@@ -58,40 +58,44 @@ export function RecentDeliveries() {
   }
 
   return (
-    <Card>
+    <Card className="border-gray-200 bg-white shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Recent Deliveries</CardTitle>
-        <Button variant="outline" size="sm">
+        <CardTitle className="text-gray-900">Recent Deliveries</CardTitle>
+        <Button variant="outline" size="sm" className="hidden md:flex">
           View All
         </Button>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {deliveries.map((delivery) => (
-              <TableRow key={delivery.id}>
-                <TableCell className="font-medium">
-                  <span className="hover:underline cursor-pointer">{delivery.id.substring(0, 8)}...</span>
-                </TableCell>
-                <TableCell>{delivery.userName}</TableCell>
-                <TableCell>
-                  <Badge className={statusColors[delivery.status]} variant="secondary">
-                    {delivery.status.replace("_", " ")}
-                  </Badge>
-                </TableCell>
-                <TableCell>{formatDate(delivery.createdAt)}</TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs md:text-sm">ID</TableHead>
+                <TableHead className="text-xs md:text-sm">Customer</TableHead>
+                <TableHead className="text-xs md:text-sm">Status</TableHead>
+                <TableHead className="text-xs md:text-sm hidden md:table-cell">Date</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {deliveries.map((delivery) => (
+                <TableRow key={delivery.id}>
+                  <TableCell className="font-medium text-xs md:text-sm">
+                    <span className="hover:underline cursor-pointer">{delivery.id.substring(0, 8)}...</span>
+                  </TableCell>
+                  <TableCell className="text-xs md:text-sm">{delivery.userName}</TableCell>
+                  <TableCell>
+                    <Badge className={`${statusColors[delivery.status]} text-xs`} variant="secondary">
+                      {delivery.status.replace("_", " ")}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs md:text-sm hidden md:table-cell">
+                    {formatDate(delivery.createdAt)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

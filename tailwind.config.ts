@@ -53,15 +53,15 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // SahelX Brand Colors
+        // SahelX Brand Colors - minimal and clean
         sahelx: {
-          50: "#fef2f2",
-          100: "#fee2e2",
-          200: "#fecaca",
-          300: "#fca5a5",
-          400: "#f87171",
-          500: "#ef4444",
-          600: "#dc2626",
+          50: "#fef7f7",
+          100: "#fef2f2",
+          200: "#fde8e8",
+          300: "#fbd5d5",
+          400: "#f8b4b4",
+          500: "#f87171", // Main red/coral accent
+          600: "#dc2626", // Darker red for buttons
           700: "#b91c1c",
           800: "#991b1b",
           900: "#7f1d1d",

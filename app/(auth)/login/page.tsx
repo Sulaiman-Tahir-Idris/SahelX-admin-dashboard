@@ -14,7 +14,7 @@ import { AlertCircle, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login } = useAuth()
+  const auth = useAuth() as ReturnType<typeof useAuth> & { login: (email: string, password: string) => Promise<void> }
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -26,8 +26,12 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await login(email, password)
-      router.push("/dashboard")
+      if (typeof auth.login === "function") {
+        await auth.login(email, password)
+        router.push("/dashboard")
+      } else {
+        throw new Error("Login method not available")
+      }
     } catch (err: any) {
       setError(err.message || "Failed to login")
     } finally {

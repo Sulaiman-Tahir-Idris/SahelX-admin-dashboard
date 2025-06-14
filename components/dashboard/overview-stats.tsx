@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bike, Calendar, Package, Users } from "lucide-react"
 
 export function OverviewStats() {
-  // Mock data for preview - replace with Firebase calls later
   const stats = {
     totalDeliveries: 1247,
     activeRiders: 23,
@@ -13,49 +12,53 @@ export function OverviewStats() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white dark:border-red-800 dark:from-red-950 dark:to-red-900">
+    <div className="grid gap-4 md:gap-6 grid-cols-2 lg:grid-cols-4">
+      <Card className="border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-red-800 dark:text-red-200">Total Deliveries</CardTitle>
-          <Package className="h-4 w-4 text-red-600 dark:text-red-400" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-red-900 dark:text-red-100">
-            {stats.totalDeliveries.toLocaleString()}
+          <CardTitle className="text-xs md:text-sm font-medium text-gray-700">Total Deliveries</CardTitle>
+          <div className="rounded-full bg-gray-100 p-1.5 md:p-2">
+            <Package className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
           </div>
-          <p className="text-xs text-red-600 dark:text-red-400">All time deliveries</p>
-        </CardContent>
-      </Card>
-      <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white dark:border-red-800 dark:from-red-950 dark:to-red-900">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-red-800 dark:text-red-200">Active Riders</CardTitle>
-          <Bike className="h-4 w-4 text-red-600 dark:text-red-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.activeRiders}</div>
-          <p className="text-xs text-red-600 dark:text-red-400">Currently available</p>
+          <div className="text-lg md:text-2xl font-bold text-gray-900">{stats.totalDeliveries.toLocaleString()}</div>
+          <p className="text-xs text-gray-500 mt-1">All time deliveries</p>
         </CardContent>
       </Card>
-      <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white dark:border-red-800 dark:from-red-950 dark:to-red-900">
+      <Card className="border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-red-800 dark:text-red-200">Total Customers</CardTitle>
-          <Users className="h-4 w-4 text-red-600 dark:text-red-400" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-red-900 dark:text-red-100">
-            {stats.totalCustomers.toLocaleString()}
+          <CardTitle className="text-xs md:text-sm font-medium text-gray-700">Active Riders</CardTitle>
+          <div className="rounded-full bg-gray-100 p-1.5 md:p-2">
+            <Bike className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
           </div>
-          <p className="text-xs text-red-600 dark:text-red-400">Registered users</p>
-        </CardContent>
-      </Card>
-      <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white dark:border-red-800 dark:from-red-950 dark:to-red-900">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-red-800 dark:text-red-200">Today's Deliveries</CardTitle>
-          <Calendar className="h-4 w-4 text-red-600 dark:text-red-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.todayDeliveries}</div>
-          <p className="text-xs text-red-600 dark:text-red-400">+12% from yesterday</p>
+          <div className="text-lg md:text-2xl font-bold text-gray-900">{stats.activeRiders}</div>
+          <p className="text-xs text-gray-500 mt-1">Currently available</p>
+        </CardContent>
+      </Card>
+      <Card className="border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xs md:text-sm font-medium text-gray-700">Total Customers</CardTitle>
+          <div className="rounded-full bg-gray-100 p-1.5 md:p-2">
+            <Users className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-lg md:text-2xl font-bold text-gray-900">{stats.totalCustomers.toLocaleString()}</div>
+          <p className="text-xs text-gray-500 mt-1">Registered users</p>
+        </CardContent>
+      </Card>
+      <Card className="border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xs md:text-sm font-medium text-gray-700">Today's Deliveries</CardTitle>
+          <div className="rounded-full bg-gray-100 p-1.5 md:p-2">
+            <Calendar className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-lg md:text-2xl font-bold text-gray-900">{stats.todayDeliveries}</div>
+          <p className="text-xs text-gray-500 mt-1">+12% from yesterday</p>
         </CardContent>
       </Card>
     </div>
