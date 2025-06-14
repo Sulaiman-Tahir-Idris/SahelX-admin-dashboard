@@ -25,6 +25,7 @@ export default function SplashScreen() {
 
       {/* Main Content */}
       <div className="relative flex min-h-screen flex-col items-center justify-center px-4">
+        <br></br><br></br>
         {/* Logo Section */}
         <div className="mb-16 text-center">
           <div className="mb-8 flex justify-center">
@@ -39,6 +40,7 @@ export default function SplashScreen() {
               />
             </div>
           </div>
+          <br></br><br></br><br></br>
 
           <h1 className="mb-4 text-4xl font-light text-gray-900 md:text-5xl">Admin Portal</h1>
           <p className="text-xl text-gray-600 md:text-2xl font-light">Fast Moves, Northern Routes</p>

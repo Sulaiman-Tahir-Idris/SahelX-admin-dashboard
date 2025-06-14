@@ -41,7 +41,7 @@ export function LiveMapView() {
             </CardHeader>
             <CardContent>
               {/* Enhanced mock map placeholder */}
-              <div className="relative h-[600px] w-full rounded-lg border bg-gradient-to-br from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 overflow-hidden">
+              <div className="relative h-[600px] w-full rounded-lg border bg-gradient-to-br from-blue-50 to-green-50 overflow-hidden">
                 {/* Mock map grid */}
                 <div className="absolute inset-0 opacity-10">
                   <div className="grid h-full w-full grid-cols-12 grid-rows-12 gap-1">
@@ -95,21 +95,17 @@ export function LiveMapView() {
 
                 {/* Map controls */}
                 <div className="absolute top-4 right-4 flex flex-col gap-2">
-                  <div className="bg-white/90 dark:bg-black/90 rounded-lg p-2 shadow-lg">
+                  <div className="bg-white/90 rounded-lg p-2 shadow-lg">
                     <div className="text-xs font-medium">Zoom Controls</div>
                     <div className="flex flex-col gap-1 mt-1">
-                      <button className="w-8 h-8 bg-white dark:bg-gray-800 border rounded text-sm hover:bg-gray-50">
-                        +
-                      </button>
-                      <button className="w-8 h-8 bg-white dark:bg-gray-800 border rounded text-sm hover:bg-gray-50">
-                        -
-                      </button>
+                      <button className="w-8 h-8 bg-white border rounded text-sm hover:bg-gray-50">+</button>
+                      <button className="w-8 h-8 bg-white border rounded text-sm hover:bg-gray-50">-</button>
                     </div>
                   </div>
                 </div>
 
                 {/* Map info overlay */}
-                <div className="absolute bottom-4 left-4 rounded-lg bg-white/90 dark:bg-black/90 p-3 shadow-lg">
+                <div className="absolute bottom-4 left-4 rounded-lg bg-white/90 p-3 shadow-lg">
                   <div className="text-sm font-medium">Live Tracking</div>
                   <div className="text-xs text-muted-foreground">
                     Showing {filteredLocations.length} {mapView === "all" ? "locations" : mapView}
@@ -120,7 +116,7 @@ export function LiveMapView() {
                 </div>
 
                 {/* Legend */}
-                <div className="absolute bottom-4 right-4 rounded-lg bg-white/90 dark:bg-black/90 p-3 shadow-lg">
+                <div className="absolute bottom-4 right-4 rounded-lg bg-white/90 p-3 shadow-lg">
                   <div className="text-sm font-medium mb-2">Legend</div>
                   <div className="space-y-1 text-xs">
                     <div className="flex items-center gap-2">

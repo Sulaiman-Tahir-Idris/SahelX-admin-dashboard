@@ -46,7 +46,7 @@ export function DeliveryMap() {
         </Tabs>
 
         {/* Mock map placeholder - replace with Google Maps component later */}
-        <div className="relative h-[300px] md:h-[500px] w-full rounded-lg border bg-gradient-to-br from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 overflow-hidden">
+        <div className="relative h-[300px] md:h-[500px] w-full rounded-lg border bg-gradient-to-br from-blue-50 to-green-50 overflow-hidden">
           {/* Mock map grid */}
           <div className="absolute inset-0 opacity-10">
             <div className="grid h-full w-full grid-cols-10 grid-rows-10 gap-1">
@@ -98,7 +98,7 @@ export function DeliveryMap() {
           </div>
 
           {/* Map overlay info */}
-          <div className="absolute bottom-2 md:bottom-4 left-2 md:left-4 rounded-lg bg-white/90 p-2 md:p-3 shadow-lg dark:bg-black/90">
+          <div className="absolute bottom-2 md:bottom-4 left-2 md:left-4 rounded-lg bg-white/90 p-2 md:p-3 shadow-lg">
             <div className="text-xs md:text-sm font-medium">Live Tracking</div>
             <div className="text-xs text-muted-foreground">
               Showing {filteredLocations.length} {mapView === "all" ? "locations" : mapView}
@@ -106,7 +106,7 @@ export function DeliveryMap() {
           </div>
 
           {/* Legend */}
-          <div className="absolute bottom-2 md:bottom-4 right-2 md:right-4 rounded-lg bg-white/90 p-2 md:p-3 shadow-lg dark:bg-black/90">
+          <div className="absolute bottom-2 md:bottom-4 right-2 md:right-4 rounded-lg bg-white/90 p-2 md:p-3 shadow-lg">
             <div className="text-xs md:text-sm font-medium mb-2">Legend</div>
             <div className="space-y-1 text-xs">
               <div className="flex items-center gap-2">

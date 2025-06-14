@@ -27,13 +27,13 @@ export default function AdminLoginPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      if (email === "MrX@sahelX.com" && password === "sahelx") {
+      if (email === "admin@sahelx.com" && password === "sahelx") {
         localStorage.setItem("isAdminLoggedIn", "true")
         localStorage.setItem(
           "adminUser",
           JSON.stringify({
-            email: "MrX@sahelX.com",
-            fullName: "Mr. X",
+            email: "admin@sahelx.com",
+            fullName: "Admin User",
             role: "superadmin",
           }),
         )
@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
               <AlertCircle className="h-4 w-4 text-blue-600" />
               <AlertTitle className="text-blue-800">Demo Credentials</AlertTitle>
               <AlertDescription className="text-blue-700">
-                <strong>Email:</strong> MrX@sahelX.com
+                <strong>Email:</strong> admin@sahelx.com
                 <br />
                 <strong>Password:</strong> sahelx
               </AlertDescription>
@@ -106,7 +106,7 @@ export default function AdminLoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="MrX@sahelX.com"
+                  placeholder="admin@sahelx.com"
                   className="border-gray-300 focus:border-sahelx-500 focus:ring-sahelx-500"
                   required
                 />

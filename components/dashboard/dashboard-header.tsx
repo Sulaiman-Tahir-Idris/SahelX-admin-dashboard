@@ -1,6 +1,5 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -12,13 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Moon, Sun, User } from "lucide-react"
+import { LogOut, User } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { MobileNav } from "./dashboard-nav"
 import Image from "next/image"
 
 export function DashboardHeader({ user }: { user?: any }) {
-  const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [currentUser, setCurrentUser] = useState<any>(null)
 
@@ -60,23 +58,6 @@ export function DashboardHeader({ user }: { user?: any }) {
         <h1 className="text-sm font-medium text-gray-900 md:text-lg">Admin Portal</h1>
       </div>
       <div className="flex items-center space-x-2 md:space-x-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-              {theme === "dark" ? (
-                <Moon className="h-4 w-4 md:h-5 md:w-5" />
-              ) : (
-                <Sun className="h-4 w-4 md:h-5 md:w-5" />
-              )}
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="border-gray-200">
-            <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
