@@ -15,15 +15,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Copy, CheckCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { createCourier } from "@/lib/firebase/users"
 
 const formSchema = z.object({
-  fullName: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  displayName: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   phone: z.string().min(10, { message: "Please enter a valid phone number." }),
   vehicleType: z.enum(["bike", "car"], {
     required_error: "Please select a vehicle type.",
   }),
-  isVerified: z.boolean().default(false),
+  plateNumber: z.string().optional(),
+  model: z.string().optional(),
+  color: z.string().optional(),
+  isVerified: z.boolean(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -41,10 +45,13 @@ export function RiderRegistrationForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: "",
+      displayName: "",
       email: "",
       phone: "",
       vehicleType: "bike",
+      plateNumber: "",
+      model: "",
+      color: "",
       isVerified: false,
     },
   })
@@ -59,53 +66,34 @@ export function RiderRegistrationForm() {
     return password
   }
 
-  // Generate rider ID
-  const generateRiderId = () => {
-    return `RIDER_${Date.now().toString().slice(-6)}`
-  }
-
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true)
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // Generate credentials for the rider
       const password = generatePassword()
-      const riderId = generateRiderId()
 
-      // In a real app, this would be a Firebase Auth creation + Firestore document
-      const newRider = {
-        uid: riderId,
-        fullName: values.fullName,
+      const result = await createCourier({
         email: values.email,
+        password: password,
+        displayName: values.displayName,
         phone: values.phone,
         vehicleType: values.vehicleType,
-        isVerified: values.isVerified,
-        status: "available",
-        currentLocation: null,
-        assignedDeliveries: [],
-        history: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        // Authentication credentials
-        password: password, // In real app, this would be hashed
-      }
+        plateNumber: values.plateNumber,
+        model: values.model,
+        color: values.color,
+      })
 
       // Store credentials to show to admin
       setRiderCredentials({
         email: values.email,
         password: password,
-        riderId: riderId,
+        riderId: result.uid,
       })
-
-      console.log("New rider registered:", newRider)
 
       setRegistrationSuccess(true)
 
       toast({
         title: "Rider registered successfully",
-        description: `${values.fullName} has been registered. Please share the login credentials with them.`,
+        description: `${values.displayName} has been registered. Please share the login credentials with them.`,
       })
     } catch (error: any) {
       toast({
@@ -269,7 +257,7 @@ export function RiderRegistrationForm() {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="fullName"
+                  name="displayName"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
@@ -327,6 +315,48 @@ export function RiderRegistrationForm() {
                           <SelectItem value="car">Car</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="plateNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Plate Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="ABC-123-XY" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="model"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vehicle Model (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Honda CBR" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vehicle Color (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Red" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -3,6 +3,7 @@ import { OverviewStats } from "@/components/dashboard/overview-stats"
 import { RecentDeliveries } from "@/components/dashboard/recent-deliveries"
 import { RiderStatusChart } from "@/components/dashboard/rider-status-chart"
 import { DeliveryMap } from "@/components/dashboard/delivery-map"
+import { FirebaseDebug } from "@/components/debug/firebase-debug"
 
 export default function AdminDashboard() {
   return (
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
         </div>
         <DeliveryMap />
       </div>
+      <FirebaseDebug />
     </DashboardLayout>
   )
 }

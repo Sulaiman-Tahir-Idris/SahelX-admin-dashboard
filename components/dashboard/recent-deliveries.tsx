@@ -1,54 +1,51 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Loader2 } from "lucide-react"
+import { getRecentDeliveries, type Delivery } from "@/lib/firebase/deliveries"
+import { toast } from "@/components/ui/use-toast"
 
 const statusColors: Record<string, string> = {
-  requested: "bg-yellow-500",
-  accepted: "bg-blue-500",
-  in_transit: "bg-purple-500",
-  completed: "bg-green-500",
-  cancelled: "bg-red-500",
+  pending: "bg-yellow-500",
+  assigned: "bg-blue-500",
+  accepted: "bg-blue-600",
+  picked_up: "bg-purple-500",
+  delivered: "bg-green-500",
+  canceled: "bg-red-500",
+  returned: "bg-orange-500",
 }
 
 export function RecentDeliveries() {
-  // Mock data for preview - replace with Firebase calls later
-  const deliveries = [
-    {
-      id: "del_001",
-      userName: "Jane Doe",
-      status: "in_transit",
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    },
-    {
-      id: "del_002",
-      userName: "John Smith",
-      status: "completed",
-      createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-    },
-    {
-      id: "del_003",
-      userName: "Alice Johnson",
-      status: "accepted",
-      createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-    },
-    {
-      id: "del_004",
-      userName: "Bob Wilson",
-      status: "requested",
-      createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 hours ago
-    },
-    {
-      id: "del_005",
-      userName: "Carol Brown",
-      status: "completed",
-      createdAt: new Date(Date.now() - 10 * 60 * 60 * 1000), // 10 hours ago
-    },
-  ]
+  const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [loading, setLoading] = useState(true)
 
-  function formatDate(date: Date) {
+  useEffect(() => {
+    loadRecentDeliveries()
+  }, [])
+
+  const loadRecentDeliveries = async () => {
+    try {
+      setLoading(true)
+      const recentDeliveries = await getRecentDeliveries(5)
+      setDeliveries(recentDeliveries)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load recent deliveries",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function formatDate(timestamp: any) {
+    if (!timestamp) return "N/A"
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
@@ -58,44 +55,50 @@ export function RecentDeliveries() {
   }
 
   return (
-    <Card className="border-gray-200 bg-white shadow-sm">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-gray-900">Recent Deliveries</CardTitle>
-        <Button variant="outline" size="sm" className="hidden md:flex">
+        <CardTitle>Recent Deliveries</CardTitle>
+        <Button variant="outline" size="sm">
           View All
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+          </div>
+        ) : deliveries.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No recent deliveries found</p>
+          </div>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs md:text-sm">ID</TableHead>
-                <TableHead className="text-xs md:text-sm">Customer</TableHead>
-                <TableHead className="text-xs md:text-sm">Status</TableHead>
-                <TableHead className="text-xs md:text-sm hidden md:table-cell">Date</TableHead>
+                <TableHead>ID</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Cost</TableHead>
+                <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {deliveries.map((delivery) => (
-                <TableRow key={delivery.id}>
-                  <TableCell className="font-medium text-xs md:text-sm">
-                    <span className="hover:underline cursor-pointer">{delivery.id.substring(0, 8)}...</span>
+                <TableRow key={delivery.deliveryId}>
+                  <TableCell className="font-medium">
+                    <span className="hover:underline cursor-pointer">{delivery.deliveryId.substring(0, 8)}...</span>
                   </TableCell>
-                  <TableCell className="text-xs md:text-sm">{delivery.userName}</TableCell>
                   <TableCell>
-                    <Badge className={`${statusColors[delivery.status]} text-xs`} variant="secondary">
+                    <Badge className={statusColors[delivery.status]} variant="secondary">
                       {delivery.status.replace("_", " ")}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs md:text-sm hidden md:table-cell">
-                    {formatDate(delivery.createdAt)}
-                  </TableCell>
+                  <TableCell>₦{delivery.cost.toLocaleString()}</TableCell>
+                  <TableCell>{formatDate(delivery.createdAt)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
+        )}
       </CardContent>
     </Card>
   )
