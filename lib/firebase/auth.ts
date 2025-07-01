@@ -1,118 +1,102 @@
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, type User } from "firebase/auth"
-import { doc, getDoc } from "firebase/firestore"
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth"
+import { doc, setDoc, getDoc } from "firebase/firestore"
 import { auth, db } from "./config"
 
 export interface AdminUser {
-  userId: string
-  id: string
-  role: string
-  permissions: string[]
-  createdAt: any
-  email?: string
+  uid: string
+  email: string
   displayName?: string
+  role: "admin" | "super_admin"
+  createdAt: Date
+  lastLogin: Date
 }
 
-// Sign in admin user
-export const signInAdmin = async (email: string, password: string): Promise<AdminUser> => {
+export async function signInAdmin(email: string, password: string): Promise<AdminUser> {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password)
     const user = userCredential.user
 
-    // Get admin data from Firestore
-    const adminDoc = await getDoc(doc(db, "Admin", user.uid))
-
+    // Check if user is admin
+    const adminDoc = await getDoc(doc(db, "admins", user.uid))
     if (!adminDoc.exists()) {
-      throw new Error("User is not an admin")
+      throw new Error("Access denied. Admin privileges required.")
     }
 
     const adminData = adminDoc.data() as AdminUser
 
-    // Check if user has admin role
-    if (adminData.role !== "admin" && adminData.role !== "superadmin") {
-      throw new Error("Insufficient permissions")
-    }
+    // Update last login
+    await setDoc(
+      doc(db, "admins", user.uid),
+      {
+        ...adminData,
+        lastLogin: new Date(),
+      },
+      { merge: true },
+    )
 
     return {
-      ...adminData,
-      email: user.email || "",
-      displayName: user.displayName || "",
+      uid: user.uid,
+      email: user.email!,
+      displayName: user.displayName || adminData.displayName,
+      role: adminData.role,
+      createdAt: adminData.createdAt,
+      lastLogin: new Date(),
     }
   } catch (error: any) {
-    console.error("Sign in error:", error)
     throw new Error(error.message || "Failed to sign in")
   }
 }
 
-// Sign out admin user
-export const signOutAdmin = async (): Promise<void> => {
+export async function createAdmin(
+  email: string,
+  password: string,
+  displayName: string,
+  role: "admin" | "super_admin" = "admin",
+): Promise<AdminUser> {
   try {
-    await signOut(auth)
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+
+    // Update user profile
+    await updateProfile(user, { displayName })
+
+    // Create admin document
+    const adminData: AdminUser = {
+      uid: user.uid,
+      email: user.email!,
+      displayName,
+      role,
+      createdAt: new Date(),
+      lastLogin: new Date(),
+    }
+
+    await setDoc(doc(db, "admins", user.uid), adminData)
+
+    return adminData
   } catch (error: any) {
-    console.error("Sign out error:", error)
-    throw new Error("Failed to sign out")
+    throw new Error(error.message || "Failed to create admin")
   }
 }
 
-// Get current admin user
-export const getCurrentAdmin = async (): Promise<AdminUser | null> => {
-  return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      unsubscribe()
-
-      if (!user) {
-        resolve(null)
-        return
-      }
-
-      try {
-        const adminDoc = await getDoc(doc(db, "Admin", user.uid))
-
-        if (!adminDoc.exists()) {
-          resolve(null)
-          return
-        }
-
-        const adminData = adminDoc.data() as AdminUser
-
-        resolve({
-          ...adminData,
-          email: user.email || "",
-          displayName: user.displayName || "",
-        })
-      } catch (error) {
-        console.error("Error getting admin data:", error)
-        resolve(null)
-      }
-    })
-  })
+export async function signOutAdmin(): Promise<void> {
+  try {
+    await signOut(auth)
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to sign out")
+  }
 }
 
-// Listen to auth state changes
-export const onAdminAuthStateChanged = (callback: (admin: AdminUser | null) => void) => {
-  return onAuthStateChanged(auth, async (user: User | null) => {
-    if (!user) {
-      callback(null)
-      return
-    }
+export async function getCurrentAdmin(): Promise<AdminUser | null> {
+  const user = auth.currentUser
+  if (!user) return null
 
-    try {
-      const adminDoc = await getDoc(doc(db, "Admin", user.uid))
+  try {
+    const adminDoc = await getDoc(doc(db, "admins", user.uid))
+    if (!adminDoc.exists()) return null
 
-      if (!adminDoc.exists()) {
-        callback(null)
-        return
-      }
-
-      const adminData = adminDoc.data() as AdminUser
-
-      callback({
-        ...adminData,
-        email: user.email || "",
-        displayName: user.displayName || "",
-      })
-    } catch (error) {
-      console.error("Error in auth state change:", error)
-      callback(null)
-    }
-  })
+    return adminDoc.data() as AdminUser
+  } catch (error) {
+    console.error("Error getting current admin:", error)
+    return null
+  }
 }

@@ -1,27 +1,39 @@
-// // app/lib/auth-utils.ts
-// import { getIdTokenResult } from 'firebase/auth';
-// import { auth } from './firebase';
+"use client"
 
-// export async function getCurrentUserRole(): Promise<'admin' | 'rider' | 'customer' | null> {
-//   const user = auth.currentUser;
-//   if (!user) return null;
+import { useEffect, useState } from "react"
+import { onAuthStateChanged, type User } from "firebase/auth"
+import { auth } from "@/lib/firebase/config"
 
-//   try {
-//     const idTokenResult = await getIdTokenResult(user);
-//     const role = idTokenResult.claims.role;
-//     if (role === 'admin' || role === 'rider' || role === 'customer') {
-//       return role;
-//     }
-//     return null;
-//   } catch (error) {
-//     console.error('Failed to get role:', error);
-//     return null;
-//   }
-// }
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-// Simple auth utility without Firebase imports to avoid build issues
-export async function getCurrentUser() {
-  // This would normally check Firebase auth
-  // For now, return null to avoid build issues
-  return null
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  return { user, loading }
+}
+
+export function isAdminLoggedIn(): boolean {
+  if (typeof window === "undefined") return false
+  return localStorage.getItem("isAdminLoggedIn") === "true"
+}
+
+export function getAdminUser() {
+  if (typeof window === "undefined") return null
+  const adminUser = localStorage.getItem("adminUser")
+  return adminUser ? JSON.parse(adminUser) : null
+}
+
+export function logoutAdmin() {
+  if (typeof window === "undefined") return
+  localStorage.removeItem("isAdminLoggedIn")
+  localStorage.removeItem("adminUser")
+  auth.signOut()
 }
