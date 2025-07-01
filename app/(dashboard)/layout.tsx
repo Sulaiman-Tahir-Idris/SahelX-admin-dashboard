@@ -1,38 +1,35 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { useAuth } from "@/lib/auth-utils"
+import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const { user, loading } = useAuth()
   const router = useRouter()
-  const { user, loading, isAdmin } = useAuth()
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (mounted && !loading && !isAdmin) {
+    if (!loading && !user) {
       router.push("/admin/login")
     }
-  }, [mounted, loading, isAdmin, router])
+  }, [user, loading, router])
 
-  if (!mounted || loading) {
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
       </div>
     )
   }
 
-  if (!isAdmin) {
+  if (!user) {
     return null
   }
 
