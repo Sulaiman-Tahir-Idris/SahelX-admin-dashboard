@@ -104,7 +104,7 @@ export default function SplashScreen() {
 
         {/* Footer */}
         <div className="mt-20 text-center">
-          <p className="text-sm text-gray-500">© 2024 SahelX. All rights reserved.</p>
+          <p className="text-sm text-gray-500">© 2025 SahelX. All rights reserved.</p>
           <p className="mt-1 text-xs text-gray-400">Powering logistics across Northern Nigeria</p>
         </div>
       </div>
