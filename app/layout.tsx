@@ -1,49 +1,65 @@
-"use client"
-
 import type React from "react"
+import { Toaster } from "@/components/ui/toaster"
+import "./globals.css"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { requireAuth } from "@/lib/auth-utils"
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { Loader2 } from "lucide-react"
+export const metadata = {
+  title: "SahelX Admin Dashboard",
+  description: "Admin dashboard for SahelX delivery service",
+  icons: {
+    icon: [
+      {
+        url: "/favicon.ico",
+        sizes: "any",
+      },
+      {
+        url: "/favicon-16x16.png",
+        sizes: "16x16",
+        type: "image/png",
+      },
+      {
+        url: "/favicon-32x32.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+    other: [
+      {
+        rel: "android-chrome-192x192",
+        url: "/android-chrome-192x192.png",
+      },
+      {
+        rel: "android-chrome-512x512",
+        url: "/android-chrome-512x512.png",
+      },
+    ],
+  },
+  manifest: "/site.webmanifest",
+}
 
-export default function Layout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading } = requireAuth()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/admin/login")
-    }
-  }, [user, loading, router])
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-
-  if (!user) {
-    return null
-  }
-
-  if (!user.isAdmin) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-          <p className="text-gray-600">You don't have admin privileges.</p>
-        </div>
-      </div>
-    )
-  }
-
-  return <DashboardLayout>{children}</DashboardLayout>
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="theme-color" content="#dc2626" />
+      </head>
+      <body>
+        {children}
+        <Toaster />
+      </body>
+    </html>
+  )
 }

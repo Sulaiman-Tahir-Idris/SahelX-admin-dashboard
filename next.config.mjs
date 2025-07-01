@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    esmExternals: 'loose',
+    esmExternals: 'loose'
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -11,32 +11,17 @@ const nextConfig = {
         net: false,
         tls: false,
         crypto: false,
-        stream: false,
-        url: false,
-        zlib: false,
-        http: false,
-        https: false,
-        assert: false,
-        os: false,
-        path: false,
       }
     }
-
+    
     config.externals = config.externals || []
     config.externals.push({
       'undici': 'commonjs undici',
-      'firebase-admin': 'commonjs firebase-admin',
     })
-
+    
     return config
   },
-  transpilePackages: [
-    'firebase',
-    '@firebase/app',
-    '@firebase/auth',
-    '@firebase/firestore',
-    '@firebase/storage',
-  ],
+  transpilePackages: ['firebase', '@firebase/auth', '@firebase/firestore'],
   eslint: {
     ignoreDuringBuilds: true,
   },
