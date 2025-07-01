@@ -1,17 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  images: {
-    domains: ['localhost'],
-    unoptimized: true,
+  experimental: {
+    esmExternals: 'loose',
   },
   webpack: (config, { isServer }) => {
-    // Handle Firebase and undici compatibility
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -30,23 +22,30 @@ const nextConfig = {
       }
     }
 
-    // Handle undici module specifically
     config.externals = config.externals || []
     config.externals.push({
-      undici: 'undici',
+      'undici': 'commonjs undici',
+      'firebase-admin': 'commonjs firebase-admin',
     })
 
     return config
-  },
-  experimental: {
-    esmExternals: 'loose',
   },
   transpilePackages: [
     'firebase',
     '@firebase/app',
     '@firebase/auth',
     '@firebase/firestore',
+    '@firebase/storage',
   ],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  images: {
+    unoptimized: true,
+  },
 }
 
 export default nextConfig
