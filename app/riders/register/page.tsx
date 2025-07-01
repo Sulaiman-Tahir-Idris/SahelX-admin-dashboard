@@ -1,5 +1,5 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { RiderRegistrationForm } from "@/components/riders/rider-registration-form"
+import { RiderRegistrationForm } from "@/components/riders/courier-registration-form"
 
 export default function RegisterRider() {
   return (

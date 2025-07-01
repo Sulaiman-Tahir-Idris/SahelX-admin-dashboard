@@ -3,27 +3,29 @@
 import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { onAdminAuthStateChanged, type AdminUser } from "@/lib/firebase/auth"
 import { DashboardNav } from "./dashboard-nav"
 import { DashboardHeader } from "./dashboard-header"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<AdminUser | null>(null)
 
   useEffect(() => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("isAdminLoggedIn")
-    const storedUser = localStorage.getItem("adminUser")
+    const unsubscribe = onAdminAuthStateChanged((adminUser) => {
+      if (!adminUser) {
+        router.push("/")
+        return
+      }
 
-    if (!isLoggedIn || !storedUser) {
-      // Redirect to splash screen if not logged in
-      router.push("/")
-      return
-    }
+      setUser(adminUser)
+      localStorage.setItem("isAdminLoggedIn", "true")
+      localStorage.setItem("adminUser", JSON.stringify(adminUser))
+      setIsLoading(false)
+    })
 
-    setUser(JSON.parse(storedUser))
-    setIsLoading(false)
+    return () => unsubscribe()
   }, [router])
 
   if (isLoading) {

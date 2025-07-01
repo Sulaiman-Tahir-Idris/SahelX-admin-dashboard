@@ -4,13 +4,27 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Mail, Phone, MapPin, Calendar, Briefcase, Edit } from "lucide-react"
+import { Mail, Phone, MapPin, Calendar, Briefcase, Edit, Shield, Car } from "lucide-react"
 import Link from "next/link"
+import type { Rider } from "@/lib/firebase/riders"
 
-export function RiderProfile({ rider }: { rider: any }) {
+interface RiderProfileProps {
+  rider: Rider
+}
+
+export function RiderProfile({ rider }: RiderProfileProps) {
   const formatDate = (timestamp: any) => {
     if (!timestamp) return "N/A"
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+
+    let date: Date
+    if (timestamp.toDate) {
+      date = timestamp.toDate()
+    } else if (timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000)
+    } else {
+      date = new Date(timestamp)
+    }
+
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "short",
@@ -18,14 +32,16 @@ export function RiderProfile({ rider }: { rider: any }) {
     }).format(date)
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case "available":
         return "bg-green-500"
       case "on_delivery":
         return "bg-blue-500"
-      default:
+      case "offline":
         return "bg-gray-500"
+      default:
+        return "bg-gray-400"
     }
   }
 
@@ -35,35 +51,51 @@ export function RiderProfile({ rider }: { rider: any }) {
         <div className="flex flex-col gap-6 md:flex-row">
           <div className="flex flex-col items-center gap-4 md:w-1/3">
             <Avatar className="h-32 w-32">
-              <AvatarImage src={rider.profileImage || "/placeholder.svg"} alt={rider.fullName} />
-              <AvatarFallback className="text-4xl">{rider.fullName.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarImage src={rider.profilePhoto || "/placeholder.svg"} alt={rider.displayName} />
+              <AvatarFallback className="text-4xl">{rider.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
 
             <div className="text-center">
-              <h2 className="text-2xl font-bold">{rider.fullName}</h2>
-              <div className="mt-2 flex justify-center">
+              <h2 className="text-2xl font-bold">{rider.displayName}</h2>
+              <div className="mt-2 flex flex-col gap-2 items-center">
                 <Badge className={getStatusColor(rider.status)} variant="secondary">
-                  {rider.status?.replace("_", " ")}
+                  {rider.status?.replace("_", " ") || "offline"}
                 </Badge>
+                {rider.verified && (
+                  <Badge className="bg-green-600" variant="secondary">
+                    <Shield className="mr-1 h-3 w-3" />
+                    Verified
+                  </Badge>
+                )}
+                {!rider.isActive && (
+                  <Badge variant="outline" className="text-red-600 border-red-600">
+                    Inactive
+                  </Badge>
+                )}
               </div>
             </div>
 
             <div className="mt-2 flex w-full justify-center gap-2">
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => window.open(`tel:${rider.phone}`)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 bg-transparent"
+                onClick={() => window.open(`tel:${rider.phone}`)}
+              >
                 <Phone className="mr-2 h-4 w-4" />
                 Call
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1"
+                className="flex-1 bg-transparent"
                 onClick={() => window.open(`mailto:${rider.email}`)}
               >
                 <Mail className="mr-2 h-4 w-4" />
                 Email
               </Button>
-              <Link href={`/riders/${rider.uid}/edit`} passHref legacyBehavior>
-                <Button size="sm" variant="outline" className="flex-1" asChild>
+              <Link href={`/admin/riders/${rider.id}/edit`} passHref legacyBehavior>
+                <Button size="sm" variant="outline" className="flex-1 bg-transparent" asChild>
                   <a>
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
@@ -90,18 +122,24 @@ export function RiderProfile({ rider }: { rider: any }) {
               </div>
 
               <div className="flex items-center gap-2">
+                <Car className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Vehicle:</span>
+                <span className="text-sm capitalize">
+                  {rider.vehicleInfo?.type} - {rider.vehicleInfo?.plateNumber}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Vehicle Type:</span>
-                <span className="text-sm capitalize">{rider.vehicleType}</span>
+                <span className="text-sm font-medium">Vehicle Model:</span>
+                <span className="text-sm">{rider.vehicleInfo?.model}</span>
               </div>
 
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Last Known Location:</span>
+                <span className="text-sm font-medium">Address:</span>
                 <span className="text-sm">
-                  {rider.currentLocation
-                    ? `${rider.currentLocation.lat.toFixed(4)}, ${rider.currentLocation.lng.toFixed(4)}`
-                    : "N/A"}
+                  {rider.address?.city}, {rider.address?.state}
                 </span>
               </div>
 
@@ -110,6 +148,13 @@ export function RiderProfile({ rider }: { rider: any }) {
                 <span className="text-sm font-medium">Joined:</span>
                 <span className="text-sm">{formatDate(rider.createdAt)}</span>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium">Full Address</h4>
+              <p className="text-sm text-muted-foreground">
+                {rider.address?.street}, {rider.address?.city}, {rider.address?.state}, {rider.address?.country}
+              </p>
             </div>
 
             <h3 className="text-xl font-semibold pt-4">Stats</h3>

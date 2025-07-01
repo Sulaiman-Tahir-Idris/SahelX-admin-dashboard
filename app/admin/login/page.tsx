@@ -11,6 +11,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Loader2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { signInAdmin } from "@/lib/firebase/auth"
+import { toast } from "@/components/ui/use-toast"
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -25,22 +27,18 @@ export default function AdminLoginPage() {
     setIsLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const adminUser = await signInAdmin(email, password)
 
-      if (email === "admin@sahelx.com" && password === "sahelx") {
-        localStorage.setItem("isAdminLoggedIn", "true")
-        localStorage.setItem(
-          "adminUser",
-          JSON.stringify({
-            email: "admin@sahelx.com",
-            fullName: "Admin User",
-            role: "superadmin",
-          }),
-        )
-        router.push("/admin/dashboard")
-      } else {
-        throw new Error("Invalid email or password. Please use the correct credentials.")
-      }
+      // Store admin data in localStorage
+      localStorage.setItem("isAdminLoggedIn", "true")
+      localStorage.setItem("adminUser", JSON.stringify(adminUser))
+
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${adminUser.displayName || adminUser.email}!`,
+      })
+
+      router.push("/admin/dashboard")
     } catch (err: any) {
       setError(err.message || "Failed to login")
     } finally {
@@ -86,16 +84,6 @@ export default function AdminLoginPage() {
               </Alert>
             )}
 
-            <Alert className="border-blue-200 bg-blue-50">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertTitle className="text-blue-800">Demo Credentials</AlertTitle>
-              <AlertDescription className="text-blue-700">
-                <strong>Email:</strong> admin@sahelx.com
-                <br />
-                <strong>Password:</strong> sahelx
-              </AlertDescription>
-            </Alert>
-
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-gray-700">
@@ -106,7 +94,7 @@ export default function AdminLoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@sahelx.com"
+                  placeholder="Enter your email"
                   className="border-gray-300 focus:border-sahelx-500 focus:ring-sahelx-500"
                   required
                 />
@@ -120,7 +108,7 @@ export default function AdminLoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="sahelx"
+                  placeholder="Enter your password"
                   className="border-gray-300 focus:border-sahelx-500 focus:ring-sahelx-500"
                   required
                 />

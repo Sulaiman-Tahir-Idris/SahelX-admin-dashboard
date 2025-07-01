@@ -15,6 +15,7 @@ import { LogOut, User } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { MobileNav } from "./dashboard-nav"
 import Image from "next/image"
+import { signOutAdmin } from "@/lib/firebase/auth"
 
 export function DashboardHeader({ user }: { user?: any }) {
   const router = useRouter()
@@ -31,16 +32,25 @@ export function DashboardHeader({ user }: { user?: any }) {
     }
   }, [user])
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAdminLoggedIn")
-    localStorage.removeItem("adminUser")
+  const handleLogout = async () => {
+    try {
+      await signOutAdmin()
+      localStorage.removeItem("isAdminLoggedIn")
+      localStorage.removeItem("adminUser")
 
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of the admin dashboard.",
-    })
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of the admin dashboard.",
+      })
 
-    router.push("/")
+      router.push("/")
+    } catch (error: any) {
+      toast({
+        title: "Logout failed",
+        description: error.message || "Failed to logout",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleProfileClick = () => {
