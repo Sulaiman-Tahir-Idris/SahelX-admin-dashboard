@@ -1,30 +1,33 @@
 "use client"
 
 import type React from "react"
-
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAdminAuth } from "@/lib/auth-utils"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
+import { useAuth } from "@/lib/auth-utils"
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const { user, loading, isAdmin } = useAdminAuth()
+export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const { user, loading, isAdmin } = useAuth()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (!loading && !isAdmin) {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted && !loading && !isAdmin) {
       router.push("/admin/login")
     }
-  }, [user, loading, isAdmin, router])
+  }, [mounted, loading, isAdmin, router])
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-600"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
+        </div>
       </div>
     )
   }

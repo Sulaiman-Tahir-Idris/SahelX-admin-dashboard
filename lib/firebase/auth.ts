@@ -1,28 +1,39 @@
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, type User, type UserCredential } from "firebase/auth"
-import { doc, getDoc } from "firebase/firestore"
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  type User,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth"
+import { doc, setDoc, getDoc } from "firebase/firestore"
 import { auth, db } from "./config"
 
 export interface AdminUser extends User {
-  isAdmin?: boolean
-  role?: string
+  isAdmin: boolean
+  role: string
 }
 
 // Sign in admin user
-export const signInAdmin = async (email: string, password: string): Promise<UserCredential> => {
+export const signInAdmin = async (email: string, password: string): Promise<AdminUser> => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
 
     // Check if user is admin
-    const userDoc = await getDoc(doc(db, "admin_users", userCredential.user.uid))
-    if (!userDoc.exists() || userDoc.data()?.role !== "admin") {
+    const adminDoc = await getDoc(doc(db, "admins", user.uid))
+    if (!adminDoc.exists()) {
       await signOut(auth)
       throw new Error("Access denied. Admin privileges required.")
     }
 
-    return userCredential
-  } catch (error) {
-    console.error("Admin sign in error:", error)
-    throw error
+    return {
+      ...user,
+      isAdmin: true,
+      role: "admin",
+    } as AdminUser
+  } catch (error: any) {
+    throw new Error(error.message || "Login failed")
   }
 }
 
@@ -30,9 +41,8 @@ export const signInAdmin = async (email: string, password: string): Promise<User
 export const signOutAdmin = async (): Promise<void> => {
   try {
     await signOut(auth)
-  } catch (error) {
-    console.error("Admin sign out error:", error)
-    throw error
+  } catch (error: any) {
+    throw new Error(error.message || "Logout failed")
   }
 }
 
@@ -41,20 +51,17 @@ export const onAdminAuthStateChanged = (callback: (user: AdminUser | null) => vo
   return onAuthStateChanged(auth, async (user) => {
     if (user) {
       try {
-        // Check if user is admin
-        const userDoc = await getDoc(doc(db, "admin_users", user.uid))
-        if (userDoc.exists() && userDoc.data()?.role === "admin") {
-          const adminUser: AdminUser = {
+        const adminDoc = await getDoc(doc(db, "admins", user.uid))
+        if (adminDoc.exists()) {
+          callback({
             ...user,
             isAdmin: true,
             role: "admin",
-          }
-          callback(adminUser)
+          } as AdminUser)
         } else {
           callback(null)
         }
       } catch (error) {
-        console.error("Error checking admin status:", error)
         callback(null)
       }
     } else {
@@ -65,7 +72,14 @@ export const onAdminAuthStateChanged = (callback: (user: AdminUser | null) => vo
 
 // Get current admin user
 export const getCurrentAdminUser = (): AdminUser | null => {
-  return auth.currentUser as AdminUser | null
+  const user = auth.currentUser
+  if (!user) return null
+
+  return {
+    ...user,
+    isAdmin: true,
+    role: "admin",
+  } as AdminUser | null
 }
 
 // Check if current user is admin
@@ -74,10 +88,33 @@ export const isCurrentUserAdmin = async (): Promise<boolean> => {
   if (!user) return false
 
   try {
-    const userDoc = await getDoc(doc(db, "admin_users", user.uid))
-    return userDoc.exists() && userDoc.data()?.role === "admin"
+    const adminDoc = await getDoc(doc(db, "admins", user.uid))
+    return adminDoc.exists()
   } catch (error) {
-    console.error("Error checking admin status:", error)
     return false
+  }
+}
+
+// Create admin user
+export const createAdminUser = async (email: string, password: string, displayName: string) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+
+    // Update profile
+    await updateProfile(user, { displayName })
+
+    // Add to admins collection
+    await setDoc(doc(db, "admins", user.uid), {
+      email: user.email,
+      displayName,
+      role: "admin",
+      createdAt: new Date().toISOString(),
+      isActive: true,
+    })
+
+    return user
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to create admin user")
   }
 }
