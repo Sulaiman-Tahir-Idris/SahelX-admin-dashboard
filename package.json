@@ -30,7 +30,9 @@
     "clsx": "^2.0.0",
     "lucide-react": "^0.294.0",
     "tailwind-merge": "^2.0.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "recharts": "^2.8.0",
+    "@react-google-maps/api": "^2.19.0"
   },
   "devDependencies": {
     "typescript": "^5",

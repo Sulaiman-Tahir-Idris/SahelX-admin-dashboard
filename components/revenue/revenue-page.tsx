@@ -5,23 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Download, Filter } from "lucide-react"
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
 
 export function RevenuePage() {
   // Mock revenue data
@@ -43,23 +27,6 @@ export function RevenuePage() {
     { month: "Apr", revenue: 195000, deliveries: 138 },
     { month: "May", revenue: 210000, deliveries: 152 },
     { month: "Jun", revenue: 185000, deliveries: 134 },
-  ]
-
-  const dailyRevenueData = [
-    { day: "Mon", revenue: 8500 },
-    { day: "Tue", revenue: 7200 },
-    { day: "Wed", revenue: 9100 },
-    { day: "Thu", revenue: 6800 },
-    { day: "Fri", revenue: 10200 },
-    { day: "Sat", revenue: 12400 },
-    { day: "Sun", revenue: 8900 },
-  ]
-
-  const revenueByCategory = [
-    { name: "Standard Delivery", value: 45, revenue: 82800 },
-    { name: "Express Delivery", value: 30, revenue: 55500 },
-    { name: "Same Day", value: 15, revenue: 27750 },
-    { name: "Scheduled", value: 10, revenue: 18500 },
   ]
 
   const topEarningRiders = [
@@ -169,15 +136,14 @@ export function RevenuePage() {
                 <CardTitle>Monthly Revenue Trend</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyRevenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
-                    <Line type="monotone" dataKey="revenue" stroke="#dc2626" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-gray-500">Revenue chart will be displayed here</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      Total: {formatCurrency(monthlyRevenueData.reduce((sum, d) => sum + d.revenue, 0))}
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -186,65 +152,12 @@ export function RevenuePage() {
                 <CardTitle>Daily Revenue (This Week)</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={dailyRevenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
-                    <Bar dataKey="revenue" fill="#dc2626" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue by Service Type</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={revenueByCategory}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {revenueByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value, name, props) => [formatCurrency(props.payload.revenue), name]} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue vs Deliveries</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyRevenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis yAxisId="left" />
-                    <YAxis yAxisId="right" orientation="right" />
-                    <Tooltip />
-                    <Bar yAxisId="left" dataKey="revenue" fill="#dc2626" name="Revenue" />
-                    <Bar yAxisId="right" dataKey="deliveries" fill="#16a34a" name="Deliveries" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-gray-500">Daily revenue chart will be displayed here</p>
+                    <p className="text-sm text-gray-400 mt-2">Current week revenue tracking</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

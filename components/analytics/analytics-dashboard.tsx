@@ -2,22 +2,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
 
 export function AnalyticsDashboard() {
   // Mock data for charts
@@ -62,15 +46,14 @@ export function AnalyticsDashboard() {
               <CardTitle>Weekly Delivery Trends</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={deliveryData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="deliveries" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+                <div className="text-center">
+                  <p className="text-gray-500">Chart visualization will be displayed here</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    Weekly deliveries: {deliveryData.reduce((sum, d) => sum + d.deliveries, 0)}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -79,25 +62,17 @@ export function AnalyticsDashboard() {
               <CardTitle>Delivery Status Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statusDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {statusDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="h-[300px] space-y-4">
+                {statusDistribution.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }}></div>
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                    <span className="text-lg font-bold">{item.value}</span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -109,15 +84,22 @@ export function AnalyticsDashboard() {
             <CardTitle>Top Performing Riders</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={riderPerformance} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} />
-                <Tooltip />
-                <Bar dataKey="deliveries" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-4">
+              {riderPerformance.map((rider, index) => (
+                <div key={rider.name} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+                      {index + 1}
+                    </div>
+                    <span className="font-medium">{rider.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{rider.deliveries} deliveries</div>
+                    <div className="text-sm text-gray-500">{rider.rating}/5 rating</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
@@ -128,15 +110,14 @@ export function AnalyticsDashboard() {
             <CardTitle>Revenue Trends</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={deliveryData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => [`₦${Number(value).toLocaleString()}`, "Revenue"]} />
-                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="text-center">
+                <p className="text-gray-500">Revenue chart will be displayed here</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Total weekly revenue: ₦{deliveryData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </TabsContent>

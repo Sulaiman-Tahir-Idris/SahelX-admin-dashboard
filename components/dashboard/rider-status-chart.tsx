@@ -1,18 +1,17 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
-
-const COLORS = ["#22c55e", "#3b82f6", "#ef4444", "#a855f7"]
 
 export function RiderStatusChart() {
   // Mock data for preview - replace with Firebase calls later
   const data = [
-    { name: "Available", value: 15 },
-    { name: "On Delivery", value: 8 },
-    { name: "Offline", value: 5 },
-    { name: "On Break", value: 3 },
+    { name: "Available", value: 15, color: "#22c55e" },
+    { name: "On Delivery", value: 8, color: "#3b82f6" },
+    { name: "Offline", value: 5, color: "#ef4444" },
+    { name: "On Break", value: 3, color: "#a855f7" },
   ]
+
+  const total = data.reduce((sum, item) => sum + item.value, 0)
 
   return (
     <Card>
@@ -20,26 +19,35 @@ export function RiderStatusChart() {
         <CardTitle>Rider Status</CardTitle>
       </CardHeader>
       <CardContent className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(value) => [`${value} riders`, ""]} />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="flex h-full items-center justify-center">
+          <div className="space-y-4 w-full">
+            {data.map((item, index) => {
+              const percentage = ((item.value / total) * 100).toFixed(0)
+              return (
+                <div key={item.name} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                      {item.name}
+                    </span>
+                    <span>
+                      {item.value} riders ({percentage}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full transition-all duration-300"
+                      style={{
+                        backgroundColor: item.color,
+                        width: `${percentage}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
