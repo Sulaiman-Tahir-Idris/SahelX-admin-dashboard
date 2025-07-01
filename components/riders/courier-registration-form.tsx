@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Copy, CheckCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { createCourier } from "@/lib/firebase/users"
+import { createCourierWithoutLogout } from "@/lib/firebase/users"
 
 const formSchema = z.object({
   displayName: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -49,6 +49,7 @@ export function CourierRegistrationForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
     defaultValues: {
       displayName: "",
       email: "",
@@ -69,7 +70,7 @@ export function CourierRegistrationForm() {
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true)
     try {
-      const courierId = await createCourier({
+      const courierId = await createCourierWithoutLogout({
         displayName: values.displayName,
         email: values.email,
         phone: values.phone,

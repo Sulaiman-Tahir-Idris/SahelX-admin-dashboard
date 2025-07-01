@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { BarChart3, Box, Home, Map, Settings, Truck, Users, Menu } from "lucide-react"
+import { BarChart3, Box, Home, Map, Settings, Truck, Users, Menu, Shield, DollarSign } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet"
@@ -29,6 +29,11 @@ const navItems = [
     icon: Box,
   },
   {
+    title: "Revenue",
+    href: "/admin/revenue",
+    icon: DollarSign,
+  },
+  {
     title: "Live Map",
     href: "/admin/live-map",
     icon: Map,
@@ -37,6 +42,11 @@ const navItems = [
     title: "Analytics",
     href: "/admin/analytics",
     icon: BarChart3,
+  },
+  {
+    title: "Admin Users",
+    href: "/admin/admin-users",
+    icon: Shield,
   },
   {
     title: "Settings",

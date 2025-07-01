@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,58 +14,39 @@ import {
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Eye, MoreHorizontal, Phone, Mail } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Eye, MoreHorizontal, Phone, Mail, Loader2, AlertCircle } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
+import { getCustomers, type CustomerUser } from "@/lib/firebase/users"
 
 export function CustomersTable() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [customers, setCustomers] = useState<CustomerUser[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data for preview - replace with Firebase calls later
-  const customers = [
-    {
-      id: "user_001",
-      fullName: "Alice Johnson",
-      email: "alice@example.com",
-      phone: "+2348012345678",
-      isActive: true,
-      totalOrders: 15,
-      profileImage: "/placeholder.svg?height=40&width=40",
-      createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
-      lastOrder: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    },
-    {
-      id: "user_002",
-      fullName: "Bob Smith",
-      email: "bob@example.com",
-      phone: "+2348087654321",
-      isActive: true,
-      totalOrders: 8,
-      profileImage: "/placeholder.svg?height=40&width=40",
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-      lastOrder: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-    },
-    {
-      id: "user_003",
-      fullName: "Carol Brown",
-      email: "carol@example.com",
-      phone: "+2348098765432",
-      isActive: false,
-      totalOrders: 3,
-      profileImage: "/placeholder.svg?height=40&width=40",
-      createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
-      lastOrder: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-    },
-    {
-      id: "user_004",
-      fullName: "David Wilson",
-      email: "david@example.com",
-      phone: "+2348076543210",
-      isActive: true,
-      totalOrders: 22,
-      profileImage: "/placeholder.svg?height=40&width=40",
-      createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000), // 120 days ago
-      lastOrder: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    },
-  ]
+  useEffect(() => {
+    loadCustomers()
+  }, [])
+
+  const loadCustomers = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const customersData = await getCustomers()
+      setCustomers(customersData)
+    } catch (error: any) {
+      console.error("Error loading customers:", error)
+      setError(error.message)
+      toast({
+        title: "Failed to load customers",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const filteredCustomers = customers.filter(
     (customer) =>
@@ -74,15 +55,58 @@ export function CustomersTable() {
       customer.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return "N/A"
+
+    let date: Date
+    if (timestamp.toDate) {
+      date = timestamp.toDate()
+    } else if (timestamp.seconds) {
+      date = new Date(timestamp.seconds * 1000)
+    } else {
+      date = new Date(timestamp)
+    }
+
+    return date.toLocaleDateString()
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="mt-2 text-sm text-muted-foreground">Loading customers...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Failed to load customers: {error}</AlertDescription>
+        </Alert>
+        <Button onClick={loadCustomers} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <Input
           placeholder="Search customers..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-sm"
         />
+        <Button onClick={loadCustomers} variant="outline" size="sm">
+          Refresh
+        </Button>
       </div>
 
       <div className="rounded-md border">
@@ -93,7 +117,7 @@ export function CustomersTable() {
               <TableHead>Status</TableHead>
               <TableHead>Total Orders</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Last Order</TableHead>
+              <TableHead>Joined</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -101,7 +125,9 @@ export function CustomersTable() {
             {filteredCustomers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
-                  No customers found.
+                  {customers.length === 0
+                    ? "No customers found. Customers will appear here when they register."
+                    : "No customers match your search."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -111,7 +137,7 @@ export function CustomersTable() {
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage src={customer.profileImage || "/placeholder.svg"} alt={customer.fullName} />
-                        <AvatarFallback>{customer.fullName.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>{customer.fullName?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="grid gap-0.5">
                         <div className="font-medium">{customer.fullName}</div>
@@ -124,9 +150,9 @@ export function CustomersTable() {
                       {customer.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{customer.totalOrders}</TableCell>
+                  <TableCell>{customer.totalOrders || 0}</TableCell>
                   <TableCell>{customer.phone}</TableCell>
-                  <TableCell>{customer.lastOrder.toLocaleDateString()}</TableCell>
+                  <TableCell>{formatDate(customer.createdAt)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -159,6 +185,12 @@ export function CustomersTable() {
           </TableBody>
         </Table>
       </div>
+
+      {customers.length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredCustomers.length} of {customers.length} customers
+        </div>
+      )}
     </div>
   )
 }
