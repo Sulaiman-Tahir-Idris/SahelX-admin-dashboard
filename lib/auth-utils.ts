@@ -1,12 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { AdminUser } from "./firebase/auth"
-import { onAdminAuthStateChanged, getCurrentAdmin } from "./firebase/auth"
+import type { User } from "firebase/auth"
+import { onAdminAuthStateChanged } from "./firebase/auth"
 
 // Client-side hook for auth state
 export const useAuth = () => {
-  const [user, setUser] = useState<AdminUser | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,6 +20,7 @@ export const useAuth = () => {
 
   return { user, loading }
 }
+<<<<<<< HEAD
 
 // Server-side function for auth check
 export const getCurrentUser = async () => {
@@ -30,3 +31,5 @@ export const getCurrentUser = async () => {
     return null
   }
 }
+=======
+>>>>>>> parent of f759a1e (BUILD FIX)

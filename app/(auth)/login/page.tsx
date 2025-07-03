@@ -14,7 +14,7 @@ import { AlertCircle, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login } = useAuth()
+  const auth = useAuth() as ReturnType<typeof useAuth> & { login: (email: string, password: string) => Promise<void> }
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -26,8 +26,12 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await login(email, password)
-      router.push("/dashboard")
+      if (typeof auth.login === "function") {
+        await auth.login(email, password)
+        router.push("/dashboard")
+      } else {
+        throw new Error("Login method not available")
+      }
     } catch (err: any) {
       setError(err.message || "Failed to login")
     } finally {
@@ -40,7 +44,7 @@ export default function LoginPage() {
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle className="text-2xl">Admin Login</CardTitle>
-          <CardDescription>Sign in to access the Sahel X admin dashboard</CardDescription>
+          <CardDescription>Sign in to access the Sahel X Logistics admin dashboard</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -59,7 +63,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@swift.com"
+                  placeholder="admin@sahelx.com"
                   required
                 />
               </div>
@@ -87,7 +91,7 @@ export default function LoginPage() {
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">Sahel X Administration</p>
+          <p className="text-sm text-muted-foreground">Sahel X Logistics Administration</p>
         </CardFooter>
       </Card>
     </div>

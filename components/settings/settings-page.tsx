@@ -13,7 +13,7 @@ export function SettingsPage() {
   const [settings, setSettings] = useState({
     flatFee: 1000,
     feePerKm: 150,
-    companyName: "Sahel X",
+    companyName: "Sahel X Logistics",
     contactPhone: "+2348011112222",
     emailNotifications: true,
     smsNotifications: false,

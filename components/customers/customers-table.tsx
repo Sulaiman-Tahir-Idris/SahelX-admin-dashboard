@@ -17,11 +17,11 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, MoreHorizontal, Phone, Mail, Loader2, AlertCircle } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
-import { getCustomers, type Customer } from "@/lib/firebase/customers"
+import { getCustomers, type CustomerUser } from "@/lib/firebase/users"
 
 export function CustomersTable() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [customers, setCustomers] = useState<Customer[]>([])
+  const [customers, setCustomers] = useState<CustomerUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
