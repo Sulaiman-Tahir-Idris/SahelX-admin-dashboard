@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import type { User } from "firebase/auth"
 import { onAdminAuthStateChanged } from "./firebase/auth"
 
-// Client-side hook for auth state
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,8 +21,8 @@ export const useAuth = () => {
 }
 <<<<<<< HEAD
 
-// Server-side function for auth check
-export const getCurrentUser = async () => {
+// Server-side function for getting current user
+export async function getCurrentUser(): Promise<AdminUser | null> {
   try {
     return await getCurrentAdmin()
   } catch (error) {
