@@ -110,12 +110,6 @@ export default function SplashScreen() {
             {isLoading ? "Loading..." : "Admin Login"}
           </Button>
         </div>
-
-        {/* Debug info - remove in production */}
-        <div className="mt-4 text-xs text-gray-400">
-          Current path: {typeof window !== "undefined" ? window.location.pathname : "SSR"}
-        </div>
-
         {/* Footer */}
         <div className="mt-20 text-center">
           <p className="text-sm text-gray-500">© 2025 SahelX. All rights reserved.</p>

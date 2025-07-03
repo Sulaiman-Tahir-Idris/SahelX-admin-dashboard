@@ -5,8 +5,8 @@ import { RiderStatusChart } from "@/components/dashboard/rider-status-chart"
 import { DeliveryMap } from "@/components/dashboard/delivery-map"
 
 export const metadata: Metadata = {
-  title: "Dashboard - Sahel X Admin Portal",
-  description: "Admin dashboard overview for Sahel X Logistics",
+  title: "Dashboard - Swift Logistics",
+  description: "Admin dashboard overview for Swift Logistics delivery service",
 }
 
 export default function Dashboard() {
