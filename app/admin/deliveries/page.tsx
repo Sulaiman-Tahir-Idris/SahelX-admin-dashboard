@@ -1,5 +1,5 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { DeliveriesTable } from "@/components/deliveries/deliveries-table"
+import DeliveriesTable from "@/components/deliveries/deliveries-table"
 
 export default function AdminDeliveries() {
   return (
