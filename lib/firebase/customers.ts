@@ -7,6 +7,7 @@ export interface Customer {
   email: string
   phone: string
   fullName: string
+  displayName:string
   role: "customer"
   isActive: boolean
   profileImage?: string

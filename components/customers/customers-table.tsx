@@ -50,7 +50,7 @@ export function CustomersTable() {
 
   const filteredCustomers = customers.filter(
     (customer) =>
-      customer.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customer.phone?.includes(searchQuery) ||
       customer.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
@@ -136,11 +136,11 @@ export function CustomersTable() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={customer.profileImage || "/placeholder.svg"} alt={customer.fullName} />
-                        <AvatarFallback>{customer.fullName?.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={customer.profileImage || "/placeholder.svg"} alt={customer.displayName} />
+                        <AvatarFallback>{customer.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="grid gap-0.5">
-                        <div className="font-medium">{customer.fullName}</div>
+                        <div className="font-medium">{customer.displayName}</div>
                         <div className="text-xs text-muted-foreground">{customer.email}</div>
                       </div>
                     </div>
