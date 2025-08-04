@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bike, Calendar, Package, Users, Loader2 } from "lucide-react"
 import { getRiders } from "@/lib/firebase/riders"
 import { getCustomers } from "@/lib/firebase/users"
+import { getDeliveries } from "@/lib/firebase/deliveries"
 
 export function OverviewStats() {
   const [stats, setStats] = useState({
-    totalDeliveries: 1247, // Keep as mock for now
+    totalDeliveries: 0,
     totalRiders: 0,
     totalCustomers: 0,
-    todayDeliveries: 45, // Keep as mock for now
+    todayDeliveries: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
 
@@ -23,18 +24,31 @@ export function OverviewStats() {
     try {
       setIsLoading(true)
 
-      // Load real data from Firebase
-      const [riders, customers] = await Promise.all([getRiders(), getCustomers()])
+      const [riders, customers, deliveries] = await Promise.all([getRiders(), getCustomers(), getDeliveries()])
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Start of today
+
+      const todayDeliveriesCount = deliveries.filter((delivery) => {
+        const deliveryDate = delivery.createdAt?.toDate ? delivery.createdAt.toDate() : new Date(0) // Handle Firebase Timestamp
+        return deliveryDate >= today
+      }).length
 
       setStats({
-        totalDeliveries: 1247, // Mock data for now
+        totalDeliveries: deliveries.length,
         totalRiders: riders.length,
         totalCustomers: customers.length,
-        todayDeliveries: 45, // Mock data for now
+        todayDeliveries: todayDeliveriesCount,
       })
     } catch (error) {
       console.error("Error loading stats:", error)
-      // Keep default values on error
+      // Keep default values on error or set to 0
+      setStats({
+        totalDeliveries: 0,
+        totalRiders: 0,
+        totalCustomers: 0,
+        todayDeliveries: 0,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -106,7 +120,7 @@ export function OverviewStats() {
         </CardHeader>
         <CardContent>
           <div className="text-lg md:text-2xl font-bold text-gray-900">{stats.todayDeliveries}</div>
-          <p className="text-xs text-gray-500 mt-1">+12% from yesterday</p>
+          <p className="text-xs text-gray-500 mt-1">Deliveries today</p>
         </CardContent>
       </Card>
     </div>

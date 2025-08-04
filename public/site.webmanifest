@@ -1,0 +1,11 @@
+{
+  "name": "SahelX Admin Dashboard",
+  "short_name": "SahelX Admin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#dc2626",
+  "icons": [
+    {}
+  ]
+}

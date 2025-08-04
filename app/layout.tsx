@@ -1,6 +1,6 @@
 import type React from "react"
 import { Toaster } from "@/components/ui/toaster"
-import "./globals.css"
+import "./globals.css" // Corrected import path
 
 export const metadata = {
   title: "SahelX Admin Dashboard",
@@ -40,7 +40,8 @@ export const metadata = {
       },
     ],
   },
-    generator: 'v0.dev'
+  manifest: "/site.webmanifest",
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({

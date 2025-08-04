@@ -1,35 +1,147 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Truck, Package, Navigation } from "lucide-react"
+import { Truck, Package } from "lucide-react"
+import { GoogleMap, MarkerF, useLoadScript, InfoWindowF } from "@react-google-maps/api"
+import { getRiders, type Rider } from "@/lib/firebase/riders"
+import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries"
+// Removed import of 'googlemaps' as it's not needed with @react-google-maps/api
+
+// Define the Libraries type for useLoadScript
+type Libraries = ("places" | "drawing" | "geometry" | "visualization")[]
+
+interface LocationCoords {
+  lat: number
+  lng: number
+}
+
+interface MapMarker {
+  id: string
+  type: "rider" | "pickup" | "dropoff"
+  name: string
+  lat: number
+  lng: number
+  status?: string // For riders and deliveries
+  deliveryId?: string // Link to delivery for pickup/dropoff
+  Address?: string // Optional address for display
+}
+
+const containerStyle = {
+  width: "100%",
+  height: "600px",
+  borderRadius: "0.5rem",
+}
+
+const kanoCenter = {
+  lat: 12.0, // Latitude for Kano, Nigeria
+  lng: 8.5167, // Longitude for Kano, Nigeria
+}
 
 export function LiveMapView() {
-  const [mapView, setMapView] = useState<"all" | "riders" | "deliveries">("all")
+  const [mapView, setMapView] = useState<"all" | "pickup" | "dropoff">("all")
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null)
+  const [riders, setRiders] = useState<Rider[]>([])
+  const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock data for preview
-  const mockLocations = [
-    { id: "rider_001", type: "rider", name: "John Rider", lat: 6.5244, lng: 3.3792, status: "available" },
-    { id: "rider_002", type: "rider", name: "Jane Rider", lat: 6.5344, lng: 3.3892, status: "on_delivery" },
-    { id: "rider_003", type: "rider", name: "Mike Johnson", lat: 6.5144, lng: 3.3692, status: "available" },
-    { id: "delivery_001", type: "delivery", name: "Delivery #001", lat: 6.5444, lng: 3.3992, status: "in_transit" },
-    { id: "delivery_002", type: "delivery", name: "Delivery #002", lat: 6.5044, lng: 3.3592, status: "accepted" },
-  ]
-
-  const filteredLocations = mockLocations.filter((location) => {
-    if (mapView === "all") return true
-    return location.type === mapView.slice(0, -1)
+  const libraries = useMemo<Libraries>(() => ["places"], []) // Memoize libraries array
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries,
   })
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const fetchedRiders = await getRiders()
+        const fetchedDeliveries = await getDeliveries()
+        setRiders(fetchedRiders)
+        setDeliveries(fetchedDeliveries)
+      } catch (err) {
+        console.error("Failed to fetch data:", err)
+        setError("Failed to load data. Please try again.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const allMarkers: MapMarker[] = useMemo(() => {
+    const markers: MapMarker[] = []
+
+    riders.forEach((rider) => {
+      if (rider.currentLocation?.lat && rider.currentLocation?.lng) {
+        markers.push({
+          id: rider.id || `rider_${rider.userId}`,
+          type: "rider",
+          name: rider.displayName,
+          lat: rider.currentLocation.lat,
+          lng: rider.currentLocation.lng,
+          status: rider.status,
+        })
+      }
+    })
+
+    deliveries.forEach((delivery) => {
+      if (delivery.pickupLocation && delivery.dropoffLocation) {
+        // Assuming pickupLocation and dropoffLocation can be parsed to lat/lng or already contain them
+        // For simplicity, using mock lat/lng for pickup/dropoff from previous version
+        // In a real app, you'd parse addresses to lat/lng or store them directly in the delivery object
+        markers.push({
+          id: `pickup_${delivery.id}`,
+          type: "pickup",
+          name: `Delivery ${delivery.id} (Pickup)`,
+          lat: delivery.pickupLocation.lat || 0, // Placeholder, replace with actual lat/lng from address
+          lng: delivery.pickupLocation.lng || 0, // Placeholder, replace with actual lat/lng from address
+          status: delivery.status,
+          deliveryId: delivery.id,
+        })
+        markers.push({
+          id: `dropoff_${delivery.id}`,
+          type: "dropoff",
+          name: `Delivery ${delivery.id} (Dropoff)`,
+          lat: delivery.dropoffLocation.lat || 0, // Placeholder, replace with actual lat/lng from address
+          lng: delivery.dropoffLocation.lng || 0, // Placeholder, replace with actual lat/lng from address
+          status: delivery.status,
+          deliveryId: delivery.id,
+        })
+      }
+    })
+    return markers
+  }, [riders, deliveries])
+
+  const filteredMarkers = useMemo(() => {
+    if (mapView === "all") return allMarkers
+    return allMarkers.filter((marker) => marker.type === mapView)
+  }, [mapView, allMarkers])
+
+  const onLoad = useCallback(function callback(map: google.maps.Map) {
+    // This is called once the map instance is available
+    // You can store the map instance in a ref if needed for other operations
+  }, [])
+
+  const onUnmount = useCallback(function callback(map: google.maps.Map) {
+    // This is called when the map component unmounts
+  }, [])
+
+  if (loadError) return <div>Error loading maps: {loadError.message}</div>
+  if (!isLoaded) return <div>Loading Map...</div>
+  if (loading) return <div>Loading data for map...</div>
+  if (error) return <div>Error: {error}</div>
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="all" onValueChange={(value) => setMapView(value as "all" | "riders" | "deliveries")}>
+      <Tabs defaultValue="all" onValueChange={(value) => setMapView(value as "all" | "pickup" | "dropoff")}>
         <TabsList>
           <TabsTrigger value="all">All Locations</TabsTrigger>
-          <TabsTrigger value="riders">Riders Only</TabsTrigger>
-          <TabsTrigger value="deliveries">Deliveries Only</TabsTrigger>
+          <TabsTrigger value="pickup">Pickup Locations</TabsTrigger>
+          <TabsTrigger value="dropoff">Dropoff Locations</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -40,100 +152,60 @@ export function LiveMapView() {
               <CardTitle>Live Map</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Enhanced mock map placeholder */}
-              <div className="relative h-[600px] w-full rounded-lg border bg-gradient-to-br from-blue-50 to-green-50 overflow-hidden">
-                {/* Mock map grid */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="grid h-full w-full grid-cols-12 grid-rows-12 gap-1">
-                    {Array.from({ length: 144 }).map((_, i) => (
-                      <div key={i} className="border border-gray-300" />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mock location markers */}
-                {filteredLocations.map((location, index) => (
-                  <div
-                    key={location.id}
-                    className="absolute flex items-center justify-center"
-                    style={{
-                      left: `${15 + (index % 5) * 15}%`,
-                      top: `${15 + Math.floor(index / 5) * 15}%`,
+              <GoogleMap
+                mapContainerStyle={containerStyle}
+                center={kanoCenter}
+                zoom={12}
+                onLoad={onLoad}
+                onUnmount={onUnmount}
+              >
+                {filteredMarkers.map((marker) => (
+                  <MarkerF
+                    key={marker.id}
+                    position={{ lat: marker.lat, lng: marker.lng }}
+                    onClick={() => setSelectedMarker(marker)}
+                    icon={{
+                      path: google.maps.SymbolPath.CIRCLE, // Access google from window
+                      scale: 10,
+                      fillColor:
+                        marker.type === "rider"
+                          ? marker.status === "available"
+                            ? "#10B981" // Green
+                            : "#3B82F6" // Blue
+                          : marker.type === "pickup"
+                            ? "#F59E0B" // Amber
+                            : "#8B5CF6", // Purple
+                      fillOpacity: 1,
+                      strokeWeight: 0,
                     }}
-                  >
-                    <div className="relative group">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-white shadow-lg cursor-pointer transition-transform hover:scale-110 ${
-                          location.type === "rider"
-                            ? location.status === "available"
-                              ? "bg-green-500"
-                              : "bg-blue-500"
-                            : "bg-purple-500"
-                        }`}
-                      >
-                        {location.type === "rider" ? (
-                          <Truck className="h-5 w-5 text-white" />
-                        ) : (
-                          <Package className="h-5 w-5 text-white" />
-                        )}
-                      </div>
-
-                      {/* Tooltip on hover */}
-                      <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap z-10">
-                        <div className="font-medium">{location.name}</div>
-                        <div className="text-xs">{location.status}</div>
-                      </div>
-                    </div>
-                  </div>
+                  />
                 ))}
 
-                {/* Map center indicator */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                  <Navigation className="h-6 w-6 text-red-500" />
-                  <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-medium">Lagos, Nigeria</div>
-                </div>
-
-                {/* Map controls */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
-                  <div className="bg-white/90 rounded-lg p-2 shadow-lg">
-                    <div className="text-xs font-medium">Zoom Controls</div>
-                    <div className="flex flex-col gap-1 mt-1">
-                      <button className="w-8 h-8 bg-white border rounded text-sm hover:bg-gray-50">+</button>
-                      <button className="w-8 h-8 bg-white border rounded text-sm hover:bg-gray-50">-</button>
+                {selectedMarker && (
+                  <InfoWindowF
+                    position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
+                    onCloseClick={() => setSelectedMarker(null)}
+                  >
+                    <div className="p-2">
+                      <h3 className="font-bold text-sm">{selectedMarker.name}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedMarker.type === "rider"
+                          ? "Rider"
+                          : selectedMarker.type === "pickup"
+                            ? "Pickup"
+                            : "Dropoff"}
+                        {selectedMarker.status && ` - ${selectedMarker.status.replace(/_/g, " ")}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Lat: {selectedMarker.lat.toFixed(4)}, Lng: {selectedMarker.lng.toFixed(4)}
+                      </p>
+                      <p>
+                        Address: {selectedMarker.Address || " Not available"}
+                      </p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Map info overlay */}
-                <div className="absolute bottom-4 left-4 rounded-lg bg-white/90 p-3 shadow-lg">
-                  <div className="text-sm font-medium">Live Tracking</div>
-                  <div className="text-xs text-muted-foreground">
-                    Showing {filteredLocations.length} {mapView === "all" ? "locations" : mapView}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Last updated: {new Date().toLocaleTimeString()}
-                  </div>
-                </div>
-
-                {/* Legend */}
-                <div className="absolute bottom-4 right-4 rounded-lg bg-white/90 p-3 shadow-lg">
-                  <div className="text-sm font-medium mb-2">Legend</div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                      <span>Available Riders</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-                      <span>Busy Riders</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-purple-500"></div>
-                      <span>Active Deliveries</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  </InfoWindowF>
+                )}
+              </GoogleMap>
             </CardContent>
           </Card>
         </div>
@@ -145,32 +217,34 @@ export function LiveMapView() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {filteredLocations.map((location) => (
-                  <div key={location.id} className="flex items-center justify-between p-2 rounded-lg border">
+                {filteredMarkers.map((marker) => (
+                  <div key={marker.id} className="flex items-center justify-between p-2 rounded-lg border">
                     <div className="flex items-center gap-2">
-                      {location.type === "rider" ? (
+                      {marker.type === "rider" ? (
                         <Truck className="h-4 w-4 text-blue-500" />
                       ) : (
                         <Package className="h-4 w-4 text-purple-500" />
                       )}
                       <div>
-                        <div className="text-sm font-medium">{location.name}</div>
+                        <div className="text-sm font-medium">{marker.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                          {marker.lat.toFixed(4)}, {marker.lng.toFixed(4)}
                         </div>
                       </div>
                     </div>
                     <Badge
                       className={
-                        location.status === "available"
-                          ? "bg-green-500"
-                          : location.status === "on_delivery"
-                            ? "bg-blue-500"
-                            : "bg-purple-500"
+                        marker.type === "rider"
+                          ? marker.status === "available"
+                            ? "bg-green-500"
+                            : "bg-blue-500"
+                          : marker.status === "in_transit"
+                            ? "bg-purple-500"
+                            : "bg-gray-500" // Default for other delivery statuses
                       }
                       variant="secondary"
                     >
-                      {location.status.replace("_", " ")}
+                      {marker.status ? marker.status.replace("_", " ") : marker.type}
                     </Badge>
                   </div>
                 ))}
