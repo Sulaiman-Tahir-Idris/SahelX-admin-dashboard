@@ -90,26 +90,25 @@ export function LiveMapView() {
 
     deliveries.forEach((delivery) => {
       if (delivery.pickupLocation && delivery.dropoffLocation) {
-        // Assuming pickupLocation and dropoffLocation can be parsed to lat/lng or already contain them
-        // For simplicity, using mock lat/lng for pickup/dropoff from previous version
-        // In a real app, you'd parse addresses to lat/lng or store them directly in the delivery object
         markers.push({
           id: `pickup_${delivery.id}`,
           type: "pickup",
           name: `Delivery ${delivery.id} (Pickup)`,
-          lat: delivery.pickupLocation.lat || 0, // Placeholder, replace with actual lat/lng from address
-          lng: delivery.pickupLocation.lng || 0, // Placeholder, replace with actual lat/lng from address
+          lat: delivery.pickupLocation.lat || 0,
+          lng: delivery.pickupLocation.lng || 0,
           status: delivery.status,
           deliveryId: delivery.id,
+          Address: delivery.pickupLocation.address || "Not available", // <-- Pass real address here
         })
         markers.push({
           id: `dropoff_${delivery.id}`,
           type: "dropoff",
           name: `Delivery ${delivery.id} (Dropoff)`,
-          lat: delivery.dropoffLocation.lat || 0, // Placeholder, replace with actual lat/lng from address
-          lng: delivery.dropoffLocation.lng || 0, // Placeholder, replace with actual lat/lng from address
+          lat: delivery.dropoffLocation.lat || 0,
+          lng: delivery.dropoffLocation.lng || 0,
           status: delivery.status,
           deliveryId: delivery.id,
+          Address: delivery.dropoffLocation.address || "Not available", // <-- Pass real address here
         })
       }
     })
