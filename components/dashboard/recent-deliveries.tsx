@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries"
+import { getCustomer } from "@/lib/firebase/customers"
 import { Loader2 } from "lucide-react"
 
 const statusColors: Record<string, string> = {
@@ -18,6 +19,7 @@ const statusColors: Record<string, string> = {
 
 export function RecentDeliveries() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [customerNames, setCustomerNames] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -34,9 +36,26 @@ export function RecentDeliveries() {
           })
           .slice(0, 5)
         setDeliveries(sortedDeliveries)
+
+        // Fetch display names for each customerId
+        const names: Record<string, string> = {}
+        await Promise.all(
+          sortedDeliveries.map(async (delivery) => {
+            if (delivery.customerId && !names[delivery.customerId]) {
+              try {
+                const customer = await getCustomer(delivery.customerId)
+                names[delivery.customerId] = customer?.displayName || delivery.customerId
+              } catch {
+                names[delivery.customerId] = delivery.customerId
+              }
+            }
+          })
+        )
+        setCustomerNames(names)
       } catch (error) {
         console.error("Error fetching recent deliveries:", error)
         setDeliveries([]) // Clear deliveries on error
+        setCustomerNames({})
       } finally {
         setIsLoading(false)
       }
@@ -85,8 +104,8 @@ export function RecentDeliveries() {
                     <TableCell className="font-medium text-xs md:text-sm">
                       <span className="hover:underline cursor-pointer">{delivery.id?.substring(0, 8)}...</span>
                     </TableCell>
-                    <TableCell className="text-xs md:text-sm">{delivery.customerId}</TableCell>{" "}
-                    {/* Assuming customerId is a display name for now */}
+                    <TableCell className="text-xs md:text-sm">{customerNames[delivery.customerId] || delivery.customerId}</TableCell>
+                    {/* Show displayName if available */}
                     <TableCell>
                       <Badge className={`${statusColors[delivery.status]} text-xs`} variant="secondary">
                         {delivery.status.replace("_", " ")}
