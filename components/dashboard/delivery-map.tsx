@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { GoogleMap, MarkerF, useLoadScript, InfoWindowF } from "@react-google-maps/api"
+import { GoogleMap, MarkerF, useLoadScript, InfoWindowF, PolylineF } from "@react-google-maps/api"
 import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries"
+import { subscribeToRiders, type Rider } from "@/lib/firebase/riders"
 import { Loader2 } from "lucide-react"
-// Removed import of 'googlemaps' as it's not needed for browser usage
 
-// Define the Libraries type for useLoadScript
 type Libraries = ("places" | "drawing" | "geometry" | "visualization")[]
 
 interface LocationCoords {
@@ -17,12 +16,12 @@ interface LocationCoords {
 
 interface MapMarker {
   id: string
-  type: "pickup" | "dropoff"
+  type: "pickup" | "dropoff" | "rider"
   name: string
   lat: number
   lng: number
-  deliveryId: string
-  status: string
+  deliveryId?: string
+  status?: string
 }
 
 const containerStyle = {
@@ -31,19 +30,16 @@ const containerStyle = {
   borderRadius: "0.5rem",
 }
 
-// Center on Kano, Nigeria
-const KANO_CENTER = {
-  lat: 11.9967,
-  lng: 8.5185,
-}
+const KANO_CENTER = { lat: 11.9967, lng: 8.5185 }
 
-// Memoize the libraries array to prevent reloads
 const libraries: Libraries = ["places"]
 
 export function DeliveryMap() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [riders, setRiders] = useState<Rider[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null)
+  const [activeLine, setActiveLine] = useState<string | null>(null)
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -51,31 +47,37 @@ export function DeliveryMap() {
   })
 
   useEffect(() => {
-    const fetchDeliveriesData = async () => {
+    let unsubscribeRiders: (() => void) | undefined
+
+    const init = async () => {
       setIsLoading(true)
       try {
         const fetchedDeliveries = await getDeliveries()
         setDeliveries(fetchedDeliveries)
+
+        unsubscribeRiders = subscribeToRiders((liveRiders) => {
+          setRiders(liveRiders)
+        })
       } catch (error) {
-        console.error("Error fetching deliveries for map:", error)
+        console.error("Error setting up map data:", error)
         setDeliveries([])
+        setRiders([])
       } finally {
         setIsLoading(false)
       }
     }
-    fetchDeliveriesData()
+
+    init()
+    return () => {
+      if (unsubscribeRiders) unsubscribeRiders()
+    }
   }, [])
 
   const allMarkers: MapMarker[] = useMemo(() => {
     const markers: MapMarker[] = []
+
     deliveries.forEach((delivery) => {
-      // Ensure lat/lng exist before adding marker
-      if (
-        delivery.pickupLocation &&
-        typeof delivery.pickupLocation === "object" &&
-        "lat" in delivery.pickupLocation &&
-        "lng" in delivery.pickupLocation 
-      ) {
+      if (delivery.pickupLocation && "lat" in delivery.pickupLocation && "lng" in delivery.pickupLocation) {
         markers.push({
           id: `pickup_${delivery.id}`,
           type: "pickup",
@@ -86,12 +88,8 @@ export function DeliveryMap() {
           status: delivery.status,
         })
       }
-      if (
-        delivery.dropoffLocation &&
-        typeof delivery.dropoffLocation === "object" &&
-        "lat" in delivery.dropoffLocation &&
-        "lng" in delivery.dropoffLocation
-      ) {
+
+      if (delivery.dropoffLocation && "lat" in delivery.dropoffLocation && "lng" in delivery.dropoffLocation) {
         markers.push({
           id: `dropoff_${delivery.id}`,
           type: "dropoff",
@@ -103,8 +101,24 @@ export function DeliveryMap() {
         })
       }
     })
+
+    riders.forEach((rider) => {
+      const lat = rider.currentLocation?.lat
+      const lng = rider.currentLocation?.lng
+      if (typeof lat === "number" && typeof lng === "number") {
+        markers.push({
+          id: `rider_${rider.id}`,
+          type: "rider",
+          name: rider.displayName || "Rider",
+          lat,
+          lng,
+          status: rider.status || (rider.isAvailable ? "available" : "offline"),
+        })
+      }
+    })
+
     return markers
-  }, [deliveries])
+  }, [deliveries, riders])
 
   const mapOptions = useMemo(
     () => ({
@@ -114,25 +128,39 @@ export function DeliveryMap() {
       streetViewControl: false,
       mapTypeControl: false,
       fullscreenControl: false,
-      styles: [
-        {
-          featureType: "poi",
-          elementType: "labels",
-          stylers: [{ visibility: "off" }],
-        },
-      ],
+      styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
     }),
     [],
   )
 
-  const onLoad = useCallback(function callback(map: google.maps.Map) {
-    // This is called once the map instance is available
-  }, [])
+  // 👇 assign custom icons per type
+  const markerIcon = (type: MapMarker["type"]) => {
+    if (type === "pickup") {
+      return {
+        url: "/icons/pickup.png",
+        scaledSize: new window.google.maps.Size(16, 16),
+      }
+    }
+    if (type === "dropoff") {
+      return {
+        url: "/icons/dropoff.png",
+        scaledSize: new window.google.maps.Size(32, 32),
+      }
+    }
+    return {
+      url: "/icons/rider.png",
+      scaledSize: new window.google.maps.Size(32, 32),
+    }
+  }
 
-  const onUnmount = useCallback(function callback(map: google.maps.Map) {
-    // This is called when the map component unmounts
-  }, [])
-  // If you get a type error for google.maps.Map, you can use 'any' or import types from @react-google-maps/api
+  const handleMarkerClick = (marker: MapMarker) => {
+    setSelectedMarker(marker)
+
+    if (marker.type === "pickup" || marker.type === "dropoff") {
+      const lineKey = `${marker.type}_${marker.deliveryId}`
+      setActiveLine((prev) => (prev === lineKey ? null : lineKey))
+    }
+  }
 
   if (loadError) return <div>Error loading maps: {loadError.message}</div>
   if (!isLoaded) return <div>Loading Map...</div>
@@ -149,31 +177,49 @@ export function DeliveryMap() {
           </div>
         ) : allMarkers.length === 0 ? (
           <div className="flex items-center justify-center h-[500px] text-muted-foreground">
-            No delivery locations to display.
+            No locations to display.
           </div>
         ) : (
           <div className="relative h-[300px] md:h-[500px] w-full rounded-lg border overflow-hidden">
-            <GoogleMap
-              mapContainerStyle={containerStyle}
-              center={KANO_CENTER} // Centered on Kano
-              zoom={12}
-              options={mapOptions}
-              onLoad={onLoad}
-              onUnmount={onUnmount}
-            >
+            <GoogleMap mapContainerStyle={containerStyle} center={KANO_CENTER} zoom={12} options={mapOptions}>
               {allMarkers.map((marker) => (
                 <MarkerF
                   key={marker.id}
                   position={{ lat: marker.lat, lng: marker.lng }}
-                  icon={{
-                    path: (window.google?.maps?.SymbolPath?.CIRCLE) ?? 0, // Use window.google.maps.SymbolPath.CIRCLE
-                    scale: 10,
-                    fillColor: marker.type === "pickup" ? "#F59E0B" : "#8B5CF6", // Amber for pickup, Purple for dropoff
-                    fillOpacity: 1,
-                    strokeWeight: 0,
-                  }}
+                  icon={markerIcon(marker.type)}
+                  onClick={() => handleMarkerClick(marker)}
                 />
               ))}
+
+              {/* Draw line when pickup or dropoff selected */}
+              {activeLine &&
+                deliveries.map((delivery) => {
+                  if (activeLine === `pickup_${delivery.id}`) {
+                    return (
+                      <PolylineF
+                        key={`line_pickup_${delivery.id}`}
+                        path={[
+                          delivery.pickupLocation as LocationCoords,
+                          delivery.dropoffLocation as LocationCoords,
+                        ]}
+                        options={{ strokeColor: "#2563EB", strokeWeight: 2 }}
+                      />
+                    )
+                  }
+                  if (activeLine === `dropoff_${delivery.id}`) {
+                    return (
+                      <PolylineF
+                        key={`line_dropoff_${delivery.id}`}
+                        path={[
+                          delivery.dropoffLocation as LocationCoords,
+                          delivery.pickupLocation as LocationCoords,
+                        ]}
+                        options={{ strokeColor: "#F97316", strokeWeight: 2 }}
+                      />
+                    )
+                  }
+                  return null
+                })}
 
               {selectedMarker && (
                 <InfoWindowF
@@ -183,8 +229,12 @@ export function DeliveryMap() {
                   <div className="p-2">
                     <h3 className="font-bold text-sm">{selectedMarker.name}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {selectedMarker.type === "pickup" ? "Pickup" : "Dropoff"} -{" "}
-                      {selectedMarker.status.replace(/_/g, " ")}
+                      {selectedMarker.type === "pickup"
+                        ? "Pickup"
+                        : selectedMarker.type === "dropoff"
+                        ? "Dropoff"
+                        : "Rider"}{" "}
+                      {selectedMarker.status ? `- ${selectedMarker.status.replace(/_/g, " ")}` : ""}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Lat: {selectedMarker.lat.toFixed(4)}, Lng: {selectedMarker.lng.toFixed(4)}
@@ -193,19 +243,25 @@ export function DeliveryMap() {
                 </InfoWindowF>
               )}
             </GoogleMap>
+
             {/* Legend */}
             <div className="absolute bottom-2 md:bottom-4 right-2 md:right-4 rounded-lg bg-white/90 p-2 md:p-3 shadow-lg">
               <div className="text-xs md:text-sm font-medium mb-2">Legend</div>
               <div className="space-y-1 text-xs">
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-amber-500"></div>
+                  <img src="/icons/pickup.png" className="h-3 w-3" alt="pickup" />
                   <span className="hidden md:inline">Pickup Locations</span>
                   <span className="md:hidden">Pickup</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-purple-500"></div>
+                  <img src="/icons/dropoff.png" className="h-3 w-3" alt="dropoff" />
                   <span className="hidden md:inline">Dropoff Locations</span>
                   <span className="md:hidden">Dropoff</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <img src="/icons/rider.png" className="h-3 w-3" alt="rider" />
+                  <span className="hidden md:inline">Rider Locations</span>
+                  <span className="md:hidden">Riders</span>
                 </div>
               </div>
             </div>

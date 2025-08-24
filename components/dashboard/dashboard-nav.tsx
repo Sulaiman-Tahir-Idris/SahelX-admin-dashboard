@@ -38,11 +38,11 @@ const navItems = [
     href: "/admin/live-map",
     icon: Map,
   },
-  {
-    title: "Analytics",
-    href: "/admin/analytics",
-    icon: BarChart3,
-  },
+  // {
+  //   title: "Analytics",
+  //   href: "/admin/analytics",
+  //   icon: BarChart3,
+  // },
   {
     title: "Admin Users",
     href: "/admin/admin-users",
