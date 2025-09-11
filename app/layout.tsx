@@ -1,6 +1,6 @@
 import type React from "react"
 import { Toaster } from "@/components/ui/toaster"
-import "./globals.css" // Corrected import path
+import "./globals.css"
 
 export const metadata = {
   title: "SahelX Admin Dashboard",
@@ -8,16 +8,16 @@ export const metadata = {
   icons: {
     icon: [
       {
-        url: "/favicon.ico",
+        url: "/images/white1.png",
         sizes: "any",
       },
       {
-        url: "/favicon-16x16.png",
+        url: "/images/white1.png",
         sizes: "16x16",
         type: "image/png",
       },
       {
-        url: "/favicon-32x32.png",
+        url: "/images/white1.png",
         sizes: "32x32",
         type: "image/png",
       },
@@ -32,16 +32,16 @@ export const metadata = {
     other: [
       {
         rel: "android-chrome-192x192",
-        url: "/android-chrome-192x192.png",
+        url: "/images/white1.png",
       },
       {
         rel: "android-chrome-512x512",
-        url: "/android-chrome-512x512.png",
+        url: "/images/white1.png",
       },
     ],
   },
   manifest: "/site.webmanifest",
-  generator: 'v0.dev'
+  generator: 'CodeCrafter17'
 }
 
 export default function RootLayout({
@@ -52,8 +52,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/images/white1.png" sizes="any" />
+        <link rel="icon" href="/images/white1.png" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#dc2626" />
       </head>
