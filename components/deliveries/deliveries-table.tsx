@@ -16,9 +16,11 @@ const DeliveriesTable = () => {
   const [customerNames, setCustomerNames] = useState<Record<string, string>>({})
   const [courierNames, setCourierNames] = useState<Record<string, string>>({})
   const [filter, setFilter] = useState<'all' | 'unassigned'>('all')
-  const [showAssign, setShowAssign] = useState<string | false>(false)
+  const [showAssign, setShowAssign] = useState<string | boolean>(false)
   const [couriers, setCouriers] = useState<any[]>([])
   const [assignLoading, setAssignLoading] = useState(false)
+  const [selectedCourierId, setSelectedCourierId] = useState<string>("")
+
   // Fetch available couriers for assignment
   const fetchCouriers = async () => {
     try {
@@ -127,7 +129,7 @@ const DeliveriesTable = () => {
               <td className="px-4 py-2">₦{(d.cost || 0).toLocaleString()}</td>
               <td className="px-4 py-2">{formatDate(d.createdAt)}</td>
               <td className="px-4 py-2 text-right">
-                <Button variant="outline" onClick={() => setSelectedDelivery(d)}>View</Button>
+                <Button variant="outline" onClick={() => { setSelectedDelivery(d); setSelectedCourierId(""); setShowAssign(false); }}>View</Button>
               </td>
             </tr>
           ))}
@@ -135,7 +137,7 @@ const DeliveriesTable = () => {
       </table>
 
       {selectedDelivery && (
-        <Dialog open={!!selectedDelivery} onOpenChange={() => { setSelectedDelivery(null); setShowAssign(false); }}>
+        <Dialog open={!!selectedDelivery} onOpenChange={() => { setSelectedDelivery(null); setShowAssign(false); setSelectedCourierId(""); }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Delivery Details</DialogTitle>
@@ -153,8 +155,8 @@ const DeliveriesTable = () => {
               {!selectedDelivery.courierId && (
                 <div className="pt-2">
                   <Button variant="default" onClick={async () => {
-                    setShowAssign("")
-                    await fetchCouriers()
+                    await fetchCouriers();
+                    setShowAssign(true);
                   }}>Assign Courier</Button>
                 </div>
               )}
@@ -164,8 +166,8 @@ const DeliveriesTable = () => {
                   <label className="block mb-2">Select Courier:</label>
                   <select
                     className="w-full border rounded px-2 py-1 mb-2"
-                    onChange={e => setShowAssign(e.target.value)}
-                    defaultValue=""
+                    value={selectedCourierId}
+                    onChange={e => setSelectedCourierId(e.target.value)}
                   >
                     <option value="" disabled>Select a courier</option>
                     {couriers.map(courier => (
@@ -174,17 +176,24 @@ const DeliveriesTable = () => {
                   </select>
                   <Button
                     variant="default"
-                    disabled={assignLoading || !showAssign || typeof showAssign !== 'string'}
+                    disabled={assignLoading || !selectedCourierId}
                     onClick={async () => {
-                      if (!selectedDelivery.id || typeof showAssign !== 'string') return
+                      if (!selectedDelivery.id || !selectedCourierId) return
                       setAssignLoading(true)
                       try {
-                        await updateDoc(doc(db, "deliveries", selectedDelivery.id), { courierId: showAssign })
-                        setSelectedDelivery({ ...selectedDelivery, courierId: showAssign })
+                        await updateDoc(doc(db, "deliveries", selectedDelivery.id), { courierId: selectedCourierId })
                         setShowAssign(false)
-                        // Optionally, refresh deliveries
+                        setSelectedDelivery(null)
+                        setSelectedCourierId("")
+                        // Refresh deliveries and courier names
                         const data = await getDeliveries()
                         setDeliveries(data)
+                        // Optionally, update courierNames mapping
+                        const courier = await getRider(selectedCourierId)
+                        setCourierNames((prev) => ({
+                          ...prev,
+                          [selectedCourierId]: courier?.displayName || selectedCourierId,
+                        }))
                       } catch (err) {
                         // handle error
                       } finally {

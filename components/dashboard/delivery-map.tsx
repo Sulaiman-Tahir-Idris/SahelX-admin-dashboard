@@ -73,6 +73,17 @@ export function DeliveryMap() {
     }
   }, [])
 
+  // Only show riders assigned to a delivery
+  const assignedRiderIds = useMemo(
+    () => deliveries.map((d) => d.courierId).filter(Boolean),
+    [deliveries],
+  )
+  const assignedRiders = useMemo(
+    () => riders.filter((r) => assignedRiderIds.includes(r.id)),
+    [riders, assignedRiderIds],
+  )
+
+  // Markers: pickups, dropoffs, and only assigned riders
   const allMarkers: MapMarker[] = useMemo(() => {
     const markers: MapMarker[] = []
 
@@ -102,7 +113,8 @@ export function DeliveryMap() {
       }
     })
 
-    riders.forEach((rider) => {
+    // Only show assigned riders
+    assignedRiders.forEach((rider) => {
       const lat = rider.currentLocation?.lat
       const lng = rider.currentLocation?.lng
       if (typeof lat === "number" && typeof lng === "number") {
@@ -118,7 +130,7 @@ export function DeliveryMap() {
     })
 
     return markers
-  }, [deliveries, riders])
+  }, [deliveries, assignedRiders])
 
   const mapOptions = useMemo(
     () => ({
@@ -130,7 +142,7 @@ export function DeliveryMap() {
       fullscreenControl: false,
       styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
     }),
-    [],
+    []
   )
 
   // 👇 assign custom icons per type
@@ -221,24 +233,60 @@ export function DeliveryMap() {
                   return null
                 })}
 
-              {selectedMarker && (
+              {/* Connect assigned riders to their delivery pickup */}
+              {assignedRiders.map((rider) => {
+                const delivery = deliveries.find((d) => d.courierId === rider.id)
+                if (
+                  delivery &&
+                  rider.currentLocation &&
+                  delivery.pickupLocation &&
+                  "lat" in delivery.pickupLocation &&
+                  "lng" in delivery.pickupLocation
+                ) {
+                  return (
+                    <PolylineF
+                      key={`rider_line_${rider.id}`}
+                      path={[
+                        { lat: rider.currentLocation.lat, lng: rider.currentLocation.lng },
+                        { lat: delivery.pickupLocation.lat, lng: delivery.pickupLocation.lng },
+                      ]}
+                      options={{ strokeColor: "#22c55e", strokeWeight: 2, zIndex: 10 }}
+                    />
+                  )
+                }
+                return null
+              })}
+
+              {selectedMarker && selectedMarker.type === "rider" && (
                 <InfoWindowF
                   position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
                   onCloseClick={() => setSelectedMarker(null)}
                 >
                   <div className="p-2">
                     <h3 className="font-bold text-sm">{selectedMarker.name}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedMarker.type === "pickup"
-                        ? "Pickup"
-                        : selectedMarker.type === "dropoff"
-                        ? "Dropoff"
-                        : "Rider"}{" "}
-                      {selectedMarker.status ? `- ${selectedMarker.status.replace(/_/g, " ")}` : ""}
+                    <p className="text-xs text-muted-foreground font-bold">
+                      Rider Status: {selectedMarker.status}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground font-bold">
                       Lat: {selectedMarker.lat.toFixed(4)}, Lng: {selectedMarker.lng.toFixed(4)}
                     </p>
+                    <div className="mt-2">
+                      <div className="font-bold text-xs mb-1">Assigned Deliveries:</div>
+                      {deliveries.filter((d) => d.courierId === selectedMarker.id.replace("rider_", "")).length === 0 ? (
+                        <div className="text-xs">No active deliveries.</div>
+                      ) : (
+                        deliveries
+                          .filter((d) => d.courierId === selectedMarker.id.replace("rider_", ""))
+                          .map((d) => (
+                            <div key={d.id} className="mb-2 border-b pb-1">
+                              <div className="text-xs font-bold">Delivery ID: {d.id}</div>
+                              <div className="text-xs">Status: {d.status}</div>
+                              <div className="text-xs">Pickup: {d.pickupLocation?.address || "N/A"}</div>
+                              <div className="text-xs">Dropoff: {d.dropoffLocation?.address || "N/A"}</div>
+                            </div>
+                          ))
+                      )}
+                    </div>
                   </div>
                 </InfoWindowF>
               )}
