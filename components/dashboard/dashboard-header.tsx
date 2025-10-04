@@ -72,27 +72,41 @@ export function DashboardHeader({ user }: { user?: any }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-7 w-7 md:h-8 md:w-8 border-2 border-gray-200">
-                <AvatarImage src="/placeholder.svg?height=32&width=32" alt={currentUser?.fullName || ""} />
-                <AvatarFallback className="bg-gray-100 text-gray-700 text-xs md:text-sm">
-                  {(currentUser?.fullName || "A").charAt(0).toUpperCase()}
+                <AvatarFallback className="bg-desertred text-desertred font-semibold text-xs md:text-sm">
+                  {(currentUser?.displayName || "A").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="border-gray-200 w-56">
-            <div className="flex items-center justify-start gap-2 p-3">
-              <div className="flex flex-col space-y-1 leading-none">
-                <p className="font-medium text-gray-900 text-sm">{currentUser?.fullName || "Admin User"}</p>
-                <p className="text-xs text-gray-600">{currentUser?.email || "admin@sahelx.com"}</p>
+          <DropdownMenuContent align="end" className="border-gray-200 w-64">
+            <div className="flex items-center gap-3 p-4">
+              <Avatar className="h-12 w-12 border-2 border-gray-200 rounded-full">
+                <AvatarFallback className="bg-desertred text-desertred font-bold text-lg">
+                  {(currentUser?.displayName || "A").charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <p className="font-semibold text-gray-900 text-sm md:text-base">
+                  {currentUser?.displayName || "Admin User"}
+                </p>
+                <p className="text-xs text-gray-600 md:text-sm">
+                  {currentUser?.email || "admin@sahelx.com"}
+                </p>
               </div>
             </div>
             <DropdownMenuSeparator className="bg-gray-200" />
-            <DropdownMenuItem onClick={handleProfileClick} className="text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <DropdownMenuItem
+              onClick={handleProfileClick}
+              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-gray-200" />
-            <DropdownMenuItem onClick={handleLogout} className="text-gray-700 hover:bg-gray-50 cursor-pointer">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>

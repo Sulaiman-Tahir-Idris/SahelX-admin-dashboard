@@ -6,16 +6,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Download, Filter } from "lucide-react"
+import { TrendingUp, Calendar, Download, Filter } from "lucide-react"
+import { getAllPayments, type Payment } from "@/lib/firebase/payments"
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid } from "recharts"
 
 export function RevenuePage() {
   const [isClient, setIsClient] = useState(false)
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setIsClient(true)
+    const fetchData = async () => {
+      try {
+        const data = await getAllPayments()
+        setPayments(
+          data.map(p => ({
+            ...p,
+            paidAt: p.paidAt ? new Date(p.paidAt) : new Date(p.createdAt), // prefer paidAt
+          }))
+        )
+      } catch (err) {
+        console.error("Error fetching payments:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
   }, [])
 
-  if (!isClient) {
+  if (!isClient || loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -26,102 +46,143 @@ export function RevenuePage() {
     )
   }
 
-  // Mock revenue data
-  const revenueStats = {
-    totalRevenue: 2450000,
-    monthlyRevenue: 185000,
-    weeklyRevenue: 42500,
-    dailyRevenue: 6800,
-    monthlyGrowth: 12.5,
-    weeklyGrowth: -2.3,
-    totalDeliveries: 1247,
-    avgOrderValue: 1965,
-  }
+  // ===================== 📊 Aggregate Stats =====================
+  const paidPayments = payments.filter(p => p.status === "paid")
+  const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0)
+  const totalDeliveries = paidPayments.length
+  const avgOrderValue = totalDeliveries > 0 ? totalRevenue / totalDeliveries : 0
 
-  const monthlyRevenueData = [
-    { month: "Jan", revenue: 145000, deliveries: 98 },
-    { month: "Feb", revenue: 162000, deliveries: 112 },
-    { month: "Mar", revenue: 178000, deliveries: 125 },
-    { month: "Apr", revenue: 195000, deliveries: 138 },
-    { month: "May", revenue: 210000, deliveries: 152 },
-    { month: "Jun", revenue: 185000, deliveries: 134 },
-  ]
+  // ===================== Monthly Revenue =====================
+  const monthlyMap: Record<string, number> = {}
+  paidPayments.forEach(p => {
+    const d = new Date(p.paidAt)
+    const key = `${d.getFullYear()}-${d.getMonth()}` // unique per year+month
+    monthlyMap[key] = (monthlyMap[key] || 0) + p.amount
+  })
+  const monthlyRevenueData = Object.entries(monthlyMap)
+    .map(([key, revenue]) => {
+      const [year, monthIdx] = key.split("-").map(Number)
+      return {
+        month: new Date(year, monthIdx).toLocaleString("default", { month: "short" }),
+        revenue,
+      }
+    })
+    .sort((a, b) => new Date(`01 ${a.month}`).getMonth() - new Date(`01 ${b.month}`).getMonth())
 
-  const topEarningRiders = [
-    { name: "John Rider", earnings: 45000, deliveries: 89, rating: 4.8 },
-    { name: "Jane Smith", earnings: 38000, deliveries: 76, rating: 4.9 },
-    { name: "Mike Johnson", earnings: 35000, deliveries: 71, rating: 4.7 },
-    { name: "Sarah Wilson", earnings: 32000, deliveries: 68, rating: 4.6 },
-    { name: "David Brown", earnings: 29000, deliveries: 62, rating: 4.8 },
-  ]
+  const currentMonthRevenue = (() => {
+    const now = new Date()
+    const key = `${now.getFullYear()}-${now.getMonth()}`
+    return monthlyMap[key] || 0
+  })()
 
-  const recentTransactions = [
-    { id: "TXN001", date: "2024-01-15", amount: 2500, type: "Delivery Fee", status: "Completed" },
-    { id: "TXN002", date: "2024-01-15", amount: 1800, type: "Express Fee", status: "Completed" },
-    { id: "TXN003", date: "2024-01-14", amount: 3200, type: "Same Day", status: "Completed" },
-    { id: "TXN004", date: "2024-01-14", amount: 1500, type: "Standard", status: "Pending" },
-    { id: "TXN005", date: "2024-01-13", amount: 2800, type: "Express Fee", status: "Completed" },
-  ]
+  // ===================== Weekly Revenue =====================
+  const today = new Date()
+  const thisWeekStart = new Date(today)
+  thisWeekStart.setDate(today.getDate() - today.getDay()) // Sunday
+  const lastWeekStart = new Date(thisWeekStart)
+  lastWeekStart.setDate(thisWeekStart.getDate() - 7)
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
+  let thisWeekTotal = 0
+  let lastWeekTotal = 0
+
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(today.getDate() - (6 - i))
+    return { date: d, total: 0 }
+  })
+
+  paidPayments.forEach(p => {
+    const d = new Date(p.paidAt)
+
+    // this week revenue
+    if (d >= thisWeekStart && d <= today) thisWeekTotal += p.amount
+    // last week revenue
+    if (d >= lastWeekStart && d < thisWeekStart) lastWeekTotal += p.amount
+
+    // last 7 days
+    last7Days.forEach(day => {
+      if (
+        d.getDate() === day.date.getDate() &&
+        d.getMonth() === day.date.getMonth() &&
+        d.getFullYear() === day.date.getFullYear()
+      ) {
+        day.total += p.amount
+      }
+    })
+  })
+
+  const weeklyGrowth =
+    lastWeekTotal > 0 ? ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100 : thisWeekTotal > 0 ? 100 : 0
+
+  const weeklyRevenueData = last7Days.map(d => ({
+    day: d.date.toLocaleDateString("en-US", { weekday: "short" }),
+    revenue: d.total,
+  }))
+
+  // ===================== Yearly Revenue =====================
+  const yearlyMap: Record<string, number> = {}
+  paidPayments.forEach(p => {
+    const d = new Date(p.paidAt)
+    const month = d.toLocaleString("default", { month: "short" })
+    yearlyMap[month] = (yearlyMap[month] || 0) + p.amount
+  })
+  const yearlyRevenueData = Object.entries(yearlyMap).map(([month, revenue]) => ({ month, revenue }))
+
+  // ===================== Recent Transactions =====================
+  const recentTransactions = paidPayments.slice(0, 10)
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 }).format(amount)
 
   return (
     <div className="space-y-6">
       {/* Revenue Overview Cards */}
       <div className="grid gap-4 md:gap-6 grid-cols-2 lg:grid-cols-4">
-        <Card className="border-gray-200 bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-gray-600" />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <span className="text-lg">₦</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{formatCurrency(revenueStats.totalRevenue)}</div>
-            <p className="text-xs text-gray-500 mt-1">All time earnings</p>
+            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">All time earnings</p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Monthly Revenue</CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
             <Calendar className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{formatCurrency(revenueStats.monthlyRevenue)}</div>
-            <div className="flex items-center mt-1">
-              <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-              <p className="text-xs text-green-600">+{revenueStats.monthlyGrowth}% from last month</p>
-            </div>
+            <div className="text-2xl font-bold">{formatCurrency(currentMonthRevenue)}</div>
+            <p className="text-xs text-green-600 flex items-center mt-1">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              Current month
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Weekly Revenue</CardTitle>
-            <Calendar className="h-4 w-4 text-gray-600" />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">This Week</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{formatCurrency(revenueStats.weeklyRevenue)}</div>
-            <div className="flex items-center mt-1">
-              <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
-              <p className="text-xs text-red-600">{revenueStats.weeklyGrowth}% from last week</p>
-            </div>
+            <div className="text-2xl font-bold">{formatCurrency(thisWeekTotal)}</div>
+            <p className={`text-xs ${weeklyGrowth >= 0 ? "text-green-600" : "text-red-600"}`}>
+              {weeklyGrowth.toFixed(1)}% from last week
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-200 bg-white shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Avg Order Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-gray-600" />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+            <span className="text-lg">₦</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{formatCurrency(revenueStats.avgOrderValue)}</div>
-            <p className="text-xs text-gray-500 mt-1">Per delivery</p>
+            <div className="text-2xl font-bold">{formatCurrency(avgOrderValue)}</div>
+            <p className="text-xs text-muted-foreground">Per delivery</p>
           </CardContent>
         </Card>
       </div>
@@ -130,8 +191,6 @@ export function RevenuePage() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="riders">Top Riders</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
           </TabsList>
 
@@ -147,84 +206,88 @@ export function RevenuePage() {
           </div>
         </div>
 
+        {/* Charts */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Monthly Line Chart */}
             <Card>
               <CardHeader>
                 <CardTitle>Monthly Revenue Trend</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-gray-500">Revenue chart will be displayed here</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      Total: {formatCurrency(monthlyRevenueData.reduce((sum, d) => sum + d.revenue, 0))}
-                    </p>
-                  </div>
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={monthlyRevenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Line type="monotone" dataKey="revenue" stroke="#2563EB" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
+            {/* Revenue by Gateway */}
             <Card>
               <CardHeader>
-                <CardTitle>Daily Revenue (This Week)</CardTitle>
+                <CardTitle>Revenue by Payment Gateway</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-gray-500">Daily revenue chart will be displayed here</p>
-                    <p className="text-sm text-gray-400 mt-2">Current week revenue tracking</p>
-                  </div>
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={Object.entries(
+                      paidPayments.reduce((acc, p) => {
+                        acc[p.gateway] = (acc[p.gateway] || 0) + p.amount
+                        return acc
+                      }, {} as Record<string, number>)
+                    ).map(([gateway, revenue]) => ({ gateway, revenue }))}
+                  >
+                    <XAxis dataKey="gateway" />
+                    <YAxis />
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Bar dataKey="revenue" fill="#10B981" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
 
-        <TabsContent value="riders" className="space-y-6">
+          {/* Weekly Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Top Earning Riders</CardTitle>
+              <CardTitle>Weekly Revenue (Last 7 Days)</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Rider</TableHead>
-                      <TableHead>Earnings</TableHead>
-                      <TableHead>Deliveries</TableHead>
-                      <TableHead>Rating</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topEarningRiders.map((rider, index) => (
-                      <TableRow key={rider.name}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className="w-6 h-6 rounded-full p-0 flex items-center justify-center"
-                            >
-                              {index + 1}
-                            </Badge>
-                            <span className="font-medium">{rider.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">{formatCurrency(rider.earnings)}</TableCell>
-                        <TableCell>{rider.deliveries}</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-500">{rider.rating}/5</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyRevenueData}>
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Bar dataKey="revenue" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Yearly Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Yearly Revenue (Jan – Dec)</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={yearlyRevenueData}>
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Bar dataKey="revenue" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* Transactions Table */}
         <TabsContent value="transactions" className="space-y-6">
           <Card>
             <CardHeader>
@@ -235,33 +298,33 @@ export function RevenuePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Transaction ID</TableHead>
+                      <TableHead>Reference</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Gateway</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell className="font-medium">{transaction.id}</TableCell>
-                        <TableCell>{transaction.date}</TableCell>
-                        <TableCell>{transaction.type}</TableCell>
-                        <TableCell className="font-medium">{formatCurrency(transaction.amount)}</TableCell>
+                    {recentTransactions.map(txn => (
+                      <TableRow key={txn.id}>
+                        <TableCell className="font-medium">{txn.reference}</TableCell>
+                        <TableCell>{new Date(txn.paidAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-medium">{formatCurrency(txn.amount)}</TableCell>
                         <TableCell>
                           <Badge
                             className={
-                              transaction.status === "Completed"
+                              txn.status === "paid"
                                 ? "bg-green-500"
-                                : transaction.status === "Pending"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
+                                : txn.status === "pending"
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
                             }
                           >
-                            {transaction.status}
+                            {txn.status}
                           </Badge>
                         </TableCell>
+                        <TableCell>{txn.gateway}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

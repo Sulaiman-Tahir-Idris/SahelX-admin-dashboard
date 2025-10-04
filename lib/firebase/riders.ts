@@ -1,3 +1,4 @@
+// riders.ts
 import {
   collection,
   doc,
@@ -22,6 +23,7 @@ export interface Rider {
   verified: boolean
   profilePhoto?: string
   isActive: boolean
+  isAvailable: boolean
   address: {
     street: string
     city: string
@@ -52,26 +54,37 @@ export interface Rider {
   updatedAt?: any
 }
 
-// Get all riders/couriers - simplified query without orderBy to avoid index requirement
+// Normalize Firestore data to our Rider shape
+const normalizeRider = (docId: string, data: any): Rider => {
+  return {
+    id: docId,
+    ...data,
+    currentLocation: data.currentLocation
+      ? {
+          lat: data.currentLocation.latitude ?? data.currentLocation.lat,
+          lng: data.currentLocation.longitude ?? data.currentLocation.lng,
+          timestamp: data.currentLocation.timestamp,
+        }
+      : undefined,
+  } as Rider
+}
+
+// Get all riders/couriers
 export const getRiders = async (): Promise<Rider[]> => {
   try {
     const q = query(collection(db, "User"), where("role", "==", "courier"))
-
     const querySnapshot = await getDocs(q)
     const riders: Rider[] = []
 
-    querySnapshot.forEach((doc) => {
-      riders.push({
-        id: doc.id,
-        ...doc.data(),
-      } as Rider)
+    querySnapshot.forEach((docSnap) => {
+      riders.push(normalizeRider(docSnap.id, docSnap.data()))
     })
 
-    // Sort by createdAt on the client side
+    // Sort by createdAt (newest first)
     riders.sort((a, b) => {
       const aTime = a.createdAt?.seconds || a.createdAt?.toDate?.()?.getTime() || 0
       const bTime = b.createdAt?.seconds || b.createdAt?.toDate?.()?.getTime() || 0
-      return bTime - aTime // Newest first
+      return bTime - aTime
     })
 
     return riders
@@ -81,28 +94,23 @@ export const getRiders = async (): Promise<Rider[]> => {
   }
 }
 
-// Alternative: Get all riders without any complex queries
+// Get all riders (client-side filter)
 export const getAllRiders = async (): Promise<Rider[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, "User"))
     const riders: Rider[] = []
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data()
-      // Filter for couriers on the client side
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data()
       if (data.role === "courier") {
-        riders.push({
-          id: doc.id,
-          ...data,
-        } as Rider)
+        riders.push(normalizeRider(docSnap.id, data))
       }
     })
 
-    // Sort by createdAt on the client side
     riders.sort((a, b) => {
       const aTime = a.createdAt?.seconds || a.createdAt?.toDate?.()?.getTime() || 0
       const bTime = b.createdAt?.seconds || b.createdAt?.toDate?.()?.getTime() || 0
-      return bTime - aTime // Newest first
+      return bTime - aTime
     })
 
     return riders
@@ -119,10 +127,7 @@ export const getRider = async (riderId: string): Promise<Rider | null> => {
     const docSnap = await getDoc(docRef)
 
     if (docSnap.exists()) {
-      return {
-        id: docSnap.id,
-        ...docSnap.data(),
-      } as Rider
+      return normalizeRider(docSnap.id, docSnap.data())
     }
 
     return null
@@ -178,6 +183,20 @@ export const updateRiderActiveStatus = async (riderId: string, isActive: boolean
   }
 }
 
+// Update rider availability status
+export const updateRiderAvailability = async (riderId: string, isAvailable: boolean): Promise<void> => {
+  try {
+    const docRef = doc(db, "User", riderId)
+    await updateDoc(docRef, {
+      isAvailable,
+      updatedAt: serverTimestamp(),
+    })
+  } catch (error: any) {
+    console.error("Error updating rider availability:", error)
+    throw new Error("Failed to update rider availability")
+  }
+}
+
 // Delete rider
 export const deleteRider = async (riderId: string): Promise<void> => {
   try {
@@ -189,18 +208,18 @@ export const deleteRider = async (riderId: string): Promise<void> => {
   }
 }
 
-// Subscribe to rider location updates
-export const subscribeToRiderLocation = (riderId: string, callback: (riderData: Rider | null) => void) => {
+// Subscribe to a single rider's updates
+export const subscribeToRiderLocation = (
+  riderId: string,
+  callback: (riderData: Rider | null) => void,
+) => {
   const docRef = doc(db, "User", riderId)
 
   return onSnapshot(
     docRef,
-    (doc) => {
-      if (doc.exists()) {
-        callback({
-          id: doc.id,
-          ...doc.data(),
-        } as Rider)
+    (docSnap) => {
+      if (docSnap.exists()) {
+        callback(normalizeRider(docSnap.id, docSnap.data()))
       } else {
         callback(null)
       }
@@ -212,29 +231,55 @@ export const subscribeToRiderLocation = (riderId: string, callback: (riderData: 
   )
 }
 
-// Get riders by status - simplified without orderBy
-export const getRidersByStatus = async (status: "available" | "on_delivery" | "offline"): Promise<Rider[]> => {
+// ✅ Subscribe to ALL riders (couriers) in real-time
+export const subscribeToRiders = (
+  callback: (riders: Rider[]) => void,
+  options?: { onlyActive?: boolean; onlyAvailable?: boolean },
+) => {
+  const filters = [where("role", "==", "courier")] as any[]
+  if (options?.onlyActive) filters.push(where("isActive", "==", true))
+  if (options?.onlyAvailable) filters.push(where("isAvailable", "==", true))
+
+  const q = query(collection(db, "User"), ...filters)
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const riders = snapshot.docs.map((d) => normalizeRider(d.id, d.data()))
+      callback(riders)
+    },
+    (error) => {
+      console.error("Error subscribing to riders:", error)
+      callback([])
+    },
+  )
+}
+
+// Get riders by status
+export const getRidersByStatus = async (
+  status: "available" | "on_delivery" | "offline",
+): Promise<Rider[]> => {
   try {
-    const q = query(collection(db, "User"), where("role", "==", "courier"), where("status", "==", status))
+    const q = query(
+      collection(db, "User"),
+      where("role", "==", "courier"),
+      where("status", "==", status),
+    )
 
     const querySnapshot = await getDocs(q)
     const riders: Rider[] = []
 
-    querySnapshot.forEach((doc) => {
-      riders.push({
-        id: doc.id,
-        ...doc.data(),
-      } as Rider)
+    querySnapshot.forEach((docSnap) => {
+      riders.push(normalizeRider(docSnap.id, docSnap.data()))
     })
 
     return riders
   } catch (error: any) {
     console.error("Error getting riders by status:", error)
-    // Fallback: get all riders and filter client-side
     try {
       const allRiders = await getRiders()
       return allRiders.filter((rider) => rider.status === status)
-    } catch (fallbackError) {
+    } catch {
       throw new Error("Failed to get riders by status")
     }
   }
