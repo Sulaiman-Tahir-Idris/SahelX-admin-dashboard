@@ -169,7 +169,7 @@ const DeliveriesTable = () => {
                   >
                     <option value="" disabled>Select a courier</option>
                     {couriers.map(courier => (
-                      <option key={courier.id} value={courier.id}>{courier.displayName || courier.id}</option>
+                      <option key={courier.id} value={courier.userId}>{courier.displayName || courier.id}</option>
                     ))}
                   </select>
                   <Button
