@@ -137,18 +137,10 @@ export function RidersTable() {
       rider.vehicleInfo?.plateNumber?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case "available":
-        return "bg-green-500"
-      case "on_delivery":
-        return "bg-blue-500"
-      case "offline":
-        return "bg-gray-500"
-      default:
-        return "bg-gray-400"
-    }
-  }
+  const getActiveColor = (isActive: boolean) => {
+  return isActive ? "bg-green-500" : "bg-gray-400"
+}
+
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return "N/A"
@@ -243,8 +235,8 @@ export function RidersTable() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <Badge className={getStatusColor(rider.status)} variant="secondary">
-                        {rider.status?.replace("_", " ") || "offline"}
+                      <Badge className={getActiveColor(rider.isActive)} variant="secondary">
+                        {rider.isActive ? "Active" : "Inactive"}
                       </Badge>
                       {!rider.isActive && (
                         <Badge variant="outline" className="text-xs">

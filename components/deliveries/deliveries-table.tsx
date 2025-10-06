@@ -8,6 +8,8 @@ import { doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase/config"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { serverTimestamp, arrayUnion, Timestamp } from "firebase/firestore"
+
 
 const DeliveriesTable = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
@@ -181,7 +183,15 @@ const DeliveriesTable = () => {
                       if (!selectedDelivery.id || !selectedCourierId) return
                       setAssignLoading(true)
                       try {
-                        await updateDoc(doc(db, "deliveries", selectedDelivery.id), { courierId: selectedCourierId })
+                        await updateDoc(doc(db, "deliveries", selectedDelivery.id), {
+                          courierId: selectedCourierId,
+                          status: "assigned",
+                          assignedAt: serverTimestamp(),
+                          history: arrayUnion({
+                            timestamp: Timestamp.now(),
+                            status: "assigned",
+                          }),
+                        })
                         setShowAssign(false)
                         setSelectedDelivery(null)
                         setSelectedCourierId("")
