@@ -23,6 +23,7 @@ export interface Delivery {
   createdAt: any
   updatedAt?: any
   rating?: number
+  tag?: string
 }
 
 export const getDeliveries = async (): Promise<Delivery[]> => {

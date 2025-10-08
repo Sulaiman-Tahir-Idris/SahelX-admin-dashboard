@@ -16,6 +16,7 @@ interface LocationCoords {
 
 interface MapMarker {
   id: string
+  userId?: string
   type: "pickup" | "dropoff" | "rider"
   name: string
   lat: number
@@ -53,7 +54,10 @@ export function DeliveryMap() {
       setIsLoading(true)
       try {
         const fetchedDeliveries = await getDeliveries()
-        setDeliveries(fetchedDeliveries)
+        const activeDeliveries = fetchedDeliveries.filter(
+          (d) => d.status?.toLowerCase() !== "received" && d.status?.toLowerCase() !== "recieved"
+        )
+        setDeliveries(activeDeliveries)
 
         unsubscribeRiders = subscribeToRiders((liveRiders) => {
           setRiders(liveRiders)
@@ -79,7 +83,7 @@ export function DeliveryMap() {
     [deliveries],
   )
   const assignedRiders = useMemo(
-    () => riders.filter((r) => assignedRiderIds.includes(r.id)),
+    () => riders.filter((r) => assignedRiderIds.includes(r.userId)),
     [riders, assignedRiderIds],
   )
 
@@ -119,13 +123,14 @@ export function DeliveryMap() {
       const lng = rider.currentLocation?.lng
       if (typeof lat === "number" && typeof lng === "number") {
         markers.push({
-          id: `rider_${rider.id}`,
+          id: `rider_${rider.userId}`,
+          userId: rider.userId,
           type: "rider",
           name: rider.displayName || "Rider",
           lat,
           lng,
           status: rider.status || (rider.isAvailable ? "available" : "offline"),
-        })
+        })  
       }
     })
 
@@ -276,7 +281,12 @@ export function DeliveryMap() {
                         <div className="text-xs">No active deliveries.</div>
                       ) : (
                         deliveries
-                          .filter((d) => d.courierId === selectedMarker.id.replace("rider_", ""))
+                           .filter(
+                              (d) =>
+                                d.courierId === selectedMarker.id.replace("rider_", "") &&
+                                d.status?.toLowerCase() !== "received" &&
+                                d.status?.toLowerCase() !== "recieved"
+                            )
                           .map((d) => (
                             <div key={d.id} className="mb-2 border-b pb-1">
                               <div className="text-xs font-bold">Delivery ID: {d.id}</div>

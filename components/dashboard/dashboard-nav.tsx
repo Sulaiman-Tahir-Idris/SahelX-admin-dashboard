@@ -29,6 +29,11 @@ const navItems = [
     icon: Box,
   },
   {
+    title: "Multiple Deliveries",
+    href: "/admin/multiple-deliveries",
+    icon: Box,
+  },
+  {
     title: "Revenue",
     href: "/admin/revenue",
     icon: DollarSign,

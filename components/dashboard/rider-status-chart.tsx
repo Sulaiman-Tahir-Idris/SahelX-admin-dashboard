@@ -26,14 +26,21 @@ export function RiderStatusChart() {
 
         const activeDeliveryRiderIds = new Set(
           deliveries
-            .filter((d) => d.courierId && d.status !== "completed" && d.status !== "cancelled")
+            .filter(
+              (d) =>
+                d.courierId &&
+                d.status?.toLowerCase() !== "completed" &&
+                d.status?.toLowerCase() !== "cancelled" &&
+                d.status?.toLowerCase() !== "received" &&
+                d.status?.toLowerCase() !== "recieved"
+            ) 
             .map((d) => d.courierId),
         )
 
         riders.forEach((rider) => {
           if (!rider.isActive) {
             offlineCount++
-          } else if (activeDeliveryRiderIds.has(rider.id)) {
+          } else if (activeDeliveryRiderIds.has(rider.userId)) {
             onDeliveryCount++
           } else {
             availableCount++
