@@ -24,6 +24,7 @@ export interface Delivery {
   updatedAt?: any
   rating?: number
   tag?: string
+  trackingId?: string
 }
 
 export const getDeliveries = async (): Promise<Delivery[]> => {

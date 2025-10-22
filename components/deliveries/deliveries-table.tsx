@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react"
 import { getDeliveries, Delivery } from "@/lib/firebase/deliveries"
-import { getCustomer } from "@/lib/firebase/customers"
 import { getRider, getRiders } from "@/lib/firebase/riders"
-import { doc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase/config"
+import { doc, updateDoc, serverTimestamp, arrayUnion, Timestamp, collection, query, where, getDocs } from "firebase/firestore"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { serverTimestamp, arrayUnion, Timestamp } from "firebase/firestore"
 
+type User = {
+  id: string
+  displayName?: string
+  role?: string
+}
 
 const DeliveriesTable = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
@@ -28,65 +31,54 @@ const DeliveriesTable = () => {
     try {
       const riders = await getRiders()
       setCouriers(riders)
-    } catch (error) {
+
+      const map: Record<string, string> = {}
+      riders.forEach(r => {
+        const id = r.userId ?? r.id
+        map[id] = r.displayName ?? id
+      })
+      setCourierNames(map)
+    } catch (err) {
       setCouriers([])
+      setCourierNames({})
+    }
+  }
+
+  // Fetch all customers (role === 'customer')
+  const fetchCustomers = async () => {
+    try {
+      const q = query(collection(db, "User"), where("role", "==", "customer"))
+      const snapshot = await getDocs(q)
+      const map: Record<string, string> = {}
+      snapshot.forEach(doc => {
+        const data = doc.data() as User
+        map[doc.id] = data.displayName ?? doc.id
+      })
+      setCustomerNames(map)
+    } catch (err) {
+      console.error("Failed to fetch customers:", err)
+      setCustomerNames({})
+    }
+  }
+
+  const fetchAllDeliveries = async () => {
+    try {
+      const data = await getDeliveries()
+      // Filter out deliveries with tags
+      const untaggedDeliveries = data.filter(d => !d.tag)
+      setDeliveries(untaggedDeliveries)
+    } catch (err) {
+      console.error("Failed to fetch deliveries:", err)
+      setDeliveries([])
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    const fetchDeliveries = async () => {
-      try {
-        const data = await getDeliveries()
-        setDeliveries(data)
-
-        // Fetch displayNames for customers and couriers
-        const customerPromises = data.map(async (d) => {
-          if (d.customerId && !customerNames[d.customerId]) {
-            try {
-              const customer = await getCustomer(d.customerId)
-              return { id: d.customerId, name: customer?.displayName || d.customerId }
-            } catch {
-              return { id: d.customerId, name: d.customerId }
-            }
-          }
-          return null
-        })
-        const courierPromises = data.map(async (d) => {
-          if (d.courierId && !courierNames[d.courierId]) {
-            try {
-              const courier = await getRider(d.courierId)
-              return { id: d.courierId, name: courier?.displayName || d.courierId }
-            } catch {
-              return { id: d.courierId, name: d.courierId }
-            }
-          }
-          return null
-        })
-        const customerResults = await Promise.all(customerPromises)
-        const courierResults = await Promise.all(courierPromises)
-        setCustomerNames((prev) => ({
-          ...prev,
-          ...Object.fromEntries(
-            customerResults
-              .filter((result): result is { id: string; name: string } => result !== null)
-              .map((result) => [result.id, result.name])
-          ),
-        }))
-        setCourierNames((prev) => ({
-          ...prev,
-          ...Object.fromEntries(
-            courierResults
-              .filter((result): result is { id: string; name: string } => result !== null)
-              .map((result) => [result.id, result.name])
-          ),
-        }))
-      } catch (error) {
-        console.error("Failed to fetch deliveries:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchDeliveries()
+    fetchAllDeliveries()
+    fetchCustomers()
+    fetchCouriers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -99,18 +91,18 @@ const DeliveriesTable = () => {
   if (loading) return <p className="p-4">Loading deliveries...</p>
   if (deliveries.length === 0) return <p className="p-4">No deliveries found.</p>
 
-  // Filter deliveries
   const filteredDeliveries = filter === 'unassigned'
-    ? deliveries.filter((d) => !d.courierId)
+    ? deliveries.filter(d => !d.courierId)
     : deliveries
 
   return (
     <div className="p-4 overflow-x-auto">
-      <h1 className="text-2xl font-bold mb-4">All Deliveries</h1>
+      <h1 className="text-2xl font-bold mb-4">All Deliveries (Untagged)</h1>
       <div className="mb-4 flex gap-2">
         <Button variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>All</Button>
         <Button variant={filter === 'unassigned' ? 'default' : 'outline'} onClick={() => setFilter('unassigned')}>Unassigned</Button>
       </div>
+
       <table className="min-w-full bg-white shadow-md rounded-md overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
@@ -119,17 +111,18 @@ const DeliveriesTable = () => {
             <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
             <th className="px-4 py-3 text-left text-sm font-medium">Fee</th>
             <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
-            <th className="px-4 py-3"></th>
+            <th className="px-4 py-3 text-left text-sm font-medium">Tracking ID</th>
           </tr>
         </thead>
         <tbody>
-          {filteredDeliveries.map((d) => (
+          {filteredDeliveries.map(d => (
             <tr key={d.id} className="border-t">
-              <td className="px-4 py-2">{customerNames[d.customerId] || d.customerId}</td>
-              <td className="px-4 py-2">{d.courierId ? (courierNames[d.courierId] || d.courierId) : "Unassigned"}</td>
+              <td className="px-4 py-2">{customerNames[d.customerId] ?? d.customerId}</td>
+              <td className="px-4 py-2">{d.courierId ? (courierNames[d.courierId] ?? d.courierId) : "Unassigned"}</td>
               <td className="px-4 py-2">{d.status}</td>
               <td className="px-4 py-2">₦{(d.cost || 0).toLocaleString()}</td>
               <td className="px-4 py-2">{formatDate(d.createdAt)}</td>
+              <td className="px-4 py-2">{(d.trackingId || "N/A")}</td>
               <td className="px-4 py-2 text-right">
                 <Button variant="outline" onClick={() => { setSelectedDelivery(d); setSelectedCourierId(""); setShowAssign(false); }}>View</Button>
               </td>
@@ -145,24 +138,20 @@ const DeliveriesTable = () => {
               <DialogTitle>Delivery Details</DialogTitle>
             </DialogHeader>
             <div className="space-y-2 text-sm">
-              <p><strong>Customer:</strong> {customerNames[selectedDelivery.customerId] || selectedDelivery.customerId}</p>
-              <p><strong>Courier:</strong> {selectedDelivery.courierId ? (courierNames[selectedDelivery.courierId] || selectedDelivery.courierId) : "Unassigned"}</p>
+              <p><strong>Customer:</strong> {customerNames[selectedDelivery.customerId] ?? selectedDelivery.customerId}</p>
+              <p><strong>Courier:</strong> {selectedDelivery.courierId ? (courierNames[selectedDelivery.courierId] ?? selectedDelivery.courierId) : "Unassigned"}</p>
               <p><strong>Status:</strong> {selectedDelivery.status}</p>
               <p><strong>Pickup:</strong> {selectedDelivery.pickupLocation?.address || "N/A"}</p>
               <p><strong>Dropoff:</strong> {selectedDelivery.dropoffLocation?.address || "N/A"}</p>
               <p><strong>Goods:</strong> {selectedDelivery.goodsSize} {selectedDelivery.goodsType}</p>
               <p><strong>Fee:</strong> ₦{(selectedDelivery.cost || 0).toLocaleString()}</p>
               <p><strong>Created:</strong> {formatDate(selectedDelivery.createdAt)}</p>
-              {/* Assign courier button if unassigned */}
+              {/* Assign courier button */}
               {!selectedDelivery.courierId && (
                 <div className="pt-2">
-                  <Button variant="default" onClick={async () => {
-                    await fetchCouriers();
-                    setShowAssign(true);
-                  }}>Assign Courier</Button>
+                  <Button variant="default" onClick={async () => { await fetchCouriers(); setShowAssign(true); }}>Assign Courier</Button>
                 </div>
               )}
-              {/* Assign courier UI */}
               {showAssign && !selectedDelivery.courierId && (
                 <div className="pt-2">
                   <label className="block mb-2">Select Courier:</label>
@@ -172,8 +161,8 @@ const DeliveriesTable = () => {
                     onChange={e => setSelectedCourierId(e.target.value)}
                   >
                     <option value="" disabled>Select a courier</option>
-                    {couriers.map(courier => (
-                      <option key={courier.id} value={courier.userId}>{courier.displayName || courier.id}</option>
+                    {couriers.map(c => (
+                      <option key={c.id ?? c.userId} value={c.userId ?? c.id}>{c.displayName ?? c.userId ?? c.id}</option>
                     ))}
                   </select>
                   <Button
@@ -187,25 +176,15 @@ const DeliveriesTable = () => {
                           courierId: selectedCourierId,
                           status: "assigned",
                           assignedAt: serverTimestamp(),
-                          history: arrayUnion({
-                            timestamp: Timestamp.now(),
-                            status: "assigned",
-                          }),
+                          history: arrayUnion({ timestamp: Timestamp.now(), status: "assigned" }),
                         })
                         setShowAssign(false)
                         setSelectedDelivery(null)
                         setSelectedCourierId("")
-                        // Refresh deliveries and courier names
-                        const data = await getDeliveries()
-                        setDeliveries(data)
-                        // Optionally, update courierNames mapping
-                        const courier = await getRider(selectedCourierId)
-                        setCourierNames((prev) => ({
-                          ...prev,
-                          [selectedCourierId]: courier?.displayName || selectedCourierId,
-                        }))
+                        await fetchAllDeliveries()
+                        await fetchCouriers()
                       } catch (err) {
-                        // handle error
+                        console.error(err)
                       } finally {
                         setAssignLoading(false)
                       }
