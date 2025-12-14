@@ -1,18 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  BarChart3,
-  Box,
-  Home,
-  Map,
-  Settings,
-  Truck,
-  Users,
-  Menu,
-  Shield,
-  DollarSign,
-} from "lucide-react";
+import { Home, Truck, Users, Box, Map, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,64 +15,24 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 const navItems = [
+  { title: "Dashboard", href: "/secretary/dashboard", icon: Home },
+  { title: "Riders", href: "/secretary/riders", icon: Truck },
+  { title: "Customers", href: "/secretary/customers", icon: Users },
+  { title: "Deliveries", href: "/secretary/deliveries", icon: Box },
   {
-    title: "Dashboard",
-    href: "/admin/dashboard",
-    icon: Home,
-  },
-  {
-    title: "Riders",
-    href: "/admin/riders",
-    icon: Truck,
-  },
-  {
-    title: "Customers",
-    href: "/admin/customers",
-    icon: Users,
-  },
-  {
-    title: "Deliveries",
-    href: "/admin/deliveries",
-    icon: Box,
+    title: "Create Delivery",
+    href: "/secretary/create-delivery",
+    icon: Box, // You can replace with a "+" icon if you want
   },
   {
     title: "Multiple Deliveries",
-    href: "/admin/multiple-deliveries",
+    href: "/secretary/multiple-deliveries",
     icon: Box,
   },
-  {
-    title: "Revenue",
-    href: "/admin/revenue",
-    icon: DollarSign,
-  },
-  {
-    title: "Live Map",
-    href: "/admin/live-map",
-    icon: Map,
-  },
-  // {
-  //   title: "Analytics",
-  //   href: "/admin/analytics",
-  //   icon: BarChart3,
-  // },
-  {
-    title: "Admin Users",
-    href: "/admin/admin-users",
-    icon: Shield,
-  },
-  {
-    title: "Secretaries",
-    href: "/admin/create-secretary",
-    icon: Users,
-  },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
-  },
+  { title: "Live Map", href: "/secretary/live-map", icon: Map },
 ];
 
-// Mobile Navigation Component
+// Mobile Navigation
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -91,7 +40,7 @@ export function MobileNav() {
 
   const handleNavigation = (href: string) => {
     router.push(href);
-    setOpen(false); // Close mobile menu after navigation
+    setOpen(false);
   };
 
   return (
@@ -112,7 +61,7 @@ export function MobileNav() {
             Navigation Menu
           </SheetTitle>
           <SheetDescription className="text-sm text-gray-600">
-            Access all admin dashboard sections
+            Access all secretary dashboard sections
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col space-y-1 p-4">
@@ -137,8 +86,8 @@ export function MobileNav() {
   );
 }
 
-// Desktop Navigation Component
-export function DashboardNav() {
+// Desktop Navigation
+export function SecretaryDashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
 

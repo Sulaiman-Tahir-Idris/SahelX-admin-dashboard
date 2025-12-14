@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Truck, MapPin, Clock, Shield } from "lucide-react"
-import Image from "next/image"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Truck, MapPin, Clock, Shield } from "lucide-react";
+import Image from "next/image";
 
 export default function SplashScreen() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAdminLogin = () => {
-    console.log("Admin login button clicked") // Debug log
-    setIsLoading(true)
+    console.log("Admin login button clicked"); // Debug log
+    setIsLoading(true);
 
     try {
-      router.push("/admin/login")
-      console.log("Navigation to /admin/login initiated") // Debug log
+      router.push("/admin/login");
+      console.log("Navigation to /admin/login initiated"); // Debug log
     } catch (error) {
-      console.error("Navigation error:", error) // Debug log
-      setIsLoading(false)
+      console.error("Navigation error:", error); // Debug log
+      setIsLoading(false);
     }
 
     // Reset loading state after a short delay in case navigation is slow
     setTimeout(() => {
-      setIsLoading(false)
-    }, 2000)
-  }
+      setIsLoading(false);
+    }, 2000);
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -51,9 +51,15 @@ export default function SplashScreen() {
             </div>
           </div>
 
-          <h1 className="mb-4 text-4xl font-light text-gray-900 md:text-5xl">Admin Portal</h1>
-          <p className="text-xl text-gray-600 md:text-2xl font-light">Fast Moves, Northern Routes</p>
-          <p className="mt-2 text-lg text-gray-500">Delivery Management System</p>
+          <h1 className="mb-4 text-4xl font-light text-gray-900 md:text-5xl">
+            Admin Portal
+          </h1>
+          <p className="text-xl text-gray-600 md:text-2xl font-light">
+            Fast Moves, Northern Routes
+          </p>
+          <p className="mt-2 text-lg text-gray-500">
+            Delivery Management System
+          </p>
         </div>
 
         {/* Features Grid */}
@@ -63,8 +69,12 @@ export default function SplashScreen() {
               <div className="mb-4 rounded-full bg-gray-50 p-4">
                 <Truck className="h-6 w-6 text-gray-700" />
               </div>
-              <h3 className="mb-2 font-medium text-gray-900">Fleet Management</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">Manage riders and vehicles efficiently</p>
+              <h3 className="mb-2 font-medium text-gray-900">
+                Fleet Management
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Manage riders and vehicles efficiently
+              </p>
             </CardContent>
           </Card>
 
@@ -74,7 +84,9 @@ export default function SplashScreen() {
                 <MapPin className="h-6 w-6 text-gray-700" />
               </div>
               <h3 className="mb-2 font-medium text-gray-900">Live Tracking</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">Real-time location monitoring</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Real-time location monitoring
+              </p>
             </CardContent>
           </Card>
 
@@ -84,7 +96,9 @@ export default function SplashScreen() {
                 <Clock className="h-6 w-6 text-gray-700" />
               </div>
               <h3 className="mb-2 font-medium text-gray-900">Fast Delivery</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">Optimized routes for quick delivery</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Optimized routes for quick delivery
+              </p>
             </CardContent>
           </Card>
 
@@ -93,14 +107,18 @@ export default function SplashScreen() {
               <div className="mb-4 rounded-full bg-gray-50 p-4">
                 <Shield className="h-6 w-6 text-gray-700" />
               </div>
-              <h3 className="mb-2 font-medium text-gray-900">Secure Platform</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">Enterprise-grade security</p>
+              <h3 className="mb-2 font-medium text-gray-900">
+                Secure Platform
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Enterprise-grade security
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Login Button */}
-        <div className="flex justify-center">
+        {/* Login Buttons */}
+        <div className="flex justify-center gap-4">
           <Button
             onClick={handleAdminLogin}
             disabled={isLoading}
@@ -109,13 +127,26 @@ export default function SplashScreen() {
           >
             {isLoading ? "Loading..." : "Admin Login"}
           </Button>
+
+          <Button
+            onClick={() => router.push("/secretary/login")}
+            size="lg"
+            className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg font-medium rounded-lg shadow-sm hover:shadow-md transition-all"
+          >
+            Secretary Login
+          </Button>
         </div>
+
         {/* Footer */}
         <div className="mt-20 text-center">
-          <p className="text-sm text-gray-500">© 2025 SahelX. All rights reserved.</p>
-          <p className="mt-1 text-xs text-gray-400">Powering logistics across Northern Nigeria</p>
+          <p className="text-sm text-gray-500">
+            © 2025 SahelX. All rights reserved.
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            Powering logistics across Northern Nigeria
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

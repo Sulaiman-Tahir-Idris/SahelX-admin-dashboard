@@ -198,13 +198,20 @@ export function DeliveryMap() {
           </div>
         ) : (
           <div className="relative h-[300px] md:h-[500px] w-full rounded-lg border overflow-hidden">
-            <GoogleMap mapContainerStyle={containerStyle} center={KANO_CENTER} zoom={12} options={mapOptions}>
+            <GoogleMap
+              mapContainerStyle={containerStyle}
+              center={KANO_CENTER}
+              zoom={12}
+              options={mapOptions}
+            >
               {allMarkers.map((marker) => (
                 <MarkerF
                   key={marker.id}
-                  position={{ lat: marker.lat, lng: marker.lng }}
+                  position={{
+                    lat: Number(marker.lat),
+                    lng: Number(marker.lng),
+                  }}
                   icon={markerIcon(marker.type)}
-                  onClick={() => handleMarkerClick(marker)}
                 />
               ))}
 
@@ -221,7 +228,7 @@ export function DeliveryMap() {
                         ]}
                         options={{ strokeColor: "#2563EB", strokeWeight: 2 }}
                       />
-                    )
+                    );
                   }
                   if (activeLine === `dropoff_${delivery.id}`) {
                     return (
@@ -233,14 +240,16 @@ export function DeliveryMap() {
                         ]}
                         options={{ strokeColor: "#F97316", strokeWeight: 2 }}
                       />
-                    )
+                    );
                   }
-                  return null
+                  return null;
                 })}
 
               {/* Connect assigned riders to their delivery pickup */}
               {assignedRiders.map((rider) => {
-                const delivery = deliveries.find((d) => d.courierId === rider.id)
+                const delivery = deliveries.find(
+                  (d) => d.courierId === rider.id
+                );
                 if (
                   delivery &&
                   rider.currentLocation &&
@@ -252,19 +261,32 @@ export function DeliveryMap() {
                     <PolylineF
                       key={`rider_line_${rider.id}`}
                       path={[
-                        { lat: rider.currentLocation.lat, lng: rider.currentLocation.lng },
-                        { lat: delivery.pickupLocation.lat, lng: delivery.pickupLocation.lng },
+                        {
+                          lat: rider.currentLocation.lat,
+                          lng: rider.currentLocation.lng,
+                        },
+                        {
+                          lat: delivery.pickupLocation.lat,
+                          lng: delivery.pickupLocation.lng,
+                        },
                       ]}
-                      options={{ strokeColor: "#22c55e", strokeWeight: 2, zIndex: 10 }}
+                      options={{
+                        strokeColor: "#22c55e",
+                        strokeWeight: 2,
+                        zIndex: 10,
+                      }}
                     />
-                  )
+                  );
                 }
-                return null
+                return null;
               })}
 
               {selectedMarker && selectedMarker.type === "rider" && (
                 <InfoWindowF
-                  position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
+                  position={{
+                    lat: selectedMarker.lat,
+                    lng: selectedMarker.lng,
+                  }}
                   onCloseClick={() => setSelectedMarker(null)}
                 >
                   <div className="p-2">
@@ -273,26 +295,40 @@ export function DeliveryMap() {
                       Rider Status: {selectedMarker.status}
                     </p>
                     <p className="text-xs text-muted-foreground font-bold">
-                      Lat: {selectedMarker.lat.toFixed(4)}, Lng: {selectedMarker.lng.toFixed(4)}
+                      Lat: {selectedMarker.lat.toFixed(4)}, Lng:{" "}
+                      {selectedMarker.lng.toFixed(4)}
                     </p>
                     <div className="mt-2">
-                      <div className="font-bold text-xs mb-1">Assigned Deliveries:</div>
-                      {deliveries.filter((d) => d.courierId === selectedMarker.id.replace("rider_", "")).length === 0 ? (
+                      <div className="font-bold text-xs mb-1">
+                        Assigned Deliveries:
+                      </div>
+                      {deliveries.filter(
+                        (d) =>
+                          d.courierId ===
+                          selectedMarker.id.replace("rider_", "")
+                      ).length === 0 ? (
                         <div className="text-xs">No active deliveries.</div>
                       ) : (
                         deliveries
-                           .filter(
-                              (d) =>
-                                d.courierId === selectedMarker.id.replace("rider_", "") &&
-                                d.status?.toLowerCase() !== "received" &&
-                                d.status?.toLowerCase() !== "recieved"
-                            )
+                          .filter(
+                            (d) =>
+                              d.courierId ===
+                                selectedMarker.id.replace("rider_", "") &&
+                              d.status?.toLowerCase() !== "received" &&
+                              d.status?.toLowerCase() !== "recieved"
+                          )
                           .map((d) => (
                             <div key={d.id} className="mb-2 border-b pb-1">
-                              <div className="text-xs font-bold">Delivery ID: {d.id}</div>
+                              <div className="text-xs font-bold">
+                                Delivery ID: {d.id}
+                              </div>
                               <div className="text-xs">Status: {d.status}</div>
-                              <div className="text-xs">Pickup: {d.pickupLocation?.address || "N/A"}</div>
-                              <div className="text-xs">Dropoff: {d.dropoffLocation?.address || "N/A"}</div>
+                              <div className="text-xs">
+                                Pickup: {d.pickupLocation?.address || "N/A"}
+                              </div>
+                              <div className="text-xs">
+                                Dropoff: {d.dropoffLocation?.address || "N/A"}
+                              </div>
                             </div>
                           ))
                       )}
@@ -307,12 +343,20 @@ export function DeliveryMap() {
               <div className="text-xs md:text-sm font-medium mb-2">Legend</div>
               <div className="space-y-1 text-xs">
                 <div className="flex items-center gap-2">
-                  <img src="/icons/pickup.png" className="h-3 w-3" alt="pickup" />
+                  <img
+                    src="/icons/pickup.png"
+                    className="h-3 w-3"
+                    alt="pickup"
+                  />
                   <span className="hidden md:inline">Pickup Locations</span>
                   <span className="md:hidden">Pickup</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <img src="/icons/dropoff.png" className="h-3 w-3" alt="dropoff" />
+                  <img
+                    src="/icons/dropoff.png"
+                    className="h-3 w-3"
+                    alt="dropoff"
+                  />
                   <span className="hidden md:inline">Dropoff Locations</span>
                   <span className="md:hidden">Dropoff</span>
                 </div>
@@ -330,5 +374,5 @@ export function DeliveryMap() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
