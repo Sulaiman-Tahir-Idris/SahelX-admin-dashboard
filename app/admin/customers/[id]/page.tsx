@@ -1,6 +1,6 @@
 import React from "react";
+import { CustomerProfile } from "@/components/customers/customer-profile";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { RiderProfile } from "@/components/riders/rider-profile";
 
 interface PageProps {
   params: any;
@@ -11,7 +11,7 @@ export default async function Page({ params }: PageProps) {
   if (!id || typeof id !== "string") {
     return (
       <DashboardLayout>
-        <div className="p-6">Invalid rider ID</div>
+        <div className="p-6">Invalid customer ID</div>
       </DashboardLayout>
     );
   }
@@ -19,7 +19,7 @@ export default async function Page({ params }: PageProps) {
   return (
     <DashboardLayout>
       <div className="p-6">
-        <RiderProfile riderId={id} />
+        <CustomerProfile customerId={id} />
       </div>
     </DashboardLayout>
   );

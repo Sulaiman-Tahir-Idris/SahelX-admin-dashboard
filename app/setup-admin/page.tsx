@@ -1,38 +1,41 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle } from "lucide-react"
-import { createAdminUser } from "@/lib/firebase/setup-admin"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, CheckCircle } from "lucide-react";
+import { createAdminUser } from "@/lib/firebase/setup-admin";
 
 export default function SetupAdminPage() {
-  const [email, setEmail] = useState("admin@sahelx.com")
-  const [password, setPassword] = useState("admin123")
-  const [displayName, setDisplayName] = useState("Admin User")
-  const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState("admin@sahelx.com");
+  const [password, setPassword] = useState("admin123");
+  const [displayName, setDisplayName] = useState("Admin User");
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [role, setRole] = useState<
+    "admin" | "superadmin" | "ceo" | "cto" | "cfo" | "coo"
+  >("ceo");
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
     try {
-      await createAdminUser(email, password, displayName)
-      setSuccess(true)
+      await createAdminUser(email, password, displayName, role);
+      setSuccess(true);
     } catch (err: any) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   if (success) {
     return (
@@ -40,25 +43,31 @@ export default function SetupAdminPage() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
-            <CardTitle className="text-green-700">Admin User Created!</CardTitle>
+            <CardTitle className="text-green-700">
+              Admin User Created!
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert className="border-green-200 bg-green-50">
               <AlertDescription className="text-green-700">
-                Admin user has been successfully created. You can now log in with:
+                Admin user has been successfully created. You can now log in
+                with:
                 <br />
                 <strong>Email:</strong> {email}
                 <br />
                 <strong>Password:</strong> {password}
               </AlertDescription>
             </Alert>
-            <Button onClick={() => (window.location.href = "/admin/login")} className="w-full">
+            <Button
+              onClick={() => (window.location.href = "/admin/login")}
+              className="w-full"
+            >
               Go to Login Page
             </Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -66,7 +75,9 @@ export default function SetupAdminPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Setup Admin User</CardTitle>
-          <p className="text-sm text-muted-foreground">Create the first admin user for SahelX dashboard</p>
+          <p className="text-sm text-muted-foreground">
+            Create the first admin user for SahelX dashboard
+          </p>
         </CardHeader>
         <CardContent>
           {error && (
@@ -78,12 +89,23 @@ export default function SetupAdminPage() {
           <form onSubmit={handleCreateAdmin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="displayName">Display Name</Label>
-              <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
@@ -95,6 +117,22 @@ export default function SetupAdminPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <select
+                id="role"
+                className="input"
+                value={role}
+                onChange={(e) => setRole(e.target.value as any)}
+              >
+                <option value="ceo">CEO</option>
+                <option value="cto">CTO</option>
+                <option value="cfo">CFO</option>
+                <option value="coo">COO</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
 
             <Button type="submit" disabled={isLoading} className="w-full">
@@ -111,12 +149,13 @@ export default function SetupAdminPage() {
 
           <Alert className="mt-4">
             <AlertDescription className="text-xs">
-              <strong>Note:</strong> This page should only be used once to create the initial admin user. Remove this
-              page after setup is complete.
+              <strong>Note:</strong> This page should only be used once to
+              create the initial admin user. Remove this page after setup is
+              complete.
             </AlertDescription>
           </Alert>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

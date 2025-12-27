@@ -1,61 +1,75 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { LogOut, User } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
-import { MobileNav } from "./dashboard-nav"
-import Image from "next/image"
-import { signOutAdmin } from "@/lib/firebase/auth"
+} from "@/components/ui/dropdown-menu";
+import { LogOut, User } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { MobileNav } from "./dashboard-nav";
+import Image from "next/image";
+import { signOutAdmin } from "@/lib/firebase/auth";
 
 export function DashboardHeader({ user }: { user?: any }) {
-  const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     if (!user) {
-      const storedUser = localStorage.getItem("adminUser")
+      const storedUser = localStorage.getItem("adminUser");
       if (storedUser) {
-        setCurrentUser(JSON.parse(storedUser))
+        setCurrentUser(JSON.parse(storedUser));
       }
     } else {
-      setCurrentUser(user)
+      setCurrentUser(user);
     }
-  }, [user])
+  }, [user]);
+
+  const displayRoleName = (role?: string) => {
+    if (!role) return "Admin";
+    const r = role.toLowerCase();
+    const map: Record<string, string> = {
+      ceo: "CEO",
+      cto: "CTO",
+      cfo: "CFO",
+      coo: "COO",
+      admin: "Admin",
+      superadmin: "Super Admin",
+    };
+    return map[r] || role;
+  };
 
   const handleLogout = async () => {
     try {
-      await signOutAdmin()
-      localStorage.removeItem("isAdminLoggedIn")
-      localStorage.removeItem("adminUser")
+      await signOutAdmin();
+      localStorage.removeItem("isAdminLoggedIn");
+      localStorage.removeItem("adminUser");
 
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of the admin dashboard.",
-      })
+      });
 
-      router.push("/")
+      router.push("/");
     } catch (error: any) {
       toast({
         title: "Logout failed",
         description: error.message || "Failed to logout",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handleProfileClick = () => {
-    router.push("/admin/profile")
-  }
+    router.push("/admin/profile");
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white/95 backdrop-blur-sm px-4 md:px-6 shadow-sm">
@@ -63,9 +77,17 @@ export function DashboardHeader({ user }: { user?: any }) {
         {/* Mobile menu trigger */}
         <MobileNav />
 
-        <Image src="/images/black1.png" alt="SahelX Logo" width={120} height={40} className="h-6 w-auto md:h-8" />
+        <Image
+          src="/images/black1.png"
+          alt="SahelX Logo"
+          width={120}
+          height={40}
+          className="h-6 w-auto md:h-8"
+        />
         <div className="h-4 w-px bg-gray-300 md:h-6"></div>
-        <h1 className="text-sm font-medium text-gray-900 md:text-lg">Admin Portal</h1>
+        <h1 className="text-sm font-medium text-gray-900 md:text-lg">
+          {displayRoleName(currentUser?.role)} Portal
+        </h1>
       </div>
       <div className="flex items-center space-x-2 md:space-x-3">
         <DropdownMenu>
@@ -114,5 +136,5 @@ export function DashboardHeader({ user }: { user?: any }) {
         </DropdownMenu>
       </div>
     </header>
-  )
+  );
 }

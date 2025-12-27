@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,10 +10,17 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Eye,
   MoreHorizontal,
@@ -25,147 +32,245 @@ import {
   UserX,
   Loader2,
   AlertCircle,
-} from "lucide-react"
-import { useRouter } from "next/navigation"
-import { toast } from "@/components/ui/use-toast"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+  Star,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   getRiders,
   getAllRiders,
   updateRiderVerification,
   updateRiderActiveStatus,
   type Rider,
-} from "@/lib/firebase/riders"
+} from "@/lib/firebase/riders";
+import {
+  getAverageRatingForCourier,
+  getDeliveryCountForCourier,
+} from "@/lib/firebase/deliveries";
 
 export function RidersTable() {
-  const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [riders, setRiders] = useState<Rider[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [updatingRider, setUpdatingRider] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  type RiderWithRating = Rider & {
+    avgRating?: number | null;
+    deliveryCount?: number;
+  };
+  const [riders, setRiders] = useState<RiderWithRating[]>([]);
+  // Caching settings for courier ratings (localStorage)
+  const RATING_CACHE_PREFIX = "courier_rating:v2:";
+  const RATING_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  const getCachedRating = (courierId: string): number | null | undefined => {
+    try {
+      if (!courierId) return null;
+      const key = `${RATING_CACHE_PREFIX}${courierId}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return undefined;
+      const parsed = JSON.parse(raw) as { avg: number | null; ts: number };
+      if (!parsed || typeof parsed.ts !== "number") return undefined;
+      if (Date.now() - parsed.ts > RATING_CACHE_TTL) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      return parsed.avg === undefined ? null : parsed.avg;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const setCachedRating = (courierId: string, avg: number | null) => {
+    try {
+      if (!courierId) return;
+      const key = `${RATING_CACHE_PREFIX}${courierId}`;
+      localStorage.setItem(key, JSON.stringify({ avg, ts: Date.now() }));
+    } catch (e) {
+      // ignore
+    }
+  };
+  const [isLoading, setIsLoading] = useState(true);
+  const [updatingRider, setUpdatingRider] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRiders()
-  }, [])
+    loadRiders();
+  }, []);
 
   const loadRiders = async () => {
     try {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
 
       // Try the optimized query first, fallback to getAllRiders if it fails
-      let ridersData: Rider[]
+      let ridersData: Rider[];
       try {
-        ridersData = await getRiders()
+        ridersData = await getRiders();
       } catch (indexError) {
-        console.log("Index query failed, falling back to client-side filtering...")
-        ridersData = await getAllRiders()
+        console.log(
+          "Index query failed, falling back to client-side filtering..."
+        );
+        ridersData = await getAllRiders();
       }
 
-      setRiders(ridersData)
+      // Fetch average rating for each rider (based on deliveries.courierId)
+      const ridersWithRatings = await Promise.all(
+        ridersData.map(async (r) => {
+          // prefer the `userId` field if present (some user docs store UID in `userId`)
+          const courierId = (r.userId as string) || (r.id as string) || "";
+
+          // try cache first
+          const cached = courierId ? getCachedRating(courierId) : undefined;
+          if (cached !== undefined)
+            return { ...(r as any), avgRating: cached } as RiderWithRating;
+
+          if (!courierId)
+            return { ...(r as any), avgRating: null } as RiderWithRating;
+
+          try {
+            const [avg, count] = await Promise.all([
+              getAverageRatingForCourier(courierId),
+              getDeliveryCountForCourier(courierId),
+            ]);
+            setCachedRating(courierId, avg === null ? null : avg);
+            return {
+              ...(r as any),
+              avgRating: avg,
+              deliveryCount: count,
+            } as RiderWithRating;
+          } catch (e) {
+            return {
+              ...(r as any),
+              avgRating: null,
+              deliveryCount: 0,
+            } as RiderWithRating;
+          }
+        })
+      );
+
+      setRiders(ridersWithRatings);
     } catch (error: any) {
-      console.error("Error loading riders:", error)
-      setError(error.message)
+      console.error("Error loading riders:", error);
+      setError(error.message);
       toast({
         title: "Failed to load riders",
         description: error.message,
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleVerificationToggle = async (riderId: string, currentStatus: boolean) => {
+  const handleVerificationToggle = async (
+    riderId: string,
+    currentStatus: boolean
+  ) => {
     try {
-      setUpdatingRider(riderId)
-      await updateRiderVerification(riderId, !currentStatus)
+      setUpdatingRider(riderId);
+      await updateRiderVerification(riderId, !currentStatus);
 
       // Update local state
       setRiders(
         riders.map((rider) =>
           rider.id === riderId
-            ? { ...rider, verified: !currentStatus, vehicleInfo: { ...rider.vehicleInfo, verified: !currentStatus } }
-            : rider,
-        ),
-      )
+            ? {
+                ...rider,
+                verified: !currentStatus,
+                vehicleInfo: { ...rider.vehicleInfo, verified: !currentStatus },
+              }
+            : rider
+        )
+      );
 
       toast({
         title: "Verification status updated",
-        description: `Rider has been ${!currentStatus ? "verified" : "unverified"}.`,
-      })
+        description: `Rider has been ${
+          !currentStatus ? "verified" : "unverified"
+        }.`,
+      });
     } catch (error: any) {
       toast({
         title: "Failed to update verification",
         description: error.message,
         variant: "destructive",
-      })
+      });
     } finally {
-      setUpdatingRider(null)
+      setUpdatingRider(null);
     }
-  }
+  };
 
-  const handleActiveStatusToggle = async (riderId: string, currentStatus: boolean) => {
+  const handleActiveStatusToggle = async (
+    riderId: string,
+    currentStatus: boolean
+  ) => {
     try {
-      setUpdatingRider(riderId)
-      await updateRiderActiveStatus(riderId, !currentStatus)
+      setUpdatingRider(riderId);
+      await updateRiderActiveStatus(riderId, !currentStatus);
 
       // Update local state
-      setRiders(riders.map((rider) => (rider.id === riderId ? { ...rider, isActive: !currentStatus } : rider)))
+      setRiders(
+        riders.map((rider) =>
+          rider.id === riderId ? { ...rider, isActive: !currentStatus } : rider
+        )
+      );
 
       toast({
         title: "Active status updated",
-        description: `Rider has been ${!currentStatus ? "activated" : "deactivated"}.`,
-      })
+        description: `Rider has been ${
+          !currentStatus ? "activated" : "deactivated"
+        }.`,
+      });
     } catch (error: any) {
       toast({
         title: "Failed to update active status",
         description: error.message,
         variant: "destructive",
-      })
+      });
     } finally {
-      setUpdatingRider(null)
+      setUpdatingRider(null);
     }
-  }
+  };
 
   const filteredRiders = riders.filter(
     (rider) =>
       rider.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rider.phone?.includes(searchQuery) ||
       rider.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rider.vehicleInfo?.plateNumber?.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+      rider.vehicleInfo?.plateNumber
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase())
+  );
 
   const getActiveColor = (isActive: boolean) => {
-  return isActive ? "bg-green-500" : "bg-gray-400"
-}
-
+    return isActive ? "bg-green-500" : "bg-gray-400";
+  };
 
   const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A"
+    if (!timestamp) return "N/A";
 
-    let date: Date
+    let date: Date;
     if (timestamp.toDate) {
-      date = timestamp.toDate()
+      date = timestamp.toDate();
     } else if (timestamp.seconds) {
-      date = new Date(timestamp.seconds * 1000)
+      date = new Date(timestamp.seconds * 1000);
     } else {
-      date = new Date(timestamp)
+      date = new Date(timestamp);
     }
 
-    return date.toLocaleDateString()
-  }
+    return date.toLocaleDateString();
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-          <p className="mt-2 text-sm text-muted-foreground">Loading riders...</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Loading riders...
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -179,7 +284,7 @@ export function RidersTable() {
           Try Again
         </Button>
       </div>
-    )
+    );
   }
 
   return (
@@ -204,6 +309,8 @@ export function RidersTable() {
               <TableHead>Status</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>Phone</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Rating</TableHead>
               <TableHead>Verification</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead>Actions</TableHead>
@@ -212,7 +319,7 @@ export function RidersTable() {
           <TableBody>
             {filteredRiders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={9} className="h-24 text-center">
                   {riders.length === 0
                     ? "No riders found. Register some riders to get started."
                     : "No riders match your search."}
@@ -224,20 +331,44 @@ export function RidersTable() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={rider.profilePhoto || "/placeholder.svg"} alt={rider.displayName} />
-                        <AvatarFallback>{rider.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                        <AvatarImage
+                          src={rider.profilePhoto || "/placeholder.svg"}
+                          alt={rider.displayName}
+                        />
+                        <AvatarFallback>
+                          {rider.displayName?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="grid gap-0.5">
                         <div className="font-medium">{rider.displayName}</div>
-                        <div className="text-xs text-muted-foreground">{rider.email}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {rider.email}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <Badge className={getActiveColor(rider.isActive)} variant="secondary">
-                        {rider.isActive ? "Active" : "Inactive"}
-                      </Badge>
+                      {(() => {
+                        const availability =
+                          (rider.status && rider.status.toLowerCase()) ||
+                          (rider.isAvailable ? "available" : "offline");
+                        const colorClass =
+                          availability === "available"
+                            ? "bg-green-500"
+                            : availability === "on_delivery" ||
+                              availability === "on-delivery" ||
+                              availability === "on delivery"
+                            ? "bg-blue-500"
+                            : "bg-gray-400";
+
+                        return (
+                          <Badge className={colorClass} variant="secondary">
+                            {availability.replace(/_/g, " ")}
+                          </Badge>
+                        );
+                      })()}
+
                       {!rider.isActive && (
                         <Badge variant="outline" className="text-xs">
                           Inactive
@@ -247,13 +378,39 @@ export function RidersTable() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div className="font-medium capitalize">{rider.vehicleInfo?.type}</div>
-                      <div className="text-xs text-muted-foreground">{rider.vehicleInfo?.plateNumber}</div>
+                      <div className="font-medium capitalize">
+                        {rider.vehicleInfo?.type}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {rider.vehicleInfo?.plateNumber}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>{rider.phone}</TableCell>
+                  <TableCell>{(rider as any).deliveryCount ?? 0}</TableCell>
                   <TableCell>
-                    <Badge className={rider.verified ? "bg-green-500" : "bg-yellow-500"} variant="secondary">
+                    {(() => {
+                      const avg = (rider as any).avgRating;
+                      if (avg === null || avg === undefined)
+                        return <span className="text-muted-foreground">-</span>;
+                      const n = Number(avg);
+                      if (isNaN(n))
+                        return <span className="text-muted-foreground">-</span>;
+                      return (
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">{n.toFixed(1)}</span>
+                          <Star className="h-4 w-4 text-yellow-400" />
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={
+                        rider.verified ? "bg-green-500" : "bg-yellow-500"
+                      }
+                      variant="secondary"
+                    >
                       {rider.verified ? "Verified" : "Pending"}
                     </Badge>
                   </TableCell>
@@ -261,7 +418,11 @@ export function RidersTable() {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={updatingRider === rider.id}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={updatingRider === rider.id}
+                        >
                           {updatingRider === rider.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
@@ -272,7 +433,11 @@ export function RidersTable() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => router.push(`/admin/riders/${rider.id}`)}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(`/admin/riders/${rider.id}`)
+                          }
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Profile
                         </DropdownMenuItem>
@@ -280,8 +445,20 @@ export function RidersTable() {
                           <MapPin className="mr-2 h-4 w-4" />
                           Track Location
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(`/admin/riders/${rider.id}/history`)
+                          }
+                        >
+                          <Star className="mr-2 h-4 w-4" />
+                          Delivery History
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleVerificationToggle(rider.id!, rider.verified)}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleVerificationToggle(rider.id!, rider.verified)
+                          }
+                        >
                           {rider.verified ? (
                             <>
                               <ShieldOff className="mr-2 h-4 w-4" />
@@ -294,7 +471,11 @@ export function RidersTable() {
                             </>
                           )}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleActiveStatusToggle(rider.id!, rider.isActive)}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleActiveStatusToggle(rider.id!, rider.isActive)
+                          }
+                        >
                           {rider.isActive ? (
                             <>
                               <UserX className="mr-2 h-4 w-4" />
@@ -308,7 +489,9 @@ export function RidersTable() {
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => window.open(`tel:${rider.phone}`)}>
+                        <DropdownMenuItem
+                          onClick={() => window.open(`tel:${rider.phone}`)}
+                        >
                           <Phone className="mr-2 h-4 w-4" />
                           Call Rider
                         </DropdownMenuItem>
@@ -328,5 +511,5 @@ export function RidersTable() {
         </div>
       )}
     </div>
-  )
+  );
 }

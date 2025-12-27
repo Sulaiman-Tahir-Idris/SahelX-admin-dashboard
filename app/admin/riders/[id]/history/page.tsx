@@ -1,6 +1,6 @@
 import React from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { RiderProfile } from "@/components/riders/rider-profile";
+import { RiderDeliveryHistory } from "@/components/riders/rider-delivery-history";
 
 interface PageProps {
   params: any;
@@ -19,7 +19,7 @@ export default async function Page({ params }: PageProps) {
   return (
     <DashboardLayout>
       <div className="p-6">
-        <RiderProfile riderId={id} />
+        <RiderDeliveryHistory riderId={id} />
       </div>
     </DashboardLayout>
   );

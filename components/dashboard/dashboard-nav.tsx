@@ -14,6 +14,9 @@ import {
   DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-utils";
+
+type NavItem = { title: string; href: string; icon: any };
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -25,7 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { usePathname, useRouter } from "next/navigation";
 
-const navItems = [
+const navItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/admin/dashboard",
@@ -83,11 +86,72 @@ const navItems = [
   },
 ];
 
+const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
+  if (!role) return items;
+  const r = role.toLowerCase();
+  if (r === "ceo" || r === "cto") return items;
+
+  // Everyone should always see live map — include its path
+  const liveMap = "/admin/live-map";
+
+  if (r === "cfo") {
+    const allowed = new Set([
+      "/admin/dashboard",
+      "/admin/revenue",
+      "/admin/riders",
+      "/admin/create-secretary",
+      liveMap,
+    ]);
+    return items.filter((i) => allowed.has(i.href));
+  }
+
+  if (r === "coo") {
+    const allowed = new Set([
+      "/admin/dashboard",
+      "/admin/riders",
+      "/admin/customers",
+      "/admin/deliveries",
+      "/admin/multiple-deliveries",
+      "/admin/create-secretary",
+      liveMap,
+    ]);
+    return items.filter((i) => allowed.has(i.href));
+  }
+
+  return items;
+};
+
 // Mobile Navigation Component
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  const getStoredRole = () => {
+    try {
+      const s = localStorage.getItem("adminUser");
+      if (!s) return undefined;
+      const parsed = JSON.parse(s);
+      return parsed?.role;
+    } catch {
+      return undefined;
+    }
+  };
+
+  let items: NavItem[];
+  if (user?.role) {
+    items = filterNavByRole(navItems, user.role);
+  } else {
+    const storedRole =
+      typeof window !== "undefined" ? getStoredRole() : undefined;
+    if (storedRole) {
+      items = filterNavByRole(navItems, storedRole);
+    } else {
+      // When role is unknown and we have no cached role, render nothing to avoid flashing
+      items = [];
+    }
+  }
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -116,7 +180,7 @@ export function MobileNav() {
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col space-y-1 p-4">
-          {navItems.map((item) => (
+          {items.map((item) => (
             <Button
               key={item.href}
               variant="ghost"
@@ -141,6 +205,32 @@ export function MobileNav() {
 export function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useAuth();
+
+  const getStoredRole = () => {
+    try {
+      const s = localStorage.getItem("adminUser");
+      if (!s) return undefined;
+      const parsed = JSON.parse(s);
+      return parsed?.role;
+    } catch {
+      return undefined;
+    }
+  };
+
+  let items: NavItem[];
+  if (user?.role) {
+    items = filterNavByRole(navItems, user.role);
+  } else {
+    const storedRole =
+      typeof window !== "undefined" ? getStoredRole() : undefined;
+    if (storedRole) {
+      items = filterNavByRole(navItems, storedRole);
+    } else {
+      // When role is unknown and we have no cached role, render nothing to avoid flashing
+      items = [];
+    }
+  }
 
   const handleNavigation = (href: string) => {
     router.push(href);
@@ -149,7 +239,7 @@ export function DashboardNav() {
   return (
     <div className="hidden md:flex fixed left-0 top-16 bottom-0 z-40 flex-col border-r border-gray-200 bg-white px-3 py-6 w-[240px]">
       <div className="flex flex-col space-y-1">
-        {navItems.map((item) => (
+        {items.map((item) => (
           <Button
             key={item.href}
             variant="ghost"

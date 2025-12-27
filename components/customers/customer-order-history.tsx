@@ -1,123 +1,174 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Filter, Eye, Download, Calendar, DollarSign, Clock, Star } from "lucide-react"
+import { useState } from "react";
+import { useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Search,
+  Filter,
+  Eye,
+  Download,
+  Calendar,
+  DollarSign,
+  Clock,
+  Star,
+} from "lucide-react";
+import { getDeliveriesByCustomer } from "@/lib/firebase/deliveries";
 
-interface CustomerOrderHistoryProps {
-  customerId: string
+interface DeliveryRow {
+  id?: string;
+  date?: any;
+  items?: string[];
+  total?: number;
+  status?: string;
+  deliveryTime?: number;
+  rating?: number;
+  rider?: string;
+  address?: string;
+  trackingId?: string;
 }
 
-export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [dateFilter, setDateFilter] = useState("all")
+interface CustomerOrderHistoryProps {
+  customerId: string;
+}
 
-  // Mock data - replace with actual Firebase query
-  const orders = [
-    {
-      id: "ORD-1247",
-      date: "2024-01-15",
-      items: ["Burger Combo", "Fries", "Drink"],
-      total: 32.5,
-      status: "delivered",
-      deliveryTime: 28,
-      rating: 5,
-      rider: "Ahmed Hassan",
-      address: "123 Main St, Downtown",
-    },
-    {
-      id: "ORD-1234",
-      date: "2024-01-12",
-      items: ["Pizza Margherita", "Garlic Bread"],
-      total: 28.9,
-      status: "delivered",
-      deliveryTime: 35,
-      rating: 4,
-      rider: "Fatima Al-Zahra",
-      address: "123 Main St, Downtown",
-    },
-    {
-      id: "ORD-1220",
-      date: "2024-01-08",
-      items: ["Sushi Set", "Miso Soup", "Green Tea"],
-      total: 45.2,
-      status: "delivered",
-      deliveryTime: 22,
-      rating: 5,
-      rider: "Omar Khalil",
-      address: "123 Main St, Downtown",
-    },
-    {
-      id: "ORD-1205",
-      date: "2024-01-05",
-      items: ["Chicken Shawarma", "Hummus"],
-      total: 18.75,
-      status: "delivered",
-      deliveryTime: 30,
-      rating: 4,
-      rider: "Aisha Mohamed",
-      address: "123 Main St, Downtown",
-    },
-    {
-      id: "ORD-1198",
-      date: "2024-01-02",
-      items: ["Pasta Carbonara", "Caesar Salad"],
-      total: 24.6,
-      status: "cancelled",
-      deliveryTime: 0,
-      rating: 0,
-      rider: "",
-      address: "123 Main St, Downtown",
-    },
-  ]
+export function CustomerOrderHistory({
+  customerId,
+}: CustomerOrderHistoryProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [orders, setOrders] = useState<DeliveryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const delivs = await getDeliveriesByCustomer(customerId);
+        if (!mounted) return;
+        const mapped = delivs.map((d) => ({
+          id: d.id,
+          date: d.createdAt,
+          items: d.goodsType ? [d.goodsType] : [],
+          total: d.cost || 0,
+          status: d.status,
+          deliveryTime: d.deliveryTime || d.duration || 0,
+          rating: d.rating || 0,
+          rider: d.courierId || d.courierName || "",
+          address: d.dropoffLocation?.address || "",
+          trackingId: d.trackingId,
+        }));
+        setOrders(mapped);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [customerId]);
+
+  if (loading) return <div>Loading orders...</div>;
+  const dateValue = (ts: any) => {
+    if (!ts) return new Date(0);
+    if (typeof ts?.toDate === "function") return ts.toDate();
+    if (ts?.seconds) return new Date(ts.seconds * 1000);
+    return new Date(ts);
+  };
+
+  const formatDate = (ts: any) => {
+    const d = dateValue(ts);
+    return isNaN(d.getTime()) ? "-" : d.toLocaleDateString();
+  };
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.items.some((item) => item.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter
+      (order.id ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.items || []).some((item) =>
+        (item ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
     const matchesDate =
       dateFilter === "all" ||
-      (dateFilter === "week" && new Date(order.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) ||
-      (dateFilter === "month" && new Date(order.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+      (dateFilter === "week" &&
+        dateValue(order.date) >=
+          new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) ||
+      (dateFilter === "month" &&
+        dateValue(order.date) >=
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
-    return matchesSearch && matchesStatus && matchesDate
-  })
+    return matchesSearch && matchesStatus && matchesDate;
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "delivered":
-        return <Badge className="bg-green-100 text-green-800">Delivered</Badge>
+        return <Badge className="bg-green-100 text-green-800">Delivered</Badge>;
       case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
       case "cancelled":
-        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>
+        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>
+        return <Badge variant="secondary">{status}</Badge>;
     }
-  }
+  };
 
   const getRatingStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <Star key={i} className={`h-3 w-3 ${i < rating ? "text-yellow-500 fill-current" : "text-gray-300"}`} />
-    ))
-  }
+      <Star
+        key={i}
+        className={`h-3 w-3 ${
+          i < rating ? "text-yellow-500 fill-current" : "text-gray-300"
+        }`}
+      />
+    ));
+  };
 
   const orderStats = {
     total: orders.length,
     delivered: orders.filter((o) => o.status === "delivered").length,
     cancelled: orders.filter((o) => o.status === "cancelled").length,
-    totalSpent: orders.filter((o) => o.status === "delivered").reduce((sum, o) => sum + o.total, 0),
-    avgRating:
-      orders.filter((o) => o.rating > 0).reduce((sum, o) => sum + o.rating, 0) /
-      orders.filter((o) => o.rating > 0).length,
-  }
+    totalSpent: orders
+      .filter((o) => o.status === "delivered")
+      .reduce((sum, o) => sum + Number(o.total || 0), 0),
+    avgRating: (() => {
+      const ratings = orders
+        .map((o) => Number(o.rating ?? 0))
+        .filter((r) => r > 0);
+      if (ratings.length === 0) return 0;
+      return ratings.reduce((s, r) => s + r, 0) / ratings.length;
+    })(),
+  };
 
   return (
     <div className="space-y-6">
@@ -152,7 +203,9 @@ export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) 
             <div className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold">${orderStats.totalSpent.toFixed(2)}</p>
+                <p className="text-2xl font-bold">
+                  ${orderStats.totalSpent.toFixed(2)}
+                </p>
                 <p className="text-xs text-muted-foreground">Total Spent</p>
               </div>
             </div>
@@ -164,7 +217,9 @@ export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) 
             <div className="flex items-center space-x-2">
               <Star className="h-4 w-4 text-yellow-500" />
               <div>
-                <p className="text-2xl font-bold">{orderStats.avgRating.toFixed(1)}</p>
+                <p className="text-2xl font-bold">
+                  {orderStats.avgRating.toFixed(1)}
+                </p>
                 <p className="text-xs text-muted-foreground">Avg Rating</p>
               </div>
             </div>
@@ -188,7 +243,9 @@ export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) 
       <Card>
         <CardHeader>
           <CardTitle>Order History</CardTitle>
-          <CardDescription>Complete order history for this customer</CardDescription>
+          <CardDescription>
+            Complete order history for this customer
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4 mb-6">
@@ -247,47 +304,60 @@ export function CustomerOrderHistory({ customerId }: CustomerOrderHistoryProps) 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div className="max-w-[200px]">
-                        <p className="truncate">{order.items.join(", ")}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.items.length} item{order.items.length > 1 ? "s" : ""}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">${order.total.toFixed(2)}</TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell>{order.deliveryTime > 0 ? `${order.deliveryTime} min` : "-"}</TableCell>
-                    <TableCell>
-                      {order.rating > 0 ? (
-                        <div className="flex items-center space-x-1">{getRatingStars(order.rating)}</div>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>{order.rider || "-"}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredOrders.map((order, idx) => {
+                  const items = order.items || [];
+                  const key = order.id ?? `idx-${idx}`;
+                  const dt = Number(order.deliveryTime ?? 0);
+                  const rating = Number(order.rating ?? 0);
+                  const idText = order.id ?? "-";
+                  return (
+                    <TableRow key={key}>
+                      <TableCell className="font-medium">{idText}</TableCell>
+                      <TableCell>{formatDate(order.date)}</TableCell>
+                      <TableCell>
+                        <div className="max-w-[200px]">
+                          <p className="truncate">{items.join(", ")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {items.length} item{items.length > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        ${Number(order.total || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(order.status || "unknown")}</TableCell>
+                      <TableCell>{dt > 0 ? `${dt} min` : "-"}</TableCell>
+                      <TableCell>
+                        {rating > 0 ? (
+                          <div className="flex items-center space-x-1">
+                            {getRatingStars(rating)}
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>{order.rider || "-"}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
 
           {filteredOrders.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No orders found matching your criteria.</p>
+              <p className="text-muted-foreground">
+                No orders found matching your criteria.
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

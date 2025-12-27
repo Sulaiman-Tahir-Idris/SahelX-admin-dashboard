@@ -1,49 +1,102 @@
-"use client"
+"use client";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Mail, Phone, MapPin, Calendar, Briefcase, Edit, Shield, Car } from "lucide-react"
-import Link from "next/link"
-import type { Rider } from "@/lib/firebase/riders"
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Briefcase,
+  Edit,
+  Shield,
+  Car,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { getRider } from "@/lib/firebase/riders";
+import {
+  getAverageRatingForCourier,
+  getDeliveryCountForCourier,
+} from "@/lib/firebase/deliveries";
+import type { Rider } from "@/lib/firebase/riders";
 
 interface RiderProfileProps {
-  rider: Rider
+  riderId: string;
 }
 
-export function RiderProfile({ rider }: RiderProfileProps) {
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A"
+export function RiderProfile({ riderId }: RiderProfileProps) {
+  const [rider, setRider] = useState<Rider | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    let date: Date
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const r = await getRider(riderId);
+        if (!mounted) return;
+        if (r) {
+          // enrich stats
+          const [avg, count] = await Promise.all([
+            getAverageRatingForCourier(r.userId || r.id || ""),
+            getDeliveryCountForCourier(r.userId || r.id || ""),
+          ]);
+          r.stats = {
+            totalDeliveries: count,
+            completionRate: r.stats?.completionRate ?? 0,
+            avgRating: avg ?? 0,
+          };
+        }
+        setRider(r);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [riderId]);
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return "N/A";
+
+    let date: Date;
     if (timestamp.toDate) {
-      date = timestamp.toDate()
+      date = timestamp.toDate();
     } else if (timestamp.seconds) {
-      date = new Date(timestamp.seconds * 1000)
+      date = new Date(timestamp.seconds * 1000);
     } else {
-      date = new Date(timestamp)
+      date = new Date(timestamp);
     }
 
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    }).format(date)
-  }
+    }).format(date);
+  };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
       case "available":
-        return "bg-green-500"
+        return "bg-green-500";
       case "on_delivery":
-        return "bg-blue-500"
+        return "bg-blue-500";
       case "offline":
-        return "bg-gray-500"
+        return "bg-gray-500";
       default:
-        return "bg-gray-400"
+        return "bg-gray-400";
     }
-  }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (!rider) return <div>Rider not found</div>;
 
   return (
     <Card>
@@ -51,14 +104,22 @@ export function RiderProfile({ rider }: RiderProfileProps) {
         <div className="flex flex-col gap-6 md:flex-row">
           <div className="flex flex-col items-center gap-4 md:w-1/3">
             <Avatar className="h-32 w-32">
-              <AvatarImage src={rider.profilePhoto || "/placeholder.svg"} alt={rider.displayName} />
-              <AvatarFallback className="text-4xl">{rider.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarImage
+                src={rider.profilePhoto || "/placeholder.svg"}
+                alt={rider.displayName}
+              />
+              <AvatarFallback className="text-4xl">
+                {rider.displayName?.charAt(0).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
 
             <div className="text-center">
               <h2 className="text-2xl font-bold">{rider.displayName}</h2>
               <div className="mt-2 flex flex-col gap-2 items-center">
-                <Badge className={getStatusColor(rider.status)} variant="secondary">
+                <Badge
+                  className={getStatusColor(rider.status)}
+                  variant="secondary"
+                >
                   {rider.status?.replace("_", " ") || "offline"}
                 </Badge>
                 {rider.verified && (
@@ -68,7 +129,10 @@ export function RiderProfile({ rider }: RiderProfileProps) {
                   </Badge>
                 )}
                 {!rider.isActive && (
-                  <Badge variant="outline" className="text-red-600 border-red-600">
+                  <Badge
+                    variant="outline"
+                    className="text-red-600 border-red-600"
+                  >
                     Inactive
                   </Badge>
                 )}
@@ -94,14 +158,19 @@ export function RiderProfile({ rider }: RiderProfileProps) {
                 <Mail className="mr-2 h-4 w-4" />
                 Email
               </Button>
-              <Link href={`/admin/riders/${rider.id}/edit`} passHref legacyBehavior>
-                <Button size="sm" variant="outline" className="flex-1 bg-transparent" asChild>
-                  <a>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 bg-transparent"
+                asChild
+              >
+                <Link href={`/admin/riders/${rider.id}/edit`}>
+                  <>
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
-                  </a>
-                </Button>
-              </Link>
+                  </>
+                </Link>
+              </Button>
             </div>
           </div>
 
@@ -153,7 +222,8 @@ export function RiderProfile({ rider }: RiderProfileProps) {
             <div className="space-y-2">
               <h4 className="font-medium">Full Address</h4>
               <p className="text-sm text-muted-foreground">
-                {rider.address?.street}, {rider.address?.city}, {rider.address?.state}, {rider.address?.country}
+                {rider.address?.street}, {rider.address?.city},{" "}
+                {rider.address?.state}, {rider.address?.country}
               </p>
             </div>
 
@@ -161,20 +231,35 @@ export function RiderProfile({ rider }: RiderProfileProps) {
             <div className="grid grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold">{rider.stats?.totalDeliveries || 0}</div>
-                  <p className="text-xs text-muted-foreground">Total Deliveries</p>
+                  <div className="text-3xl font-bold">
+                    {rider.stats?.totalDeliveries || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Total Deliveries
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold">{rider.stats?.completionRate || 0}%</div>
-                  <p className="text-xs text-muted-foreground">Completion Rate</p>
+                  <div className="text-3xl font-bold">
+                    {rider.stats?.completionRate || 0}%
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Completion Rate
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold">{rider.stats?.avgRating || 0}/5</div>
-                  <p className="text-xs text-muted-foreground">Average Rating</p>
+                  <div className="text-3xl font-bold">
+                    {typeof (rider.stats?.avgRating || 0) === "number"
+                      ? (rider.stats?.avgRating || 0).toFixed(1)
+                      : rider.stats?.avgRating || 0}
+                    /5
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Average Rating
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -182,5 +267,5 @@ export function RiderProfile({ rider }: RiderProfileProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

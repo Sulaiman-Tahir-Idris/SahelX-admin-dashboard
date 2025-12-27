@@ -1,14 +1,27 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Eye } from "lucide-react"
-import Link from "next/link"
-import { fetchRiderDeliveryHistory } from "@/lib/firebase/deliveries"
+import { useEffect, useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Eye } from "lucide-react";
+import Link from "next/link";
+import { fetchRiderDeliveryHistory } from "@/lib/firebase/deliveries";
 
 const statusColors: Record<string, string> = {
   requested: "bg-yellow-500",
@@ -16,32 +29,32 @@ const statusColors: Record<string, string> = {
   in_transit: "bg-purple-500",
   completed: "bg-green-500",
   cancelled: "bg-red-500",
-}
+};
 
 export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
-  const [deliveries, setDeliveries] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [filter, setFilter] = useState("all")
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     const loadDeliveries = async () => {
       try {
-        const data = await fetchRiderDeliveryHistory(riderId)
-        setDeliveries(data)
+        const data = await fetchRiderDeliveryHistory(riderId);
+        setDeliveries(data);
       } catch (error) {
-        console.error("Failed to load delivery history:", error)
+        console.error("Failed to load delivery history:", error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadDeliveries()
-  }, [riderId])
+    loadDeliveries();
+  }, [riderId]);
 
   const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A"
+    if (!timestamp) return "N/A";
 
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
 
     return new Intl.DateTimeFormat("en-US", {
       year: "numeric",
@@ -49,10 +62,13 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
       day: "numeric",
       hour: "numeric",
       minute: "numeric",
-    }).format(date)
-  }
+    }).format(date);
+  };
 
-  const filteredDeliveries = filter === "all" ? deliveries : deliveries.filter((delivery) => delivery.status === filter)
+  const filteredDeliveries =
+    filter === "all"
+      ? deliveries
+      : deliveries.filter((delivery) => delivery.status === filter);
 
   return (
     <Card>
@@ -97,9 +113,13 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
                 {filteredDeliveries.map((delivery) => (
                   <TableRow key={delivery.id}>
                     <TableCell>{delivery.id}</TableCell>
-                    <TableCell>{formatDate(delivery.date)}</TableCell>
                     <TableCell>
-                      <Badge className={statusColors[delivery.status]}>{delivery.status}</Badge>
+                      {formatDate(delivery.createdAt ?? delivery.date)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={statusColors[delivery.status]}>
+                        {delivery.status}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost">
@@ -116,5 +136,5 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

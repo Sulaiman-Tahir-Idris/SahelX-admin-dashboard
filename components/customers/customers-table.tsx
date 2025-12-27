@@ -32,8 +32,10 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { getCustomers, type Customer } from "@/lib/firebase/customers";
+import { useRouter } from "next/navigation";
 
 export function CustomersTable() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -271,7 +273,11 @@ export function CustomersTable() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            router.push(`/admin/customers/${customer.id}`)
+                          }
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Profile
                         </DropdownMenuItem>

@@ -1,98 +1,110 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { GoogleMap, MarkerF, useLoadScript, InfoWindowF, PolylineF } from "@react-google-maps/api"
-import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries"
-import { subscribeToRiders, type Rider } from "@/lib/firebase/riders"
-import { Loader2 } from "lucide-react"
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  GoogleMap,
+  MarkerF,
+  useLoadScript,
+  InfoWindowF,
+  PolylineF,
+} from "@react-google-maps/api";
+import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries";
+import { subscribeToRiders, type Rider } from "@/lib/firebase/riders";
+import { Loader2 } from "lucide-react";
 
-type Libraries = ("places" | "drawing" | "geometry" | "visualization")[]
+type Libraries = ("places" | "drawing" | "geometry" | "visualization")[];
 
 interface LocationCoords {
-  lat: number
-  lng: number
+  lat: number;
+  lng: number;
 }
 
 interface MapMarker {
-  id: string
-  userId?: string
-  type: "pickup" | "dropoff" | "rider"
-  name: string
-  lat: number
-  lng: number
-  deliveryId?: string
-  status?: string
+  id: string;
+  userId?: string;
+  type: "pickup" | "dropoff" | "rider";
+  name: string;
+  lat: number;
+  lng: number;
+  deliveryId?: string;
+  status?: string;
 }
 
 const containerStyle = {
   width: "100%",
   height: "500px",
   borderRadius: "0.5rem",
-}
+};
 
-const KANO_CENTER = { lat: 11.9967, lng: 8.5185 }
+const KANO_CENTER = { lat: 11.9967, lng: 8.5185 };
 
-const libraries: Libraries = ["places"]
+const libraries: Libraries = ["places"];
 
 export function DeliveryMap() {
-  const [deliveries, setDeliveries] = useState<Delivery[]>([])
-  const [riders, setRiders] = useState<Rider[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null)
-  const [activeLine, setActiveLine] = useState<string | null>(null)
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [riders, setRiders] = useState<Rider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  const [activeLine, setActiveLine] = useState<string | null>(null);
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries,
-  })
+  });
 
   useEffect(() => {
-    let unsubscribeRiders: (() => void) | undefined
+    let unsubscribeRiders: (() => void) | undefined;
 
     const init = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const fetchedDeliveries = await getDeliveries()
+        const fetchedDeliveries = await getDeliveries();
         const activeDeliveries = fetchedDeliveries.filter(
-          (d) => d.status?.toLowerCase() !== "received" && d.status?.toLowerCase() !== "recieved"
-        )
-        setDeliveries(activeDeliveries)
+          (d) =>
+            d.status?.toLowerCase() !== "received" &&
+            d.status?.toLowerCase() !== "recieved"
+        );
+        setDeliveries(activeDeliveries);
 
         unsubscribeRiders = subscribeToRiders((liveRiders) => {
-          setRiders(liveRiders)
-        })
+          setRiders(liveRiders);
+        });
       } catch (error) {
-        console.error("Error setting up map data:", error)
-        setDeliveries([])
-        setRiders([])
+        console.error("Error setting up map data:", error);
+        setDeliveries([]);
+        setRiders([]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    init()
+    init();
     return () => {
-      if (unsubscribeRiders) unsubscribeRiders()
-    }
-  }, [])
+      if (unsubscribeRiders) unsubscribeRiders();
+    };
+  }, []);
 
   // Only show riders assigned to a delivery
   const assignedRiderIds = useMemo(
     () => deliveries.map((d) => d.courierId).filter(Boolean),
-    [deliveries],
-  )
+    [deliveries]
+  );
   const assignedRiders = useMemo(
     () => riders.filter((r) => assignedRiderIds.includes(r.userId)),
-    [riders, assignedRiderIds],
-  )
+    [riders, assignedRiderIds]
+  );
 
   // Markers: pickups, dropoffs, and only assigned riders
   const allMarkers: MapMarker[] = useMemo(() => {
-    const markers: MapMarker[] = []
+    const markers: MapMarker[] = [];
 
     deliveries.forEach((delivery) => {
-      if (delivery.pickupLocation && "lat" in delivery.pickupLocation && "lng" in delivery.pickupLocation) {
+      if (
+        delivery.pickupLocation &&
+        "lat" in delivery.pickupLocation &&
+        "lng" in delivery.pickupLocation
+      ) {
         markers.push({
           id: `pickup_${delivery.id}`,
           type: "pickup",
@@ -101,10 +113,14 @@ export function DeliveryMap() {
           lng: (delivery.pickupLocation as LocationCoords).lng,
           deliveryId: delivery.id || "",
           status: delivery.status,
-        })
+        });
       }
 
-      if (delivery.dropoffLocation && "lat" in delivery.dropoffLocation && "lng" in delivery.dropoffLocation) {
+      if (
+        delivery.dropoffLocation &&
+        "lat" in delivery.dropoffLocation &&
+        "lng" in delivery.dropoffLocation
+      ) {
         markers.push({
           id: `dropoff_${delivery.id}`,
           type: "dropoff",
@@ -113,14 +129,14 @@ export function DeliveryMap() {
           lng: (delivery.dropoffLocation as LocationCoords).lng,
           deliveryId: delivery.id || "",
           status: delivery.status,
-        })
+        });
       }
-    })
+    });
 
     // Only show assigned riders
     assignedRiders.forEach((rider) => {
-      const lat = rider.currentLocation?.lat
-      const lng = rider.currentLocation?.lng
+      const lat = rider.currentLocation?.lat;
+      const lng = rider.currentLocation?.lng;
       if (typeof lat === "number" && typeof lng === "number") {
         markers.push({
           id: `rider_${rider.userId}`,
@@ -130,12 +146,12 @@ export function DeliveryMap() {
           lat,
           lng,
           status: rider.status || (rider.isAvailable ? "available" : "offline"),
-        })  
+        });
       }
-    })
+    });
 
-    return markers
-  }, [deliveries, assignedRiders])
+    return markers;
+  }, [deliveries, assignedRiders]);
 
   const mapOptions = useMemo(
     () => ({
@@ -145,10 +161,16 @@ export function DeliveryMap() {
       streetViewControl: false,
       mapTypeControl: false,
       fullscreenControl: false,
-      styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }],
+      styles: [
+        {
+          featureType: "poi",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }],
+        },
+      ],
     }),
     []
-  )
+  );
 
   // 👇 assign custom icons per type
   const markerIcon = (type: MapMarker["type"]) => {
@@ -156,31 +178,31 @@ export function DeliveryMap() {
       return {
         url: "/icons/pickup.png",
         scaledSize: new window.google.maps.Size(16, 16),
-      }
+      };
     }
     if (type === "dropoff") {
       return {
         url: "/icons/dropoff.png",
         scaledSize: new window.google.maps.Size(32, 32),
-      }
+      };
     }
     return {
       url: "/icons/rider.png",
       scaledSize: new window.google.maps.Size(32, 32),
-    }
-  }
+    };
+  };
 
   const handleMarkerClick = (marker: MapMarker) => {
-    setSelectedMarker(marker)
+    setSelectedMarker(marker);
 
     if (marker.type === "pickup" || marker.type === "dropoff") {
-      const lineKey = `${marker.type}_${marker.deliveryId}`
-      setActiveLine((prev) => (prev === lineKey ? null : lineKey))
+      const lineKey = `${marker.type}_${marker.deliveryId}`;
+      setActiveLine((prev) => (prev === lineKey ? null : lineKey));
     }
-  }
+  };
 
-  if (loadError) return <div>Error loading maps: {loadError.message}</div>
-  if (!isLoaded) return <div>Loading Map...</div>
+  if (loadError) return <div>Error loading maps: {loadError.message}</div>;
+  if (!isLoaded) return <div>Loading Map...</div>;
 
   return (
     <Card className="col-span-full border-gray-200 bg-white shadow-sm">
@@ -212,6 +234,7 @@ export function DeliveryMap() {
                     lng: Number(marker.lng),
                   }}
                   icon={markerIcon(marker.type)}
+                  onClick={() => handleMarkerClick(marker)}
                 />
               ))}
 
@@ -259,7 +282,7 @@ export function DeliveryMap() {
                 ) {
                   return (
                     <PolylineF
-                      key={`rider_line_${rider.id}`}
+                      key={`rider_line_${rider.userId}`}
                       path={[
                         {
                           lat: rider.currentLocation.lat,
