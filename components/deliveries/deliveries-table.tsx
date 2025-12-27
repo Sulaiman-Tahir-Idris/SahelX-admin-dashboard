@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getDeliveries, Delivery } from "@/lib/firebase/deliveries";
-import { getRider, getRiders } from "@/lib/firebase/riders";
+import { getRiders } from "@/lib/firebase/riders";
 import { db } from "@/lib/firebase/config";
 import {
   doc,
@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 type User = {
   id: string;
@@ -39,18 +40,20 @@ const DeliveriesTable = () => {
     {}
   );
   const [courierNames, setCourierNames] = useState<Record<string, string>>({});
-  const [filter, setFilter] = useState<"all" | "unassigned">("all");
+  const [filter, setFilter] = useState<"all" | "unassigned" | "traditional">(
+    "all"
+  );
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [showAssign, setShowAssign] = useState<string | boolean>(false);
   const [couriers, setCouriers] = useState<any[]>([]);
   const [assignLoading, setAssignLoading] = useState(false);
   const [selectedCourierId, setSelectedCourierId] = useState<string>("");
 
-  // Fetch available couriers for assignment
   const fetchCouriers = async () => {
     try {
       const riders = await getRiders();
       setCouriers(riders);
-
       const map: Record<string, string> = {};
       riders.forEach((r) => {
         const id = r.userId ?? r.id;
@@ -63,15 +66,14 @@ const DeliveriesTable = () => {
     }
   };
 
-  // Fetch all customers (role === 'customer')
   const fetchCustomers = async () => {
     try {
       const q = query(collection(db, "User"), where("role", "==", "customer"));
       const snapshot = await getDocs(q);
       const map: Record<string, string> = {};
-      snapshot.forEach((doc) => {
-        const data = doc.data() as User;
-        map[doc.id] = data.displayName ?? doc.id;
+      snapshot.forEach((d) => {
+        const data = d.data() as User;
+        map[d.id] = data.displayName ?? d.id;
       });
       setCustomerNames(map);
     } catch (err) {
@@ -83,9 +85,8 @@ const DeliveriesTable = () => {
   const fetchAllDeliveries = async () => {
     try {
       const data = await getDeliveries();
-      // Filter out deliveries with tags
-      const untaggedDeliveries = data.filter((d) => !d.tag);
-      setDeliveries(untaggedDeliveries);
+      const untagged = data.filter((d) => !d.tag);
+      setDeliveries(untagged);
     } catch (err) {
       console.error("Failed to fetch deliveries:", err);
       setDeliveries([]);
@@ -103,10 +104,40 @@ const DeliveriesTable = () => {
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return "N/A";
-    const date = timestamp.toDate
-      ? timestamp.toDate()
-      : new Date(timestamp.seconds * 1000);
-    return date.toLocaleString();
+    if (timestamp.toDate) return timestamp.toDate().toLocaleString();
+    if (timestamp.seconds)
+      return new Date(timestamp.seconds * 1000).toLocaleString();
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const copyTrackingId = async (id: string | undefined) => {
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+      toast({
+        title: "Copied",
+        description: "Tracking ID copied to clipboard.",
+      });
+    } catch (err) {
+      try {
+        const input = document.createElement("input");
+        input.value = id;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        toast({
+          title: "Copied",
+          description: "Tracking ID copied to clipboard.",
+        });
+      } catch (e) {
+        toast({
+          title: "Copy failed",
+          description: "Could not copy tracking ID.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   if (loading) return <p className="p-4">Loading deliveries...</p>;
@@ -116,12 +147,22 @@ const DeliveriesTable = () => {
   const filteredDeliveries =
     filter === "unassigned"
       ? deliveries.filter((d) => !d.courierId)
+      : filter === "traditional"
+      ? deliveries.filter((d) => d.type === "traditional")
       : deliveries;
+
+  // Pagination
+  const total = filteredDeliveries.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (page > totalPages) setPage(1);
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, total);
+  const pageItems = filteredDeliveries.slice(startIndex, endIndex);
 
   return (
     <div className="p-4 overflow-x-auto">
-      <h1 className="text-2xl font-bold mb-4">All Deliveries (Untagged)</h1>
-      <div className="mb-4 flex gap-2">
+      {/* <h1 className="text-2xl font-bold mb-4">All Deliveries (Untagged)</h1> */}
+      <div className="mb-4 flex gap-2 flex-wrap">
         <Button
           variant={filter === "all" ? "default" : "outline"}
           onClick={() => setFilter("all")}
@@ -134,39 +175,105 @@ const DeliveriesTable = () => {
         >
           Unassigned
         </Button>
+        <Button
+          variant={filter === "traditional" ? "default" : "outline"}
+          onClick={() => setFilter("traditional")}
+        >
+          Traditional
+        </Button>
       </div>
 
-      <table className="min-w-full bg-white shadow-md rounded-md overflow-hidden">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Showing {startIndex + 1}-{endIndex} of {total}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm">Rows:</label>
+          <select
+            className="input h-8"
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPage(1);
+            }}
+          >
+            {[10, 25, 50, 100].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Prev
+          </Button>
+          <div className="px-2 text-sm">
+            {page} / {totalPages}
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+
+      <table className="min-w-full table-auto bg-white shadow-md rounded-md overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="px-3 py-2 text-left text-sm font-medium">
               Customer
             </th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Courier</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Fee</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
-            <th className="px-4 py-3 text-left text-sm font-medium">
+            <th className="px-3 py-2 text-left text-sm font-medium">Courier</th>
+            <th className="px-3 py-2 text-left text-sm font-medium">Status</th>
+            <th className="px-3 py-2 text-left text-sm font-medium">Fee</th>
+            <th className="px-3 py-2 text-left text-sm font-medium">Created</th>
+            <th className="px-3 py-2 text-left text-sm font-medium">
               Tracking ID
+            </th>
+            <th className="px-3 py-2 text-right text-sm font-medium">
+              Actions
             </th>
           </tr>
         </thead>
         <tbody>
-          {filteredDeliveries.map((d) => (
+          {pageItems.map((d) => (
             <tr key={d.id} className="border-t">
-              <td className="px-4 py-2">
+              <td className="px-3 py-2 max-w-[220px] truncate">
                 {customerNames[d.customerId] ?? d.customerId}
               </td>
-              <td className="px-4 py-2">
+              <td className="px-3 py-2 max-w-[180px] truncate">
                 {d.courierId
                   ? courierNames[d.courierId] ?? d.courierId
                   : "Unassigned"}
               </td>
-              <td className="px-4 py-2">{d.status}</td>
-              <td className="px-4 py-2">₦{(d.cost || 0).toLocaleString()}</td>
-              <td className="px-4 py-2">{formatDate(d.createdAt)}</td>
-              <td className="px-4 py-2">{d.trackingId || "N/A"}</td>
-              <td className="px-4 py-2 text-right">
+              <td className="px-3 py-2">{d.status}</td>
+              <td className="px-3 py-2">₦{(d.cost || 0).toLocaleString()}</td>
+              <td className="px-3 py-2">{formatDate(d.createdAt)}</td>
+              <td className="px-3 py-2 max-w-[200px]">
+                {d.trackingId ? (
+                  <div className="flex items-center gap-2">
+                    <span className="truncate max-w-[160px]">
+                      {d.trackingId}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => copyTrackingId(d.trackingId)}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                ) : (
+                  "N/A"
+                )}
+              </td>
+              <td className="px-3 py-2 text-right">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -232,7 +339,6 @@ const DeliveriesTable = () => {
                 <strong>Created:</strong>{" "}
                 {formatDate(selectedDelivery.createdAt)}
               </p>
-              {/* Assign courier button */}
               {!selectedDelivery.courierId && (
                 <div className="pt-2">
                   <Button
