@@ -47,6 +47,7 @@
     "embla-carousel-react": "8.5.1",
     "file-saver": "^2.0.5",
     "firebase": "latest",
+    "firebase-admin": "^13.6.0",
     "input-otp": "1.4.1",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",

@@ -1,29 +1,47 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "@/components/ui/use-toast"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Copy, CheckCircle, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { createCourierWithoutLogout } from "@/lib/firebase/users"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Copy, CheckCircle, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+// import { createCourierWithoutLogout } from "@/lib/firebase/users";
 
 const formSchema = z.object({
-  displayName: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  displayName: z
+    .string()
+    .min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email address." }),
   phone: z.string().min(10, { message: "Please enter a valid phone number." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  vehicleType: z.enum(["motorcycle", "car", "bicycle"], {
-    required_error: "Please select a vehicle type.",
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters." }),
+  vehicleType: z.enum(["motorcycle", "car", "bicycle"] as const, {
+    message: "Please select a vehicle type.",
   }),
   plateNumber: z.string().min(1, { message: "Plate number is required." }),
   vehicleModel: z.string().min(1, { message: "Vehicle model is required." }),
@@ -33,19 +51,19 @@ const formSchema = z.object({
   state: z.string().min(1, { message: "State is required." }),
   isVerified: z.boolean().default(false),
   isActive: z.boolean().default(true),
-})
+});
 
-type FormValues = z.infer<typeof formSchema>
+type FormValues = z.infer<typeof formSchema>;
 
 export function CourierRegistrationForm() {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [registrationSuccess, setRegistrationSuccess] = useState(false)
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [courierCredentials, setCourierCredentials] = useState<{
-    email: string
-    password: string
-    courierId: string
-  } | null>(null)
+    email: string;
+    password: string;
+    courierId: string;
+  } | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -65,65 +83,80 @@ export function CourierRegistrationForm() {
       isVerified: false,
       isActive: true,
     },
-  })
+  });
 
   async function onSubmit(values: FormValues) {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      const courierId = await createCourierWithoutLogout({
-        displayName: values.displayName,
-        email: values.email,
-        phone: values.phone,
-        password: values.password,
-        role: "courier",
-        verified: values.isVerified,
-        isActive: values.isActive,
-        address: {
-          street: values.street,
-          city: values.city,
-          state: values.state,
-          country: "Nigeria",
-        },
-        vehicleInfo: {
-          type: values.vehicleType,
-          plateNumber: values.plateNumber,
-          model: values.vehicleModel,
-          color: values.vehicleColor,
-          verified: values.isVerified,
-        },
-      })
+      const res = await fetch("/api/admin/create-courier", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: values.displayName,
+          email: values.email,
+          password: values.password,
+          phone: values.phone,
+          isVerified: values.isVerified,
+          isActive: values.isActive,
+          address: {
+            street: values.street,
+            city: values.city,
+            state: values.state,
+            country: "Nigeria",
+          },
+          vehicleInfo: {
+            type: values.vehicleType,
+            plateNumber: values.plateNumber,
+            model: values.vehicleModel,
+            color: values.vehicleColor,
+            verified: values.isVerified,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || err.message || "Failed to create courier");
+      }
+
+      const data = await res.json();
+      const courierId = data.id ?? data.courierId;
+
+      if (!courierId) {
+        throw new Error("No courier id returned from server");
+      }
 
       // Store credentials to show to admin
       setCourierCredentials({
         email: values.email,
         password: values.password,
         courierId: courierId,
-      })
+      });
 
-      setRegistrationSuccess(true)
+      setRegistrationSuccess(true);
 
       toast({
         title: "Courier registered successfully",
         description: `${values.displayName} has been registered. Please share the login credentials with them.`,
-      })
+      });
     } catch (error: any) {
       toast({
         title: "Failed to register courier",
         description: error.message || "An unexpected error occurred.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard.writeText(text);
     toast({
       title: "Copied to clipboard",
       description: "The credentials have been copied to your clipboard.",
-    })
-  }
+    });
+  };
 
   if (registrationSuccess && courierCredentials) {
     return (
@@ -147,8 +180,9 @@ export function CourierRegistrationForm() {
           <CardContent className="space-y-4">
             <Alert>
               <AlertDescription>
-                The courier has been successfully registered. Share these credentials with the courier so they can log
-                into their SahelX Courier Mobile App.
+                The courier has been successfully registered. Share these
+                credentials with the courier so they can log into their SahelX
+                Courier Mobile App.
               </AlertDescription>
             </Alert>
 
@@ -158,7 +192,13 @@ export function CourierRegistrationForm() {
                   <label className="text-sm font-medium">Courier ID</label>
                   <div className="flex items-center gap-2">
                     <Input value={courierCredentials.courierId} readOnly />
-                    <Button size="sm" variant="outline" onClick={() => copyToClipboard(courierCredentials.courierId)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        copyToClipboard(courierCredentials.courierId)
+                      }
+                    >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
@@ -168,7 +208,11 @@ export function CourierRegistrationForm() {
                   <label className="text-sm font-medium">Email</label>
                   <div className="flex items-center gap-2">
                     <Input value={courierCredentials.email} readOnly />
-                    <Button size="sm" variant="outline" onClick={() => copyToClipboard(courierCredentials.email)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard(courierCredentials.email)}
+                    >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
@@ -178,7 +222,13 @@ export function CourierRegistrationForm() {
                   <label className="text-sm font-medium">Password</label>
                   <div className="flex items-center gap-2">
                     <Input value={courierCredentials.password} readOnly />
-                    <Button size="sm" variant="outline" onClick={() => copyToClipboard(courierCredentials.password)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        copyToClipboard(courierCredentials.password)
+                      }
+                    >
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
@@ -186,7 +236,9 @@ export function CourierRegistrationForm() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Complete Credentials (Copy All)</label>
+                <label className="text-sm font-medium">
+                  Complete Credentials (Copy All)
+                </label>
                 <div className="flex items-center gap-2">
                   <Input
                     value={`Email: ${courierCredentials.email} | Password: ${courierCredentials.password} | Courier ID: ${courierCredentials.courierId}`}
@@ -198,7 +250,7 @@ export function CourierRegistrationForm() {
                     variant="outline"
                     onClick={() =>
                       copyToClipboard(
-                        `Email: ${courierCredentials.email}\nPassword: ${courierCredentials.password}\nCourier ID: ${courierCredentials.courierId}`,
+                        `Email: ${courierCredentials.email}\nPassword: ${courierCredentials.password}\nCourier ID: ${courierCredentials.courierId}`
                       )
                     }
                   >
@@ -209,31 +261,37 @@ export function CourierRegistrationForm() {
             </div>
 
             <div className="rounded-lg border bg-blue-50 p-4 dark:bg-blue-950">
-              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Mobile App Access</h4>
+              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                Mobile App Access
+              </h4>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                The courier will use these credentials to log into the SahelX Courier Mobile App. Make sure they have
-                the app installed on their mobile device before sharing these credentials.
+                The courier will use these credentials to log into the SahelX
+                Courier Mobile App. Make sure they have the app installed on
+                their mobile device before sharing these credentials.
               </p>
             </div>
 
             <div className="flex gap-2">
               <Button
                 onClick={() => {
-                  setRegistrationSuccess(false)
-                  setCourierCredentials(null)
-                  form.reset()
+                  setRegistrationSuccess(false);
+                  setCourierCredentials(null);
+                  form.reset();
                 }}
               >
                 Register Another Courier
               </Button>
-              <Button variant="outline" onClick={() => router.push("/admin/riders")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/admin/riders")}
+              >
                 View All Couriers
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -251,7 +309,8 @@ export function CourierRegistrationForm() {
         <CardHeader>
           <CardTitle>Courier Registration</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Register a new courier to the SahelX platform. This will create their account and mobile app access.
+            Register a new courier to the SahelX platform. This will create
+            their account and mobile app access.
           </p>
         </CardHeader>
         <CardContent>
@@ -279,9 +338,15 @@ export function CourierRegistrationForm() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="john@example.com" type="email" {...field} />
+                        <Input
+                          placeholder="john@example.com"
+                          type="email"
+                          {...field}
+                        />
                       </FormControl>
-                      <FormDescription>This will be used as the courier's login email</FormDescription>
+                      <FormDescription>
+                        This will be used as the courier's login email
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -308,9 +373,15 @@ export function CourierRegistrationForm() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input placeholder="Minimum 6 characters" type="password" {...field} />
+                        <Input
+                          placeholder="Minimum 6 characters"
+                          type="password"
+                          {...field}
+                        />
                       </FormControl>
-                      <FormDescription>Temporary password for the courier</FormDescription>
+                      <FormDescription>
+                        Temporary password for the courier
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -326,14 +397,19 @@ export function CourierRegistrationForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Vehicle Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select vehicle type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="motorcycle">Motorcycle</SelectItem>
+                            <SelectItem value="motorcycle">
+                              Motorcycle
+                            </SelectItem>
                             <SelectItem value="car">Car</SelectItem>
                             <SelectItem value="bicycle">Bicycle</SelectItem>
                           </SelectContent>
@@ -441,13 +517,19 @@ export function CourierRegistrationForm() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">Verified Courier</FormLabel>
+                        <FormLabel className="text-base">
+                          Verified Courier
+                        </FormLabel>
                         <FormDescription>
-                          Mark this courier as verified. Verified couriers can start accepting deliveries immediately.
+                          Mark this courier as verified. Verified couriers can
+                          start accepting deliveries immediately.
                         </FormDescription>
                       </div>
                       <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
                     </FormItem>
                   )}
@@ -459,13 +541,19 @@ export function CourierRegistrationForm() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">Active Status</FormLabel>
+                        <FormLabel className="text-base">
+                          Active Status
+                        </FormLabel>
                         <FormDescription>
-                          Set the courier as active. Inactive couriers cannot receive delivery requests.
+                          Set the courier as active. Inactive couriers cannot
+                          receive delivery requests.
                         </FormDescription>
                       </div>
                       <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
                     </FormItem>
                   )}
@@ -487,5 +575,5 @@ export function CourierRegistrationForm() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
