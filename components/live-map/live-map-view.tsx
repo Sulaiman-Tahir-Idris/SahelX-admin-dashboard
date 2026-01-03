@@ -53,7 +53,7 @@ export function LiveMapView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const libraries = useMemo<Libraries>(() => ["places"], []); // Memoize libraries array
+  const libraries = useMemo<Libraries>(() => ["places"], []);
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries,

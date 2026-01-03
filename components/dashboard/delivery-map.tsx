@@ -47,11 +47,25 @@ export function DeliveryMap() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [activeLine, setActiveLine] = useState<string | null>(null);
+  const [animatedRiders, setAnimatedRiders] = useState<
+    Record<string, { lat: number; lng: number }>
+  >({});
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries,
   });
+
+  function interpolate(
+    start: { lat: number; lng: number },
+    end: { lat: number; lng: number },
+    t: number
+  ) {
+    return {
+      lat: start.lat + (end.lat - start.lat) * t,
+      lng: start.lng + (end.lng - start.lng) * t,
+    };
+  }
 
   useEffect(() => {
     let unsubscribeRiders: (() => void) | undefined;
@@ -84,6 +98,35 @@ export function DeliveryMap() {
       if (unsubscribeRiders) unsubscribeRiders();
     };
   }, []);
+
+  useEffect(() => {
+    riders.forEach((rider) => {
+      if (!rider.currentLocation) return;
+
+      const id = rider.userId;
+      const target = rider.currentLocation;
+      const start = animatedRiders[id] ?? target;
+
+      const duration = 1000; // ms
+      let startTime: number | null = null;
+
+      function animate(time: number) {
+        if (!startTime) startTime = time;
+        const progress = Math.min((time - startTime) / duration, 1);
+
+        const position = interpolate(start, target, progress);
+
+        setAnimatedRiders((prev) => ({
+          ...prev,
+          [id]: position,
+        }));
+
+        if (progress < 1) requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+    });
+  }, [riders]);
 
   // Only show riders assigned to a delivery
   const assignedRiderIds = useMemo(
@@ -133,18 +176,24 @@ export function DeliveryMap() {
       }
     });
 
-    // Only show assigned riders
+    // Only show assigned riders (animated)
     assignedRiders.forEach((rider) => {
-      const lat = rider.currentLocation?.lat;
-      const lng = rider.currentLocation?.lng;
-      if (typeof lat === "number" && typeof lng === "number") {
+      const rawLat = rider.currentLocation?.lat;
+      const rawLng = rider.currentLocation?.lng;
+
+      if (typeof rawLat === "number" && typeof rawLng === "number") {
+        const animated = animatedRiders[rider.userId] ?? {
+          lat: rawLat,
+          lng: rawLng,
+        };
+
         markers.push({
           id: `rider_${rider.userId}`,
           userId: rider.userId,
           type: "rider",
           name: rider.displayName || "Rider",
-          lat,
-          lng,
+          lat: animated.lat,
+          lng: animated.lng,
           status: rider.status || (rider.isAvailable ? "available" : "offline"),
         });
       }
