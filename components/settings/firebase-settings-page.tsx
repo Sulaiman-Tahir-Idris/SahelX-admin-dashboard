@@ -22,8 +22,8 @@ export function FirebaseSettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [pricing, setPricing] = useState<Pricing>({
     baseFee: 1000,
-    perKm: 150,
-    perKg: 50,
+    feePerKm: 150,
+    feePerKg: 50,
   })
   const [serviceAreas, setServiceAreas] = useState<GeoBoundary[]>([
     { lat: 6.5244, lng: 3.3792, radius: 10 }, // Lagos default
@@ -144,20 +144,20 @@ export function FirebaseSettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="perKm">Fee per KM (₦)</Label>
                 <Input
-                  id="perKm"
+                  id="feePerKm"
                   type="number"
-                  value={pricing.perKm}
-                  onChange={(e) => setPricing({ ...pricing, perKm: Number(e.target.value) })}
+                  value={pricing.feePerKm}
+                  onChange={(e) => setPricing({ ...pricing, feePerKm: Number(e.target.value) })}
                 />
                 <p className="text-xs text-muted-foreground">Additional fee per kilometer</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="perKg">Fee per KG (₦)</Label>
+                <Label htmlFor="feePerKg">Fee per KG (₦)</Label>
                 <Input
-                  id="perKg"
+                  id="feePerKg"
                   type="number"
-                  value={pricing.perKg}
-                  onChange={(e) => setPricing({ ...pricing, perKg: Number(e.target.value) })}
+                  value={pricing.feePerKg}
+                  onChange={(e) => setPricing({ ...pricing, feePerKg: Number(e.target.value) })}
                 />
                 <p className="text-xs text-muted-foreground">Additional fee per kilogram</p>
               </div>
@@ -168,9 +168,9 @@ export function FirebaseSettingsPage() {
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-medium mb-2">Pricing Preview</h4>
               <p className="text-sm text-muted-foreground">
-                Example: 5km delivery with 2kg package = ₦{pricing.baseFee + 5 * pricing.perKm + 2 * pricing.perKg}
+                Example: 5km delivery with 2kg package = ₦{pricing.baseFee + 5 * pricing.feePerKm + 2 * pricing.feePerKg}
                 <br />
-                (Base: ₦{pricing.baseFee} + Distance: ₦{5 * pricing.perKm} + Weight: ₦{2 * pricing.perKg})
+                (Base: ₦{pricing.baseFee} + Distance: ₦{5 * pricing.feePerKm} + Weight: ₦{2 * pricing.feePerKg})
               </p>
             </div>
 

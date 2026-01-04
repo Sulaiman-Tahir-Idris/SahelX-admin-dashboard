@@ -3,8 +3,8 @@ import { db } from "./config"
 
 export interface Pricing {
   baseFee: number
-  perKm: number
-  perKg: number
+  feePerKm: number
+  feePerKg: number
 }
 
 export interface GeoBoundary {
@@ -28,8 +28,8 @@ export interface AppSettings {
 const defaultSettings: Omit<AppSettings, "id" | "createdAt" | "updatedAt"> = {
   pricing: {
     baseFee: 1000,
-    perKm: 150,
-    perKg: 50,
+    feePerKm: 150,
+    feePerKg: 50,
   },
   serviceAreas: [
     { lat: 6.5244, lng: 3.3792, radius: 10 }, // Lagos
