@@ -99,7 +99,7 @@ export function CustomersTable() {
   const exportToPdf = async () => {
     const rows = filteredCustomers.map((c) => [
       c.displayName || c.fullName || c.email || "",
-      c.isActive ? "Active" : "Inactive",
+      c.email,
       String(c.totalOrders || 0),
       c.phone || "",
       formatDate(c.createdAt ?? c.lastOrder),
@@ -156,6 +156,50 @@ export function CustomersTable() {
       setTimeout(() => w.print(), 500);
     }
   };
+  const exportEmails = async () => {
+    const emails = Array.from(
+      new Set(
+        filteredCustomers
+          .map((c) => c.email)
+          .filter((email): email is string => !!email)
+      )
+    );
+
+    if (emails.length === 0) {
+      toast({
+        title: "No emails found",
+        description: "There are no customer emails to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { jsPDF } = await import("jspdf");
+
+      const doc = new jsPDF({ unit: "pt" });
+      doc.setFontSize(12);
+      doc.text("Customer Emails", 40, 40);
+
+      emails.forEach((email, index) => {
+        doc.text(email, 40, 70 + index * 14);
+      });
+
+      doc.save("customer-emails.pdf");
+    } catch (error) {
+      // fallback: simple text file
+      const content = emails.join("\n");
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "customer-emails.txt";
+      a.click();
+
+      URL.revokeObjectURL(url);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -194,6 +238,9 @@ export function CustomersTable() {
           className="max-w-sm"
         />
         <div className="flex items-center gap-2">
+          <Button onClick={exportEmails} variant="secondary" size="sm">
+            Export Emails
+          </Button>
           <Button onClick={exportToPdf} variant="secondary" size="sm">
             Export PDF
           </Button>
