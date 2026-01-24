@@ -11,8 +11,10 @@ import {
   Users,
   Menu,
   Shield,
+  MessageSquare,
   DollarSign,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-utils";
 
@@ -64,6 +66,11 @@ const navItems: NavItem[] = [
     href: "/admin/live-map",
     icon: Map,
   },
+  {
+    title: "Messages",
+    href: "/admin/messages",
+    icon: MessageSquare,
+  },
   // {
   //   title: "Analytics",
   //   href: "/admin/analytics",
@@ -100,6 +107,7 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
       "/admin/revenue",
       "/admin/riders",
       "/admin/create-secretary",
+      "/admin/messages",
       liveMap,
     ]);
     return items.filter((i) => allowed.has(i.href));
@@ -113,6 +121,7 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
       "/admin/deliveries",
       "/admin/multiple-deliveries",
       "/admin/create-secretary",
+      "/admin/messages",
       liveMap,
     ]);
     return items.filter((i) => allowed.has(i.href));
@@ -187,7 +196,7 @@ export function MobileNav() {
               className={cn(
                 "h-12 w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-medium",
                 pathname === item.href &&
-                  "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600"
+                  "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600",
               )}
               onClick={() => handleNavigation(item.href)}
             >
@@ -246,7 +255,7 @@ export function DashboardNav() {
             className={cn(
               "h-10 w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-medium",
               pathname === item.href &&
-                "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600"
+                "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600",
             )}
             onClick={() => handleNavigation(item.href)}
           >

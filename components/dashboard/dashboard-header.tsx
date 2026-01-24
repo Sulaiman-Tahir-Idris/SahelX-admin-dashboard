@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAdminMessages } from "@/lib/chat/use-admin-messages";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ import { toast } from "@/components/ui/use-toast";
 import { MobileNav } from "./dashboard-nav";
 import Image from "next/image";
 import { signOutAdmin } from "@/lib/firebase/auth";
+import { MessageBell } from "@/components/dashboard/message-bell";
 
 export function DashboardHeader({ user }: { user?: any }) {
   const router = useRouter();
@@ -31,6 +33,7 @@ export function DashboardHeader({ user }: { user?: any }) {
       setCurrentUser(user);
     }
   }, [user]);
+  const messages = useAdminMessages();
 
   const displayRoleName = (role?: string) => {
     if (!role) return "Admin";
@@ -90,6 +93,9 @@ export function DashboardHeader({ user }: { user?: any }) {
         </h1>
       </div>
       <div className="flex items-center space-x-2 md:space-x-3">
+        {/* 🔔 Message Notification Bell */}
+        <MessageBell messages={messages || []} />
+        {/* 👤 Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -100,38 +106,9 @@ export function DashboardHeader({ user }: { user?: any }) {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent align="end" className="border-gray-200 w-64">
-            <div className="flex items-center gap-3 p-4">
-              <Avatar className="h-12 w-12 border-2 border-gray-200 rounded-full">
-                <AvatarFallback className="bg-desertred text-desertred font-bold text-lg">
-                  {(currentUser?.displayName || "A").charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <p className="font-semibold text-gray-900 text-sm md:text-base">
-                  {currentUser?.displayName || "Admin User"}
-                </p>
-                <p className="text-xs text-gray-600 md:text-sm">
-                  {currentUser?.email || "admin@sahelx.com"}
-                </p>
-              </div>
-            </div>
-            <DropdownMenuSeparator className="bg-gray-200" />
-            <DropdownMenuItem
-              onClick={handleProfileClick}
-              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
-            >
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-gray-200" />
-            <DropdownMenuItem
-              onClick={handleLogout}
-              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
+            ...
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
