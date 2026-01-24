@@ -12,39 +12,23 @@ export const toggleMessageReaction = async (
   emoji: string,
   userId: string,
 ) => {
-  const messageRef = doc(db, "AdminMessages", messageId);
+  const messageRef = doc(db, "adminChats", "global", "messages", messageId);
 
-  try {
-    const snapshot = await getDoc(messageRef);
-    const data = snapshot.data();
-    const reactions: Record<string, string[]> = data?.reactions || {};
+  const snapshot = await getDoc(messageRef);
+  if (!snapshot.exists()) return;
 
-    const userHasReacted = reactions[emoji]?.includes(userId) ?? false;
+  const data = snapshot.data();
+  const reactions: Record<string, string[]> = data.reactions || {};
 
-    if (userHasReacted) {
-      // Remove reaction
-      await setDoc(
-        messageRef,
-        {
-          reactions: {
-            [emoji]: arrayRemove(userId),
-          },
-        },
-        { merge: true }, // merge ensures existing fields are preserved
-      );
-    } else {
-      // Add reaction
-      await setDoc(
-        messageRef,
-        {
-          reactions: {
-            [emoji]: arrayUnion(userId),
-          },
-        },
-        { merge: true },
-      );
-    }
-  } catch (error) {
-    console.error("Error toggling reaction:", error);
-  }
+  const hasReacted = reactions[emoji]?.includes(userId);
+
+  await setDoc(
+    messageRef,
+    {
+      reactions: {
+        [emoji]: hasReacted ? arrayRemove(userId) : arrayUnion(userId),
+      },
+    },
+    { merge: true },
+  );
 };

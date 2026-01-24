@@ -10,30 +10,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import { Timestamp } from "firebase/firestore";
 
 export type AdminMessage = {
   id: string;
   senderId: string;
   senderName: string;
   text: string;
-  createdAt?: any;
-  seen?: boolean;
-  reactions?: Record<string, string[]>; // 👈 IMPORTANT
-  [key: string]: any; // for any additional fields
+  createdAt?: Timestamp; // Firestore timestamp
+  reactions?: Record<string, string[]>; // optional
+  [key: string]: any;
 };
 
 interface MessageBellProps {
   messages: AdminMessage[];
+  lastSeen?: Timestamp | null; // 👈 lastSeen timestamp from admin doc
   onClick?: () => void;
 }
 
-export function MessageBell({ messages, onClick }: MessageBellProps) {
+export function MessageBell({ messages, lastSeen, onClick }: MessageBellProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const unreadCount = messages.filter((m) => !m.seen).length;
+  // ✅ Safely compute unread count
+  const unreadCount = messages.filter((m) => {
+    if (!lastSeen || !m.createdAt) return false;
+    return m.createdAt.toMillis() > lastSeen.toMillis();
+  }).length;
 
-  const previewMessages = messages.slice().reverse().slice(0, 3); // last 3 messages
+  // Show last 3 messages in dropdown
+  const previewMessages = messages.slice().reverse().slice(0, 3);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -57,9 +63,11 @@ export function MessageBell({ messages, onClick }: MessageBellProps) {
         <div className="px-2 py-1 text-sm font-semibold text-gray-700 border-b">
           Messages
         </div>
+
         {previewMessages.length === 0 && (
           <div className="px-3 py-2 text-xs text-gray-500">No new messages</div>
         )}
+
         {previewMessages.map((msg) => (
           <DropdownMenuItem
             key={msg.id}
@@ -70,6 +78,7 @@ export function MessageBell({ messages, onClick }: MessageBellProps) {
             <span className="truncate">{msg.text}</span>
           </DropdownMenuItem>
         ))}
+
         {messages.length > 3 && (
           <DropdownMenuItem
             className="text-center text-xs text-gray-500"
