@@ -39,6 +39,12 @@ const containerStyle = {
 
 const KANO_CENTER = { lat: 11.9967, lng: 8.5185 };
 
+const OFFICE_LOCATION = {
+  lat: 11.990528,
+  lng: 8.481111,
+  address: "SahelX Office, Kano",
+};
+
 const libraries: Libraries = ["places"];
 
 export function DeliveryMap() {
@@ -59,7 +65,7 @@ export function DeliveryMap() {
   function interpolate(
     start: { lat: number; lng: number },
     end: { lat: number; lng: number },
-    t: number
+    t: number,
   ) {
     return {
       lat: start.lat + (end.lat - start.lat) * t,
@@ -77,7 +83,7 @@ export function DeliveryMap() {
         const activeDeliveries = fetchedDeliveries.filter(
           (d) =>
             d.status?.toLowerCase() !== "received" &&
-            d.status?.toLowerCase() !== "recieved"
+            d.status?.toLowerCase() !== "recieved",
         );
         setDeliveries(activeDeliveries);
 
@@ -85,7 +91,6 @@ export function DeliveryMap() {
           setRiders(liveRiders);
         });
       } catch (error) {
-        console.error("Error setting up map data:", error);
         setDeliveries([]);
         setRiders([]);
       } finally {
@@ -131,11 +136,11 @@ export function DeliveryMap() {
   // Only show riders assigned to a delivery
   const assignedRiderIds = useMemo(
     () => deliveries.map((d) => d.courierId).filter(Boolean),
-    [deliveries]
+    [deliveries],
   );
   const assignedRiders = useMemo(
     () => riders.filter((r) => assignedRiderIds.includes(r.userId)),
-    [riders, assignedRiderIds]
+    [riders, assignedRiderIds],
   );
 
   // Markers: pickups, dropoffs, and only assigned riders
@@ -199,6 +204,15 @@ export function DeliveryMap() {
       }
     });
 
+    markers.push({
+      id: "sahelx_office",
+      type: "pickup", // Using pickup type for now, but we'll use a special icon
+      name: "Depot ",
+      lat: OFFICE_LOCATION.lat,
+      lng: OFFICE_LOCATION.lng,
+      status: "Office",
+    });
+
     return markers;
   }, [deliveries, assignedRiders]);
 
@@ -218,26 +232,32 @@ export function DeliveryMap() {
         },
       ],
     }),
-    []
+    [],
   );
 
   // 👇 assign custom icons per type
-  const markerIcon = (type: MapMarker["type"]) => {
+  const markerIcon = (type: MapMarker["type"], id?: string) => {
+    if (id === "sahelx_office") {
+      return {
+        url: "/icons/office.png",
+        scaledSize: { width: 32, height: 32 } as any,
+      };
+    }
     if (type === "pickup") {
       return {
         url: "/icons/pickup.png",
-        scaledSize: new window.google.maps.Size(16, 16),
+        scaledSize: { width: 16, height: 16 } as any,
       };
     }
     if (type === "dropoff") {
       return {
         url: "/icons/dropoff.png",
-        scaledSize: new window.google.maps.Size(32, 32),
+        scaledSize: { width: 32, height: 32 } as any,
       };
     }
     return {
       url: "/icons/rider.png",
-      scaledSize: new window.google.maps.Size(32, 32),
+      scaledSize: { width: 32, height: 32 } as any,
     };
   };
 
@@ -256,7 +276,7 @@ export function DeliveryMap() {
   return (
     <Card className="col-span-full border-gray-200 bg-white shadow-sm">
       <CardHeader>
-        <CardTitle className="text-gray-900">Live Delivery Map</CardTitle>
+        {/* <CardTitle className="text-gray-900">Live Delivery Map</CardTitle> */}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -282,7 +302,7 @@ export function DeliveryMap() {
                     lat: Number(marker.lat),
                     lng: Number(marker.lng),
                   }}
-                  icon={markerIcon(marker.type)}
+                  icon={markerIcon(marker.type, marker.id)}
                   onClick={() => handleMarkerClick(marker)}
                 />
               ))}
@@ -320,7 +340,7 @@ export function DeliveryMap() {
               {/* Connect assigned riders to their delivery pickup */}
               {assignedRiders.map((rider) => {
                 const delivery = deliveries.find(
-                  (d) => d.courierId === rider.id
+                  (d) => d.courierId === rider.id,
                 );
                 if (
                   delivery &&
@@ -353,7 +373,7 @@ export function DeliveryMap() {
                 return null;
               })}
 
-              {selectedMarker && selectedMarker.type === "rider" && (
+              {selectedMarker && (
                 <InfoWindowF
                   position={{
                     lat: selectedMarker.lat,
@@ -361,50 +381,76 @@ export function DeliveryMap() {
                   }}
                   onCloseClick={() => setSelectedMarker(null)}
                 >
-                  <div className="p-2">
-                    <h3 className="font-bold text-sm">{selectedMarker.name}</h3>
-                    <p className="text-xs text-muted-foreground font-bold">
-                      Rider Status: {selectedMarker.status}
-                    </p>
-                    <p className="text-xs text-muted-foreground font-bold">
-                      Lat: {selectedMarker.lat.toFixed(4)}, Lng:{" "}
-                      {selectedMarker.lng.toFixed(4)}
-                    </p>
-                    <div className="mt-2">
-                      <div className="font-bold text-xs mb-1">
-                        Assigned Deliveries:
-                      </div>
-                      {deliveries.filter(
-                        (d) =>
-                          d.courierId ===
-                          selectedMarker.id.replace("rider_", "")
-                      ).length === 0 ? (
-                        <div className="text-xs">No active deliveries.</div>
-                      ) : (
-                        deliveries
-                          .filter(
+                  <div className="p-2 min-w-[200px]">
+                    <h3 className="font-bold text-sm text-gray-900">
+                      {selectedMarker.name}
+                    </h3>
+
+                    {selectedMarker.type === "rider" && (
+                      <>
+                        <p className="text-xs text-blue-600 font-bold mt-1">
+                          Rider Status: {selectedMarker.status}
+                        </p>
+                        <div className="mt-2 pt-2 border-t">
+                          <div className="font-bold text-xs mb-1">
+                            Assigned Deliveries:
+                          </div>
+                          {deliveries.filter(
                             (d) =>
                               d.courierId ===
-                                selectedMarker.id.replace("rider_", "") &&
-                              d.status?.toLowerCase() !== "received" &&
-                              d.status?.toLowerCase() !== "recieved"
-                          )
-                          .map((d) => (
-                            <div key={d.id} className="mb-2 border-b pb-1">
-                              <div className="text-xs font-bold">
-                                Delivery ID: {d.id}
-                              </div>
-                              <div className="text-xs">Status: {d.status}</div>
-                              <div className="text-xs">
-                                Pickup: {d.pickupLocation?.address || "N/A"}
-                              </div>
-                              <div className="text-xs">
-                                Dropoff: {d.dropoffLocation?.address || "N/A"}
-                              </div>
-                            </div>
-                          ))
+                              selectedMarker.id.replace("rider_", ""),
+                          ).length === 0 ? (
+                            <div className="text-xs">No active deliveries.</div>
+                          ) : (
+                            deliveries
+                              .filter(
+                                (d) =>
+                                  d.courierId ===
+                                    selectedMarker.id.replace("rider_", "") &&
+                                  d.status?.toLowerCase() !== "received" &&
+                                  d.status?.toLowerCase() !== "recieved",
+                              )
+                              .map((d) => (
+                                <div key={d.id} className="mb-2 last:mb-0">
+                                  <div className="text-xs font-bold">
+                                    ID: {d.id?.substring(0, 8)}...
+                                  </div>
+                                  <div className="text-[10px] text-gray-600">
+                                    Status: {d.status}
+                                  </div>
+                                </div>
+                              ))
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {(selectedMarker.type === "pickup" ||
+                      selectedMarker.type === "dropoff") &&
+                      selectedMarker.id !== "sahelx_office" && (
+                        <div className="mt-1">
+                          <p className="text-xs font-medium text-desertred uppercase">
+                            {selectedMarker.type} Point
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            Status: {selectedMarker.status}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-1">
+                            Delivery ID: {selectedMarker.deliveryId}
+                          </p>
+                        </div>
                       )}
-                    </div>
+
+                    {selectedMarker.id === "sahelx_office" && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Main headquarters and dispatch center.
+                      </p>
+                    )}
+
+                    <p className="text-[10px] text-muted-foreground mt-2 pt-1 border-t">
+                      {selectedMarker.lat.toFixed(6)},{" "}
+                      {selectedMarker.lng.toFixed(6)}
+                    </p>
                   </div>
                 </InfoWindowF>
               )}

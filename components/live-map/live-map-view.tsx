@@ -45,6 +45,12 @@ const kanoCenter = {
   lng: 8.5167, // Longitude for Kano, Nigeria
 };
 
+const OFFICE_LOCATION = {
+  lat: 11.990528,
+  lng: 8.481111,
+  address: "SahelX Office, Kano",
+};
+
 export function LiveMapView() {
   const [mapView, setMapView] = useState<"all" | "pickup" | "dropoff">("all");
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
@@ -68,7 +74,6 @@ export function LiveMapView() {
         setRiders(fetchedRiders);
         setDeliveries(fetchedDeliveries);
       } catch (err) {
-        console.error("Failed to fetch data:", err);
         setError("Failed to load data. Please try again.");
       } finally {
         setLoading(false);
@@ -117,20 +122,56 @@ export function LiveMapView() {
         });
       }
     });
+
+    markers.push({
+      id: "sahelx_office",
+      type: "pickup", // Or create a new type if needed, but existing styling works
+      name: "Depot",
+      lat: OFFICE_LOCATION.lat,
+      lng: OFFICE_LOCATION.lng,
+      status: "Office",
+      Address: OFFICE_LOCATION.address,
+    });
+
     return markers;
   }, [riders, deliveries]);
 
   const filteredMarkers = useMemo(() => {
     if (mapView === "all") return allMarkers;
     return allMarkers.filter((marker) => marker.type === mapView);
-  }, [mapView, allMarkers]);
+  }, [allMarkers, mapView]);
 
-  const onLoad = useCallback(function callback(map: google.maps.Map) {
+  const markerIcon = (type: MapMarker["type"], id?: string) => {
+    if (id === "sahelx_office") {
+      return {
+        url: "/icons/office.png",
+        scaledSize: { width: 32, height: 32 } as any,
+      };
+    }
+    if (type === "pickup") {
+      return {
+        url: "/icons/pickup.png",
+        scaledSize: { width: 32, height: 32 } as any,
+      };
+    }
+    if (type === "dropoff") {
+      return {
+        url: "/icons/dropoff.png",
+        scaledSize: { width: 32, height: 32 } as any,
+      };
+    }
+    return {
+      url: "/icons/rider.png",
+      scaledSize: { width: 32, height: 32 } as any,
+    };
+  };
+
+  const onLoad = useCallback(function callback(map: any) {
     // This is called once the map instance is available
     // You can store the map instance in a ref if needed for other operations
   }, []);
 
-  const onUnmount = useCallback(function callback(map: google.maps.Map) {
+  const onUnmount = useCallback(function callback(map: any) {
     // This is called when the map component unmounts
   }, []);
 
@@ -173,20 +214,7 @@ export function LiveMapView() {
                     key={marker.id}
                     position={{ lat: marker.lat, lng: marker.lng }}
                     onClick={() => setSelectedMarker(marker)}
-                    icon={{
-                      path: google.maps.SymbolPath.CIRCLE, // Access google from window
-                      scale: 10,
-                      fillColor:
-                        marker.type === "rider"
-                          ? marker.status === "available"
-                            ? "#10B981" // Green
-                            : "#3B82F6" // Blue
-                          : marker.type === "pickup"
-                          ? "#F59E0B" // Amber
-                          : "#8B5CF6", // Purple
-                      fillOpacity: 1,
-                      strokeWeight: 0,
-                    }}
+                    icon={markerIcon(marker.type, marker.id)}
                   />
                 ))}
 
@@ -206,8 +234,8 @@ export function LiveMapView() {
                         {selectedMarker.type === "rider"
                           ? "Rider"
                           : selectedMarker.type === "pickup"
-                          ? "Pickup"
-                          : "Dropoff"}
+                            ? "Pickup"
+                            : "Dropoff"}
                         {selectedMarker.status &&
                           ` - ${selectedMarker.status.replace(/_/g, " ")}`}
                       </p>
@@ -227,48 +255,53 @@ export function LiveMapView() {
         </div>
 
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle className="text-lg">Active Items</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {filteredMarkers.map((marker) => (
-                  <div
-                    key={marker.id}
-                    className="flex items-center justify-between p-2 rounded-lg border"
-                  >
-                    <div className="flex items-center gap-2">
-                      {marker.type === "rider" ? (
-                        <Truck className="h-4 w-4 text-blue-500" />
-                      ) : (
-                        <Package className="h-4 w-4 text-purple-500" />
-                      )}
-                      <div>
-                        <div className="text-sm font-medium">{marker.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {marker.lat.toFixed(4)}, {marker.lng.toFixed(4)}
+            <CardContent className="flex-grow overflow-hidden p-0">
+              <div className="h-[400px] lg:h-[600px] overflow-y-auto p-6 pt-0">
+                <div className="space-y-3">
+                  {filteredMarkers.map((marker) => (
+                    <div
+                      key={marker.id}
+                      className="flex items-center justify-between p-2 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedMarker(marker)}
+                    >
+                      <div className="flex items-center gap-2">
+                        {marker.type === "rider" ? (
+                          <Truck className="h-4 w-4 text-blue-500" />
+                        ) : (
+                          <Package className="h-4 w-4 text-purple-500" />
+                        )}
+                        <div>
+                          <div className="text-sm font-medium">
+                            {marker.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {marker.lat.toFixed(4)}, {marker.lng.toFixed(4)}
+                          </div>
                         </div>
                       </div>
+                      <Badge
+                        className={
+                          marker.type === "rider"
+                            ? marker.status === "available"
+                              ? "bg-green-500 hover:bg-green-600"
+                              : "bg-blue-500 hover:bg-blue-600"
+                            : marker.status === "in_transit"
+                              ? "bg-purple-500 hover:bg-purple-600"
+                              : "bg-gray-500 hover:bg-gray-600"
+                        }
+                        variant="secondary"
+                      >
+                        {marker.status
+                          ? marker.status.replace("_", " ")
+                          : marker.type}
+                      </Badge>
                     </div>
-                    <Badge
-                      className={
-                        marker.type === "rider"
-                          ? marker.status === "available"
-                            ? "bg-green-500"
-                            : "bg-blue-500"
-                          : marker.status === "in_transit"
-                          ? "bg-purple-500"
-                          : "bg-gray-500" // Default for other delivery statuses
-                      }
-                      variant="secondary"
-                    >
-                      {marker.status
-                        ? marker.status.replace("_", " ")
-                        : marker.type}
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

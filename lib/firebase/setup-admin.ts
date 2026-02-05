@@ -7,14 +7,14 @@ export const createAdminUser = async (
   email: string,
   password: string,
   displayName: string,
-  role: "admin" | "superadmin" | "ceo" | "cto" | "cfo" | "coo" = "admin"
+  role: "admin" | "superadmin" | "ceo" | "cto" | "cfo" | "coo" = "admin",
 ) => {
   try {
     // Create Firebase Auth user
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       email,
-      password
+      password,
     );
     const user = userCredential.user;
 
@@ -51,11 +51,7 @@ export const createAdminUser = async (
 
     await setDoc(doc(db, "Admin", user.uid), adminData);
 
-    console.log("Admin user created successfully:", {
-      uid: user.uid,
-      email: email,
-      displayName: displayName,
-    });
+    await setDoc(doc(db, "Admin", user.uid), adminData);
 
     return {
       uid: user.uid,
@@ -63,7 +59,6 @@ export const createAdminUser = async (
       displayName: displayName,
     };
   } catch (error: any) {
-    console.error("Error creating admin user:", error);
     throw new Error(error.message || "Failed to create admin user");
   }
 };

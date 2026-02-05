@@ -44,7 +44,6 @@ export const getSecretaryUsers = async (): Promise<SecretaryUser[]> => {
 
     return secretaries;
   } catch (error: any) {
-    console.error("Error getting secretaries:", error);
     throw new Error("Failed to get secretaries");
   }
 };
@@ -53,7 +52,7 @@ export const getSecretaryUsers = async (): Promise<SecretaryUser[]> => {
  * Get a single secretary by ID
  */
 export const getSecretaryUser = async (
-  id: string
+  id: string,
 ): Promise<SecretaryUser | null> => {
   try {
     const docRef = doc(db, "Secretary", id);
@@ -68,7 +67,6 @@ export const getSecretaryUser = async (
 
     return null;
   } catch (error: any) {
-    console.error("Error getting secretary:", error);
     throw new Error("Failed to get secretary");
   }
 };
@@ -81,10 +79,8 @@ export const deleteSecretaryUser = async (id: string): Promise<void> => {
     const docRef = doc(db, "Secretary", id);
     await deleteDoc(docRef);
 
-    console.log("Secretary deleted from Firestore:", id);
     // Note: Deleting the actual Firebase Auth user requires server-side admin SDK
   } catch (error: any) {
-    console.error("Error deleting secretary:", error);
     throw new Error("Failed to delete secretary");
   }
 };

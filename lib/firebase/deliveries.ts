@@ -8,8 +8,20 @@ import {
   where,
   orderBy,
   limit,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  arrayUnion,
+  Timestamp,
 } from "firebase/firestore";
+
 import { db } from "./config";
+
+export interface HistoryItem {
+  timestamp: any;
+  status: string;
+  paymentStatus?: string;
+}
 
 export interface Delivery {
   id?: string;
@@ -21,7 +33,9 @@ export interface Delivery {
     address: string;
     lat: number;
     lng: number;
+    phone?: string;
   };
+  pickupPhoneNumber?: string;
   dropoffLocation?: {
     address: string;
     lat: number;
@@ -38,6 +52,8 @@ export interface Delivery {
   rating?: number;
   tag?: string;
   trackingId?: string;
+  paymentStatus?: string;
+  history?: HistoryItem[];
 }
 
 export const getDeliveries = async (): Promise<Delivery[]> => {
@@ -62,21 +78,20 @@ export const getDeliveries = async (): Promise<Delivery[]> => {
 
     return deliveries;
   } catch (error: any) {
-    console.error("Error getting deliveries:", error);
     throw new Error("Failed to get deliveries");
   }
 };
 
 // Get deliveries for a single customer
 export const getDeliveriesByCustomer = async (
-  customerId: string
+  customerId: string,
 ): Promise<Delivery[]> => {
   try {
     // Avoid server-side orderBy to prevent Firestore composite index requirement.
     // We'll fetch by customerId and sort client-side.
     const q = query(
       collection(db, "deliveries"),
-      where("customerId", "==", customerId)
+      where("customerId", "==", customerId),
     );
 
     const querySnapshot = await getDocs(q);
@@ -97,7 +112,6 @@ export const getDeliveriesByCustomer = async (
 
     return deliveries;
   } catch (error: any) {
-    console.error("Error getting deliveries for customer:", error);
     // return empty array instead of throwing to keep UI responsive
     return [];
   }
@@ -105,12 +119,12 @@ export const getDeliveriesByCustomer = async (
 
 // Compute average rating for a courier (by courierId)
 export const getAverageRatingForCourier = async (
-  courierId: string
+  courierId: string,
 ): Promise<number | null> => {
   try {
     const q = query(
       collection(db, "deliveries"),
-      where("courierId", "==", courierId)
+      where("courierId", "==", courierId),
     );
     const querySnapshot = await getDocs(q);
     const ratings: number[] = [];
@@ -131,41 +145,39 @@ export const getAverageRatingForCourier = async (
     const sum = ratings.reduce((s, v) => s + v, 0);
     return sum / ratings.length;
   } catch (error: any) {
-    console.error("Error computing average rating for courier:", error);
     return null;
   }
 };
 
 // Get total number of deliveries for a courier
 export const getDeliveryCountForCourier = async (
-  courierId: string
+  courierId: string,
 ): Promise<number> => {
   try {
     const q = query(
       collection(db, "deliveries"),
-      where("courierId", "==", courierId)
+      where("courierId", "==", courierId),
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.size || querySnapshot.docs.length || 0;
   } catch (error: any) {
-    console.error("Error getting delivery count for courier:", error);
     return 0;
   }
 };
 
 // Fetch delivery history for a courier
 export const fetchRiderDeliveryHistory = async (
-  courierId: string
+  courierId: string,
 ): Promise<Delivery[]> => {
   try {
     const q = query(
       collection(db, "deliveries"),
-      where("courierId", "==", courierId)
+      where("courierId", "==", courierId),
     );
     const snapshot = await getDocs(q);
     const deliveries: Delivery[] = [];
     snapshot.forEach((d) =>
-      deliveries.push({ id: d.id, ...(d.data() as any) } as Delivery)
+      deliveries.push({ id: d.id, ...(d.data() as any) } as Delivery),
     );
 
     deliveries.sort((a, b) => {
@@ -178,7 +190,37 @@ export const fetchRiderDeliveryHistory = async (
 
     return deliveries;
   } catch (error: any) {
-    console.error("Error fetching rider delivery history:", error);
     return [];
+  }
+};
+
+// Update delivery
+export const updateDelivery = async (
+  id: string,
+  updates: Partial<Delivery>,
+): Promise<void> => {
+  try {
+    const deliveryRef = doc(db, "deliveries", id);
+    await updateDoc(deliveryRef, {
+      ...updates,
+      updatedAt: serverTimestamp(),
+      history: arrayUnion({
+        timestamp: Timestamp.now(),
+        status: updates.status || "updated",
+        paymentStatus: updates.paymentStatus,
+      }),
+    });
+  } catch (error: any) {
+    throw new Error("Failed to update delivery");
+  }
+};
+
+// Delete delivery
+export const deleteDelivery = async (id: string): Promise<void> => {
+  try {
+    const deliveryRef = doc(db, "deliveries", id);
+    await deleteDoc(deliveryRef);
+  } catch (error: any) {
+    throw new Error("Failed to delete delivery");
   }
 };

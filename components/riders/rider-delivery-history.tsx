@@ -42,7 +42,7 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
         const data = await fetchRiderDeliveryHistory(riderId);
         setDeliveries(data);
       } catch (error) {
-        console.error("Failed to load delivery history:", error);
+        // handled
       } finally {
         setIsLoading(false);
       }

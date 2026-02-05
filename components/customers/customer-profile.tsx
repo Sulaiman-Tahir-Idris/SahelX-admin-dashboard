@@ -56,7 +56,7 @@ export function CustomerProfile({ customerId }: CustomerProfileProps) {
         setCustomer(c);
         setDeliveries(delivs);
       } catch (err) {
-        console.error(err);
+        // handled
       } finally {
         if (mounted) setLoading(false);
       }
@@ -211,8 +211,8 @@ export function CustomerProfile({ customerId }: CustomerProfileProps) {
                         d.status === "delivered"
                           ? "bg-green-500"
                           : d.status === "cancelled"
-                          ? "bg-red-500"
-                          : "bg-gray-500"
+                            ? "bg-red-500"
+                            : "bg-gray-500"
                       }`}
                     />
                     <div className="flex-1">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,10 +29,16 @@ import {
   Mail,
   Loader2,
   AlertCircle,
+  Users,
+  UserCheck,
+  UserX,
+  TrendingUp,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { getCustomers, type Customer } from "@/lib/firebase/customers";
 import { useRouter } from "next/navigation";
+import { StatsCard } from "../dashboard/stats-card";
 
 export function CustomersTable() {
   const router = useRouter();
@@ -42,6 +48,10 @@ export function CustomersTable() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "active" | "inactive"
+  >("all");
+  const [sortKey, setSortKey] = useState<"none" | "orders">("none");
 
   useEffect(() => {
     loadCustomers();
@@ -54,7 +64,6 @@ export function CustomersTable() {
       const customersData = await getCustomers();
       setCustomers(customersData);
     } catch (error: any) {
-      console.error("Error loading customers:", error);
       setError(error.message);
       toast({
         title: "Failed to load customers",
@@ -66,12 +75,31 @@ export function CustomersTable() {
     }
   };
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone?.includes(searchQuery) ||
-      customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCustomers = useMemo(() => {
+    let result = customers.filter(
+      (customer: Customer) =>
+        customer.displayName
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        customer.phone?.includes(searchQuery) ||
+        customer.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+
+    if (filterStatus === "active") {
+      result = result.filter((c: Customer) => c.isActive);
+    } else if (filterStatus === "inactive") {
+      result = result.filter((c: Customer) => !c.isActive);
+    }
+
+    if (sortKey === "orders") {
+      result = [...result].sort(
+        (a: Customer, b: Customer) =>
+          (b.totalOrders || 0) - (a.totalOrders || 0),
+      );
+    }
+
+    return result;
+  }, [customers, searchQuery, filterStatus, sortKey]);
 
   // pagination
   const total = filteredCustomers.length;
@@ -135,8 +163,8 @@ export function CustomersTable() {
       const tableHeader = `<tr><th>Customer</th><th>Status</th><th>Total Orders</th><th>Phone</th><th>Joined</th></tr>`;
       const tableRows = rows
         .map(
-          (r) =>
-            `<tr>${r.map((cell) => `<td>${cell ?? ""}</td>`).join("")}</tr>`
+          (r: any[]) =>
+            `<tr>${r.map((cell: any) => `<td>${cell ?? ""}</td>`).join("")}</tr>`,
         )
         .join("");
       const html = `<!doctype html><html><head><meta charset="utf-8">${style}</head><body>${header}<table>${tableHeader}${tableRows}</table></body></html>`;
@@ -161,8 +189,8 @@ export function CustomersTable() {
       new Set(
         filteredCustomers
           .map((c) => c.email)
-          .filter((email): email is string => !!email)
-      )
+          .filter((email): email is string => !!email),
+      ),
     );
 
     if (emails.length === 0) {
@@ -228,16 +256,86 @@ export function CustomersTable() {
     );
   }
 
+  const activeCount = customers.filter((c: Customer) => c.isActive).length;
+  const inactiveCount = customers.filter((c: Customer) => !c.isActive).length;
+  const topOrdersCount = customers.filter(
+    (c: Customer) => (c.totalOrders || 0) > 0,
+  ).length;
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Total Customers"
+          value={customers.length}
+          icon={Users}
+          color="blue"
+          isActive={filterStatus === "all" && sortKey === "none"}
+          onClick={() => {
+            setFilterStatus("all");
+            setSortKey("none");
+          }}
+        />
+        <StatsCard
+          title="Active Customers"
+          value={activeCount}
+          icon={UserCheck}
+          color="green"
+          isActive={filterStatus === "active"}
+          onClick={() => {
+            setFilterStatus("active");
+            setSortKey("none");
+          }}
+        />
+        <StatsCard
+          title="Inactive Customers"
+          value={inactiveCount}
+          icon={UserX}
+          color="gray"
+          isActive={filterStatus === "inactive"}
+          onClick={() => {
+            setFilterStatus("inactive");
+            setSortKey("none");
+          }}
+        />
+        <StatsCard
+          title="Top Orders"
+          value={topOrdersCount}
+          icon={TrendingUp}
+          color="purple"
+          isActive={sortKey === "orders"}
+          onClick={() => {
+            setSortKey("orders");
+            setFilterStatus("all");
+          }}
+        />
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <Input
           placeholder="Search customers..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-sm"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+          {(filterStatus !== "all" ||
+            sortKey !== "none" ||
+            searchQuery !== "") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterStatus("all");
+                setSortKey("none");
+                setSearchQuery("");
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+          )}
           <Button onClick={exportEmails} variant="secondary" size="sm">
             Export Emails
           </Button>
@@ -252,14 +350,20 @@ export function CustomersTable() {
 
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-gray-50/50">
             <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Total Orders</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="font-bold text-gray-900">
+                Customer
+              </TableHead>
+              <TableHead className="font-bold text-gray-900">Status</TableHead>
+              <TableHead className="font-bold text-gray-900">
+                Total Orders
+              </TableHead>
+              <TableHead className="font-bold text-gray-900">Phone</TableHead>
+              <TableHead className="font-bold text-gray-900">Joined</TableHead>
+              <TableHead className="text-right font-bold text-gray-900">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -273,7 +377,10 @@ export function CustomersTable() {
               </TableRow>
             ) : (
               pageItems.map((customer) => (
-                <TableRow key={customer.id}>
+                <TableRow
+                  key={customer.id}
+                  className="group hover:bg-gray-50/50 transition-colors"
+                >
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -359,9 +466,9 @@ export function CustomersTable() {
             Showing {startIndex + 1}-{endIndex} of {total} customers
           </div>
           <div className="flex items-center gap-2">
-            <label>Rows:</label>
+            <label className="text-xs font-medium">Rows:</label>
             <select
-              className="input h-8"
+              className="bg-white border rounded px-1 py-1 text-xs outline-none focus:ring-1 focus:ring-primary"
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
@@ -374,22 +481,53 @@ export function CustomersTable() {
                 </option>
               ))}
             </select>
+            <div className="h-4 w-px bg-gray-200 mx-1"></div>
             <Button
+              variant="outline"
               size="sm"
+              className="h-8 w-8 p-0"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
             >
-              Prev
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-chevron-left"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
             </Button>
-            <div className="px-2">
+            <div className="px-2 text-xs font-medium min-w-[40px] text-center">
               {page} / {totalPages}
             </div>
             <Button
+              variant="outline"
               size="sm"
+              className="h-8 w-8 p-0"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
             >
-              Next
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-chevron-right"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
             </Button>
           </div>
         </div>

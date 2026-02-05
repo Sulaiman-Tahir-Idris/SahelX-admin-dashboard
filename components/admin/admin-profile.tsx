@@ -1,92 +1,90 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Edit, Save, X, Shield, User, Mail, MapPin } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
-import { getCurrentAdmin, type AdminUser } from "@/lib/firebase/auth"
-import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase/config"
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Edit, Save, X, Shield, User, Mail, MapPin } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { getCurrentAdmin, type AdminUser } from "@/lib/firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 
 export function AdminProfile() {
-  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editForm, setEditForm] = useState({
     displayName: "",
     email: "",
     phone: "",
     location: "",
-  })
+  });
 
   useEffect(() => {
     const loadAdminData = async () => {
       try {
-        const admin = await getCurrentAdmin()
+        const admin = await getCurrentAdmin();
         if (admin) {
-          setCurrentUser(admin)
+          setCurrentUser(admin);
           setEditForm({
             displayName: admin.displayName || "",
             email: admin.email || "",
             phone: admin.phone || "",
             location: admin.location || "",
-          })
+          });
         }
       } catch (error) {
-        console.error("Error loading admin data:", error)
         toast({
           title: "Error",
           description: "Failed to load profile data",
           variant: "destructive",
-        })
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadAdminData()
-  }, [])
+    loadAdminData();
+  }, []);
 
   const handleSaveProfile = async () => {
-    if (!currentUser) return
+    if (!currentUser) return;
 
     try {
-      const adminRef = doc(db, "Admin", currentUser.userId)
+      const adminRef = doc(db, "Admin", currentUser.userId);
       await updateDoc(adminRef, {
         displayName: editForm.displayName,
         phone: editForm.phone,
         location: editForm.location,
         updatedAt: new Date(),
-      })
+      });
 
       const updatedUser = {
         ...currentUser,
         displayName: editForm.displayName,
         phone: editForm.phone,
         location: editForm.location,
-      }
-      setCurrentUser(updatedUser)
-      setIsEditing(false)
+      };
+      setCurrentUser(updatedUser);
+      setIsEditing(false);
 
       toast({
         title: "Profile updated",
         description: "Your profile information has been successfully updated.",
-      })
+      });
     } catch (error) {
-      console.error("Error updating profile:", error)
       toast({
         title: "Error",
         description: "Failed to update profile",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handleCancelEdit = () => {
     if (currentUser) {
@@ -95,10 +93,10 @@ export function AdminProfile() {
         email: currentUser.email || "",
         phone: currentUser.phone || "",
         location: currentUser.location || "",
-      })
+      });
     }
-    setIsEditing(false)
-  }
+    setIsEditing(false);
+  };
 
   if (loading) {
     return (
@@ -108,21 +106,24 @@ export function AdminProfile() {
           <p className="mt-2 text-sm text-red-600">Loading profile...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <p className="text-red-600">No admin user found. Please log in again.</p>
+          <p className="text-red-600">
+            No admin user found. Please log in again.
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
-  const displayName = currentUser.displayName || currentUser.email?.split("@")[0] || "Admin User"
-  const userInitial = displayName.charAt(0).toUpperCase()
+  const displayName =
+    currentUser.displayName || currentUser.email?.split("@")[0] || "Admin User";
+  const userInitial = displayName.charAt(0).toUpperCase();
 
   return (
     <div className="space-y-6">
@@ -141,7 +142,11 @@ export function AdminProfile() {
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button onClick={handleSaveProfile} size="sm" className="bg-red-600 hover:bg-red-700">
+              <Button
+                onClick={handleSaveProfile}
+                size="sm"
+                className="bg-red-600 hover:bg-red-700"
+              >
                 <Save className="mr-2 h-4 w-4" />
                 Save
               </Button>
@@ -168,7 +173,9 @@ export function AdminProfile() {
               </Avatar>
 
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900">{displayName}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {displayName}
+                </h2>
                 <Badge className="mt-2 bg-red-600 hover:bg-red-700">
                   <Shield className="mr-1 h-3 w-3" />
                   {currentUser.role === "superadmin" ? "Super Admin" : "Admin"}
@@ -186,7 +193,12 @@ export function AdminProfile() {
                     <Input
                       id="displayName"
                       value={editForm.displayName}
-                      onChange={(e) => setEditForm({ ...editForm, displayName: e.target.value })}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          displayName: e.target.value,
+                        })
+                      }
                       className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
                     />
                   ) : (
@@ -203,9 +215,13 @@ export function AdminProfile() {
                   </Label>
                   <div className="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50">
                     <Mail className="h-4 w-4 text-gray-600" />
-                    <span className="text-gray-900">{currentUser.email || "N/A"}</span>
+                    <span className="text-gray-900">
+                      {currentUser.email || "N/A"}
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-500">Email cannot be changed</p>
+                  <p className="text-xs text-gray-500">
+                    Email cannot be changed
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -216,13 +232,17 @@ export function AdminProfile() {
                     <Input
                       id="phone"
                       value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, phone: e.target.value })
+                      }
                       className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
                       placeholder="Enter phone number"
                     />
                   ) : (
                     <div className="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50">
-                      <span className="text-gray-900">{editForm.phone || "Not provided"}</span>
+                      <span className="text-gray-900">
+                        {editForm.phone || "Not provided"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -235,14 +255,18 @@ export function AdminProfile() {
                     <Input
                       id="location"
                       value={editForm.location}
-                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, location: e.target.value })
+                      }
                       className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
                       placeholder="Enter location"
                     />
                   ) : (
                     <div className="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50">
                       <MapPin className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-900">{editForm.location || "Not provided"}</span>
+                      <span className="text-gray-900">
+                        {editForm.location || "Not provided"}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -253,7 +277,9 @@ export function AdminProfile() {
               <p className="text-sm text-gray-500">
                 Member Since:{" "}
                 {currentUser?.createdAt
-                  ? new Date(currentUser.createdAt.seconds * 1000).toLocaleDateString()
+                  ? new Date(
+                      currentUser.createdAt.seconds * 1000,
+                    ).toLocaleDateString()
                   : "N/A"}
               </p>
             </div>
@@ -261,5 +287,5 @@ export function AdminProfile() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

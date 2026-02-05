@@ -13,13 +13,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import {
+  signOutSecretary,
+  type SecretaryUser,
+} from "@/lib/firebase/secretaryAuth";
+import { useAdminMessages } from "@/lib/chat/use-admin-messages";
+import { MessageBell } from "@/components/dashboard/message-bell";
 import { MobileNav } from "./secretary-dashboard-nav";
 import Image from "next/image";
-import { signOutSecretary } from "@/lib/firebase/secretaryAuth";
 
-export function SecretaryDashboardHeader({ user }: { user?: any }) {
+export function SecretaryDashboardHeader({ user }: { user?: SecretaryUser }) {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<SecretaryUser | null>(null);
 
   useEffect(() => {
     if (!user) {

@@ -12,14 +12,11 @@ export default function SplashScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAdminLogin = () => {
-    console.log("Admin login button clicked"); // Debug log
     setIsLoading(true);
 
     try {
       router.push("/admin/login");
-      console.log("Navigation to /admin/login initiated"); // Debug log
     } catch (error) {
-      console.error("Navigation error:", error); // Debug log
       setIsLoading(false);
     }
 

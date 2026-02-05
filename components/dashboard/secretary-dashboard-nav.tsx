@@ -72,7 +72,7 @@ export function MobileNav() {
               className={cn(
                 "h-12 w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-medium",
                 pathname === item.href &&
-                  "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600"
+                  "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600",
               )}
               onClick={() => handleNavigation(item.href)}
             >
@@ -103,13 +103,20 @@ export function SecretaryDashboardNav() {
             key={item.href}
             variant="ghost"
             className={cn(
-              "h-10 w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-medium",
+              "h-10 w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-medium transition-all duration-200 group active:scale-[0.98]",
               pathname === item.href &&
-                "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600"
+                "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600 shadow-sm shadow-sahelx-100/50",
             )}
             onClick={() => handleNavigation(item.href)}
           >
-            <item.icon className="h-5 w-5" />
+            <item.icon
+              className={cn(
+                "h-5 w-5 transition-transform duration-200",
+                pathname === item.href
+                  ? "text-sahelx-600"
+                  : "text-gray-500 group-hover:scale-110",
+              )}
+            />
             <span className="ml-3">{item.title}</span>
           </Button>
         ))}

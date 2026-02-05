@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,9 @@ import {
   Loader2,
   AlertCircle,
   Star,
+  Bike,
+  TrendingUp,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
@@ -47,7 +50,10 @@ import {
 import {
   getAverageRatingForCourier,
   getDeliveryCountForCourier,
+  getDeliveries,
+  type Delivery,
 } from "@/lib/firebase/deliveries";
+import { StatsCard } from "../dashboard/stats-card";
 
 export function RidersTable() {
   const router = useRouter();
@@ -57,6 +63,11 @@ export function RidersTable() {
     deliveryCount?: number;
   };
   const [riders, setRiders] = useState<RiderWithRating[]>([]);
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "available" | "on_delivery" | "offline"
+  >("all");
+  const [sortKey, setSortKey] = useState<"none" | "rating">("none");
+
   // Caching settings for courier ratings (localStorage)
   const RATING_CACHE_PREFIX = "courier_rating:v2:";
   const RATING_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -91,6 +102,9 @@ export function RidersTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingRider, setUpdatingRider] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeDeliveryRiderIds, setActiveDeliveryRiderIds] = useState<
+    Set<string>
+  >(new Set());
 
   useEffect(() => {
     loadRiders();
@@ -101,16 +115,35 @@ export function RidersTable() {
       setIsLoading(true);
       setError(null);
 
-      // Try the optimized query first, fallback to getAllRiders if it fails
-      let ridersData: Rider[];
-      try {
-        ridersData = await getRiders();
-      } catch (indexError) {
-        console.log(
-          "Index query failed, falling back to client-side filtering..."
-        );
-        ridersData = await getAllRiders();
-      }
+      // Fetch riders and deliveries
+      let ridersData: Rider[] = [];
+      const [allDeliveries] = await Promise.all([
+        getDeliveries(),
+        (async () => {
+          try {
+            const data = await getRiders();
+            ridersData = data;
+          } catch (indexError) {
+            const data = await getAllRiders();
+            ridersData = data;
+          }
+          return ridersData;
+        })(),
+      ]);
+
+      // Calculate active ones like in dashboard
+      const activeIds = new Set<string>(
+        allDeliveries
+          .filter(
+            (d: Delivery) =>
+              d.courierId &&
+              !["completed", "cancelled", "received", "recieved"].includes(
+                d.status?.toLowerCase() || "",
+              ),
+          )
+          .map((d: Delivery) => d.courierId as string),
+      );
+      setActiveDeliveryRiderIds(activeIds);
 
       // Fetch average rating for each rider (based on deliveries.courierId)
       const ridersWithRatings = await Promise.all(
@@ -121,10 +154,9 @@ export function RidersTable() {
           // try cache first
           const cached = courierId ? getCachedRating(courierId) : undefined;
           if (cached !== undefined)
-            return { ...(r as any), avgRating: cached } as RiderWithRating;
+            return { ...r, avgRating: cached } as RiderWithRating;
 
-          if (!courierId)
-            return { ...(r as any), avgRating: null } as RiderWithRating;
+          if (!courierId) return { ...r, avgRating: null } as RiderWithRating;
 
           try {
             const [avg, count] = await Promise.all([
@@ -133,23 +165,22 @@ export function RidersTable() {
             ]);
             setCachedRating(courierId, avg === null ? null : avg);
             return {
-              ...(r as any),
+              ...r,
               avgRating: avg,
               deliveryCount: count,
             } as RiderWithRating;
           } catch (e) {
             return {
-              ...(r as any),
+              ...r,
               avgRating: null,
               deliveryCount: 0,
             } as RiderWithRating;
           }
-        })
+        }),
       );
 
       setRiders(ridersWithRatings);
     } catch (error: any) {
-      console.error("Error loading riders:", error);
       setError(error.message);
       toast({
         title: "Failed to load riders",
@@ -163,7 +194,7 @@ export function RidersTable() {
 
   const handleVerificationToggle = async (
     riderId: string,
-    currentStatus: boolean
+    currentStatus: boolean,
   ) => {
     try {
       setUpdatingRider(riderId);
@@ -178,8 +209,8 @@ export function RidersTable() {
                 verified: !currentStatus,
                 vehicleInfo: { ...rider.vehicleInfo, verified: !currentStatus },
               }
-            : rider
-        )
+            : rider,
+        ),
       );
 
       toast({
@@ -201,7 +232,7 @@ export function RidersTable() {
 
   const handleActiveStatusToggle = async (
     riderId: string,
-    currentStatus: boolean
+    currentStatus: boolean,
   ) => {
     try {
       setUpdatingRider(riderId);
@@ -210,8 +241,8 @@ export function RidersTable() {
       // Update local state
       setRiders(
         riders.map((rider) =>
-          rider.id === riderId ? { ...rider, isActive: !currentStatus } : rider
-        )
+          rider.id === riderId ? { ...rider, isActive: !currentStatus } : rider,
+        ),
       );
 
       toast({
@@ -231,15 +262,43 @@ export function RidersTable() {
     }
   };
 
-  const filteredRiders = riders.filter(
-    (rider) =>
-      rider.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rider.phone?.includes(searchQuery) ||
-      rider.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rider.vehicleInfo?.plateNumber
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase())
-  );
+  const filteredRiders = useMemo(() => {
+    let result = riders.filter(
+      (rider: RiderWithRating) =>
+        rider.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rider.phone?.includes(searchQuery) ||
+        rider.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rider.vehicleInfo?.plateNumber
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+    );
+
+    if (filterStatus !== "all") {
+      result = result.filter((rider: RiderWithRating) => {
+        const isOffline = !rider.isActive;
+        const isOnDelivery =
+          rider.isActive &&
+          activeDeliveryRiderIds.has(rider.userId || rider.id || "");
+        const isAvailable =
+          rider.isActive &&
+          !activeDeliveryRiderIds.has(rider.userId || rider.id || "");
+
+        if (filterStatus === "offline") return isOffline;
+        if (filterStatus === "on_delivery") return isOnDelivery;
+        if (filterStatus === "available") return isAvailable;
+        return true;
+      });
+    }
+
+    if (sortKey === "rating") {
+      result = [...result].sort(
+        (a: RiderWithRating, b: RiderWithRating) =>
+          (b.avgRating || 0) - (a.avgRating || 0),
+      );
+    }
+
+    return result;
+  }, [riders, searchQuery, filterStatus, sortKey, activeDeliveryRiderIds]);
 
   const getActiveColor = (isActive: boolean) => {
     return isActive ? "bg-green-500" : "bg-gray-400";
@@ -287,33 +346,117 @@ export function RidersTable() {
     );
   }
 
+  const availableCount = riders.filter(
+    (r: RiderWithRating) =>
+      r.isActive && !activeDeliveryRiderIds.has(r.userId || r.id || ""),
+  ).length;
+
+  const onDeliveryCount = riders.filter(
+    (r: RiderWithRating) =>
+      r.isActive && activeDeliveryRiderIds.has(r.userId || r.id || ""),
+  ).length;
+
+  const offlineCount = riders.filter(
+    (r: RiderWithRating) => !r.isActive,
+  ).length;
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Total Riders"
+          value={riders.length}
+          icon={Bike}
+          color="blue"
+          isActive={filterStatus === "all" && sortKey === "none"}
+          onClick={() => {
+            setFilterStatus("all");
+            setSortKey("none");
+          }}
+        />
+        <StatsCard
+          title="Available Riders"
+          value={availableCount}
+          icon={UserCheck}
+          color="green"
+          isActive={filterStatus === "available"}
+          onClick={() => {
+            setFilterStatus("available");
+            setSortKey("none");
+          }}
+        />
+        <StatsCard
+          title="On Delivery"
+          value={onDeliveryCount}
+          icon={TrendingUp}
+          color="amber"
+          isActive={filterStatus === "on_delivery"}
+          onClick={() => {
+            setFilterStatus("on_delivery");
+            setSortKey("none");
+          }}
+        />
+        <StatsCard
+          title="Offline"
+          value={offlineCount}
+          icon={UserX}
+          color="red"
+          isActive={filterStatus === "offline"}
+          onClick={() => {
+            setFilterStatus("offline");
+            setSortKey("none");
+          }}
+        />
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
         <Input
           placeholder="Search riders..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={loadRiders} variant="outline" size="sm">
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {(filterStatus !== "all" ||
+            sortKey !== "none" ||
+            searchQuery !== "") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterStatus("all");
+                setSortKey("none");
+                setSearchQuery("");
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+          )}
+          <Button onClick={loadRiders} variant="outline" size="sm">
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-gray-50/50">
             <TableRow>
-              <TableHead>Rider</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Vehicle</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Verification</TableHead>
-              <TableHead>Joined</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="font-bold text-gray-900">Rider</TableHead>
+              <TableHead className="font-bold text-gray-900">Status</TableHead>
+              <TableHead className="font-bold text-gray-900">Vehicle</TableHead>
+              <TableHead className="font-bold text-gray-900">Phone</TableHead>
+              <TableHead className="font-bold text-gray-900">Total</TableHead>
+              <TableHead className="font-bold text-gray-900">Rating</TableHead>
+              <TableHead className="font-bold text-gray-900">
+                Verification
+              </TableHead>
+              <TableHead className="font-bold text-gray-900">Joined</TableHead>
+              <TableHead className="text-right font-bold text-gray-900">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -327,7 +470,10 @@ export function RidersTable() {
               </TableRow>
             ) : (
               filteredRiders.map((rider) => (
-                <TableRow key={rider.id}>
+                <TableRow
+                  key={rider.id}
+                  className="group hover:bg-gray-50/50 transition-colors"
+                >
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -357,10 +503,10 @@ export function RidersTable() {
                           availability === "available"
                             ? "bg-green-500"
                             : availability === "on_delivery" ||
-                              availability === "on-delivery" ||
-                              availability === "on delivery"
-                            ? "bg-blue-500"
-                            : "bg-gray-400";
+                                availability === "on-delivery" ||
+                                availability === "on delivery"
+                              ? "bg-blue-500"
+                              : "bg-gray-400";
 
                         return (
                           <Badge className={colorClass} variant="secondary">
@@ -387,10 +533,10 @@ export function RidersTable() {
                     </div>
                   </TableCell>
                   <TableCell>{rider.phone}</TableCell>
-                  <TableCell>{(rider as any).deliveryCount ?? 0}</TableCell>
+                  <TableCell>{rider.deliveryCount ?? 0}</TableCell>
                   <TableCell>
                     {(() => {
-                      const avg = (rider as any).avgRating;
+                      const avg = rider.avgRating;
                       if (avg === null || avg === undefined)
                         return <span className="text-muted-foreground">-</span>;
                       const n = Number(avg);

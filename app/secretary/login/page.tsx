@@ -31,7 +31,6 @@ export default function SecretaryLoginPage() {
 
     try {
       const user = await signInSecretary(email, password);
-      console.log("Secretary logged in:", user);
       router.push("/secretary/dashboard"); // create secretary dashboard later
     } catch (err: any) {
       setError(err.message || "Failed to login");

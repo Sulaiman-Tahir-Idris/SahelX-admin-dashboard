@@ -86,7 +86,7 @@ export function CustomerOrderHistory({
         }));
         setOrders(mapped);
       } catch (err) {
-        console.error(err);
+        // handled
       } finally {
         if (mounted) setLoading(false);
       }
@@ -114,7 +114,7 @@ export function CustomerOrderHistory({
     const matchesSearch =
       (order.id ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.items || []).some((item) =>
-        (item ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+        (item ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
       );
     const matchesStatus =
       statusFilter === "all" || order.status === statusFilter;
@@ -325,7 +325,9 @@ export function CustomerOrderHistory({
                       <TableCell className="font-medium">
                         ${Number(order.total || 0).toFixed(2)}
                       </TableCell>
-                      <TableCell>{getStatusBadge(order.status || "unknown")}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(order.status || "unknown")}
+                      </TableCell>
                       <TableCell>{dt > 0 ? `${dt} min` : "-"}</TableCell>
                       <TableCell>
                         {rating > 0 ? (

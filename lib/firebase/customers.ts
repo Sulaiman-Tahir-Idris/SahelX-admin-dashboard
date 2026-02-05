@@ -52,7 +52,7 @@ export const getCustomers = async (): Promise<Customer[]> => {
         try {
           const deliveriesQuery = query(
             collection(db, "deliveries"),
-            where("customerId", "==", customer.id)
+            where("customerId", "==", customer.id),
           );
           const deliveriesSnap = await getDocs(deliveriesQuery);
 
@@ -81,18 +81,13 @@ export const getCustomers = async (): Promise<Customer[]> => {
             isActive: (totalOrders || 0) >= 2,
           } as Customer;
         } catch (err) {
-          console.error(
-            "Error fetching deliveries for customer",
-            customer.id,
-            err
-          );
           return {
             ...customer,
             totalOrders: customer.totalOrders || 0,
             isActive: customer.isActive ?? false,
           } as Customer;
         }
-      })
+      }),
     );
 
     // Sort by createdAt on client side
@@ -106,14 +101,13 @@ export const getCustomers = async (): Promise<Customer[]> => {
 
     return customersWithStats;
   } catch (error: any) {
-    console.error("Error getting customers:", error);
     throw new Error("Failed to get customers");
   }
 };
 
 // Get single customer
 export const getCustomer = async (
-  customerId: string
+  customerId: string,
 ): Promise<Customer | null> => {
   try {
     const docRef = doc(db, "User", customerId);
@@ -135,7 +129,6 @@ export const getCustomer = async (
 
     return null;
   } catch (error: any) {
-    console.error("Error getting customer:", error);
     throw new Error("Failed to get customer");
   }
 };

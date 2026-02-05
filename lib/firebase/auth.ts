@@ -22,13 +22,13 @@ export interface AdminUser {
 // Sign in admin user
 export const signInAdmin = async (
   email: string,
-  password: string
+  password: string,
 ): Promise<AdminUser> => {
   try {
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
-      password
+      password,
     );
     const user = userCredential.user;
 
@@ -54,7 +54,6 @@ export const signInAdmin = async (
       displayName: user.displayName || adminData.displayName || "",
     };
   } catch (error: any) {
-    console.error("Sign in error:", error);
     throw new Error(error.message || "Failed to sign in");
   }
 };
@@ -64,7 +63,6 @@ export const signOutAdmin = async (): Promise<void> => {
   try {
     await signOut(auth);
   } catch (error: any) {
-    console.error("Sign out error:", error);
     throw new Error("Failed to sign out");
   }
 };
@@ -97,7 +95,6 @@ export const getCurrentAdmin = async (): Promise<AdminUser | null> => {
           displayName: user.displayName || adminData.displayName || "",
         });
       } catch (error) {
-        console.error("Error getting admin data:", error);
         resolve(null);
       }
     });
@@ -106,7 +103,7 @@ export const getCurrentAdmin = async (): Promise<AdminUser | null> => {
 
 // Listen to auth state changes
 export const onAdminAuthStateChanged = (
-  callback: (admin: AdminUser | null) => void
+  callback: (admin: AdminUser | null) => void,
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (!user) {
@@ -131,7 +128,6 @@ export const onAdminAuthStateChanged = (
         displayName: user.displayName || adminData.displayName || "",
       });
     } catch (error) {
-      console.error("Error in auth state change:", error);
       callback(null);
     }
   });

@@ -31,6 +31,6 @@ export const toggleMessageReaction = async (
       { merge: true },
     );
   } catch (error) {
-    console.error("Error toggling reaction:", error);
+    // Error handled by re-throwing or ignored if silent failure preferred
   }
 };

@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 export function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -18,12 +18,11 @@ export function SettingsPage() {
     emailNotifications: true,
     smsNotifications: false,
     autoAssignDeliveries: true,
-  })
+  });
 
   const handleSave = () => {
     // Firebase update would go here
-    console.log("Settings saved:", settings)
-  }
+  };
 
   return (
     <Tabs defaultValue="general" className="space-y-6">
@@ -46,7 +45,9 @@ export function SettingsPage() {
                 <Input
                   id="companyName"
                   value={settings.companyName}
-                  onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
+                  onChange={(e) =>
+                    setSettings({ ...settings, companyName: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -54,7 +55,9 @@ export function SettingsPage() {
                 <Input
                   id="contactPhone"
                   value={settings.contactPhone}
-                  onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
+                  onChange={(e) =>
+                    setSettings({ ...settings, contactPhone: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -76,7 +79,12 @@ export function SettingsPage() {
                   id="flatFee"
                   type="number"
                   value={settings.flatFee}
-                  onChange={(e) => setSettings({ ...settings, flatFee: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      flatFee: Number(e.target.value),
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -85,7 +93,12 @@ export function SettingsPage() {
                   id="feePerKm"
                   type="number"
                   value={settings.feePerKm}
-                  onChange={(e) => setSettings({ ...settings, feePerKm: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      feePerKm: Number(e.target.value),
+                    })
+                  }
                 />
               </div>
             </div>
@@ -103,22 +116,30 @@ export function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+                <p className="text-sm text-muted-foreground">
+                  Receive notifications via email
+                </p>
               </div>
               <Switch
                 checked={settings.emailNotifications}
-                onCheckedChange={(checked) => setSettings({ ...settings, emailNotifications: checked })}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, emailNotifications: checked })
+                }
               />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>SMS Notifications</Label>
-                <p className="text-sm text-muted-foreground">Receive notifications via SMS</p>
+                <p className="text-sm text-muted-foreground">
+                  Receive notifications via SMS
+                </p>
               </div>
               <Switch
                 checked={settings.smsNotifications}
-                onCheckedChange={(checked) => setSettings({ ...settings, smsNotifications: checked })}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, smsNotifications: checked })
+                }
               />
             </div>
             <Button onClick={handleSave}>Save Preferences</Button>
@@ -135,11 +156,15 @@ export function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Auto-assign Deliveries</Label>
-                <p className="text-sm text-muted-foreground">Automatically assign deliveries to available riders</p>
+                <p className="text-sm text-muted-foreground">
+                  Automatically assign deliveries to available riders
+                </p>
               </div>
               <Switch
                 checked={settings.autoAssignDeliveries}
-                onCheckedChange={(checked) => setSettings({ ...settings, autoAssignDeliveries: checked })}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, autoAssignDeliveries: checked })
+                }
               />
             </div>
             <Button onClick={handleSave}>Update System Settings</Button>
@@ -147,5 +172,5 @@ export function SettingsPage() {
         </Card>
       </TabsContent>
     </Tabs>
-  )
+  );
 }

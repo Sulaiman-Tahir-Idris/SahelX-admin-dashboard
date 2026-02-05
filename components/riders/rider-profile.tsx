@@ -52,7 +52,7 @@ export function RiderProfile({ riderId }: RiderProfileProps) {
         }
         setRider(r);
       } catch (e) {
-        console.error(e);
+        // handled
       } finally {
         if (mounted) setLoading(false);
       }

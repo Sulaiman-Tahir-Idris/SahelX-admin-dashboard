@@ -42,7 +42,6 @@ export const getAdminUsers = async (): Promise<AdminUser[]> => {
 
     return adminUsers;
   } catch (error: any) {
-    console.error("Error getting admin users:", error);
     throw new Error("Failed to get admin users");
   }
 };
@@ -64,7 +63,6 @@ export const getAdminUser = async (
 
     return null;
   } catch (error: any) {
-    console.error("Error getting admin user:", error);
     throw new Error("Failed to get admin user");
   }
 };
@@ -78,9 +76,7 @@ export const deleteAdminUser = async (adminId: string): Promise<void> => {
 
     // Note: We can't delete the Firebase Auth user from here as it requires
     // the user to be currently signed in or admin SDK on server side
-    console.log("Admin user deleted from Firestore:", adminId);
   } catch (error: any) {
-    console.error("Error deleting admin user:", error);
     throw new Error("Failed to delete admin user");
   }
 };

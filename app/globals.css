@@ -51,17 +51,33 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 }
 
 /* Clean grid pattern for backgrounds */
 .bg-grid-pattern {
-  background-image: radial-gradient(circle, #e5e7eb 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-image: radial-gradient(circle, #f3f4f6 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 /* Smooth transitions */
 * {
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  transition:
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sleek shadow effect */
+.sleek-shadow {
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.item-hover {
+  @apply transition-all duration-200 hover:bg-gray-50 active:scale-[0.98];
 }

@@ -16,12 +16,12 @@ import { LogOut, User } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MobileNav } from "./dashboard-nav";
 import Image from "next/image";
-import { signOutAdmin } from "@/lib/firebase/auth";
+import { signOutAdmin, type AdminUser } from "@/lib/firebase/auth";
 import { MessageBell } from "@/components/dashboard/message-bell";
 
-export function DashboardHeader({ user }: { user?: any }) {
+export function DashboardHeader({ user }: { user?: AdminUser }) {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -108,7 +108,40 @@ export function DashboardHeader({ user }: { user?: any }) {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="border-gray-200 w-64">
-            ...
+            <div className="flex items-center gap-3 p-4">
+              <Avatar className="h-12 w-12 border-2 border-gray-200 rounded-full">
+                <AvatarFallback className="bg-desertred text-desertred font-bold text-lg">
+                  {(currentUser?.displayName || "A").charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <p className="font-semibold text-gray-900 text-sm md:text-base">
+                  {currentUser?.displayName || "Admin User"}
+                </p>
+                <p className="text-xs text-gray-600 md:text-sm">
+                  {currentUser?.email || "admin@sahelx.com"}
+                </p>
+                <p className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded mt-1 self-start font-medium uppercase">
+                  {displayRoleName(currentUser?.role)}
+                </p>
+              </div>
+            </div>
+            <DropdownMenuSeparator className="bg-gray-200" />
+            <DropdownMenuItem
+              onClick={handleProfileClick}
+              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-gray-200" />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
