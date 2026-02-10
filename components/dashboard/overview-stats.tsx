@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bike, Calendar, Package, Users, Loader2 } from "lucide-react";
 import { getRiders } from "@/lib/firebase/riders";
@@ -77,68 +78,86 @@ export function OverviewStats() {
 
   return (
     <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      <Card className="relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 group bg-white">
-        <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wider">
-            Total Deliveries
-          </CardTitle>
-          <div className="rounded-xl bg-blue-50 p-2 group-hover:bg-blue-100 transition-colors">
-            <Package className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-            {stats.totalDeliveries.toLocaleString()}
-          </div>
-          <div className="flex items-center mt-1 text-[10px] md:text-xs">
-            <span className="text-gray-400 font-medium">
-              All-time processed orders
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <Link
+        href="/admin/deliveries"
+        aria-label="View deliveries"
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sahelx-500 focus-visible:ring-offset-2 rounded-2xl"
+      >
+        <Card className="relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 group bg-white cursor-pointer">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wider">
+              Total Deliveries
+            </CardTitle>
+            <div className="rounded-xl bg-blue-50 p-2 group-hover:bg-blue-100 transition-colors">
+              <Package className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
+              {stats.totalDeliveries.toLocaleString()}
+            </div>
+            <div className="flex items-center mt-1 text-[10px] md:text-xs">
+              <span className="text-gray-400 font-medium">
+                All-time processed orders
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
 
-      <Card className="relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 group bg-white">
-        <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wider">
-            Active Riders
-          </CardTitle>
-          <div className="rounded-xl bg-emerald-50 p-2 group-hover:bg-emerald-100 transition-colors">
-            <Bike className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-            {stats.totalRiders}
-          </div>
-          <div className="flex items-center mt-1 text-[10px] md:text-xs text-emerald-600 font-semibold">
-            <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-            Verified delivery partners
-          </div>
-        </CardContent>
-      </Card>
+      <Link
+        href="/admin/riders"
+        aria-label="View riders"
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sahelx-500 focus-visible:ring-offset-2 rounded-2xl"
+      >
+        <Card className="relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 group bg-white cursor-pointer">
+          <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wider">
+              Active Riders
+            </CardTitle>
+            <div className="rounded-xl bg-emerald-50 p-2 group-hover:bg-emerald-100 transition-colors">
+              <Bike className="h-4 w-4 md:h-5 md:w-5 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
+              {stats.totalRiders}
+            </div>
+            <div className="flex items-center mt-1 text-[10px] md:text-xs text-emerald-600 font-semibold">
+              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+              Verified delivery partners
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
 
-      <Card className="relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 group bg-white">
-        <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wider">
-            Total Customers
-          </CardTitle>
-          <div className="rounded-xl bg-purple-50 p-2 group-hover:bg-purple-100 transition-colors">
-            <Users className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-            {stats.totalCustomers.toLocaleString()}
-          </div>
-          <p className="text-[10px] md:text-xs text-gray-400 mt-1 font-medium">
-            Standard & corporate users
-          </p>
-        </CardContent>
-      </Card>
+      <Link
+        href="/admin/customers"
+        aria-label="View customers"
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sahelx-500 focus-visible:ring-offset-2 rounded-2xl"
+      >
+        <Card className="relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 group bg-white cursor-pointer">
+          <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wider">
+              Total Customers
+            </CardTitle>
+            <div className="rounded-xl bg-purple-50 p-2 group-hover:bg-purple-100 transition-colors">
+              <Users className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
+              {stats.totalCustomers.toLocaleString()}
+            </div>
+            <p className="text-[10px] md:text-xs text-gray-400 mt-1 font-medium">
+              Standard & corporate users
+            </p>
+          </CardContent>
+        </Card>
+      </Link>
 
       <Card className="relative overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 group bg-white">
         <div className="absolute top-0 left-0 w-1 h-full bg-sahelx-600 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -151,7 +170,7 @@ export function OverviewStats() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+          <div className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">
             {stats.todayDeliveries}
           </div>
           <div className="flex items-center mt-1 text-[10px] md:text-xs font-semibold text-sahelx-600">

@@ -483,6 +483,15 @@ export function DeliveryMap() {
                   <span className="hidden md:inline">Rider Locations</span>
                   <span className="md:hidden">Riders</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/icons/office.png"
+                    className="h-4 w-4"
+                    alt="depot"
+                  />
+                  <span className="hidden md:inline">Depot (Office)</span>
+                  <span className="md:hidden">Depot</span>
+                </div>
               </div>
             </div>
           </div>

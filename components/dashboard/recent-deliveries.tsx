@@ -111,16 +111,16 @@ export function RecentDeliveries() {
             <Table>
               <TableHeader className="bg-gray-50/50">
                 <TableRow>
-                  <TableHead className="text-xs md:text-sm font-bold text-gray-900">
+                  <TableHead className="text-xs md:text-sm font-semibold text-gray-900">
                     ID
                   </TableHead>
-                  <TableHead className="text-xs md:text-sm font-bold text-gray-900">
+                  <TableHead className="text-xs md:text-sm font-semibold text-gray-900">
                     Customer
                   </TableHead>
-                  <TableHead className="text-xs md:text-sm font-bold text-gray-900">
+                  <TableHead className="text-xs md:text-sm font-semibold text-gray-900">
                     Status
                   </TableHead>
-                  <TableHead className="text-xs md:text-sm hidden md:table-cell font-bold text-gray-900">
+                  <TableHead className="text-xs md:text-sm hidden md:table-cell font-semibold text-gray-900">
                     Date
                   </TableHead>
                 </TableRow>
