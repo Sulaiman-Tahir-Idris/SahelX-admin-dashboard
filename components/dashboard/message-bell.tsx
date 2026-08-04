@@ -60,18 +60,18 @@ export function MessageBell({ messages, lastSeen, onClick }: MessageBellProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-64 border">
-        <div className="px-2 py-1 text-sm font-semibold text-gray-700 border-b">
+        <div className="px-2 py-1 text-sm font-semibold text-muted-foreground border-b">
           Messages
         </div>
 
         {previewMessages.length === 0 && (
-          <div className="px-3 py-2 text-xs text-gray-500">No new messages</div>
+          <div className="px-3 py-2 text-xs text-muted-foreground">No new messages</div>
         )}
 
         {previewMessages.map((msg) => (
           <DropdownMenuItem
             key={msg.id}
-            className="flex flex-col text-xs cursor-pointer hover:bg-gray-100"
+            className="flex flex-col text-xs cursor-pointer hover:bg-muted"
             onClick={() => router.push("/admin/messages")}
           >
             <span className="font-medium">{msg.senderName}</span>
@@ -81,7 +81,7 @@ export function MessageBell({ messages, lastSeen, onClick }: MessageBellProps) {
 
         {messages.length > 3 && (
           <DropdownMenuItem
-            className="text-center text-xs text-gray-500"
+            className="text-center text-xs text-muted-foreground"
             onClick={() => router.push("/admin/messages")}
           >
             See all messages

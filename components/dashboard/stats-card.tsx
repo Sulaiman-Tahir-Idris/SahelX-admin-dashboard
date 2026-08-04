@@ -25,7 +25,7 @@ const colorMaps = {
   green: "text-green-600 bg-green-50 border-green-100",
   purple: "text-purple-600 bg-purple-50 border-purple-100",
   amber: "text-amber-600 bg-amber-50 border-amber-100",
-  gray: "text-gray-600 bg-gray-50 border-gray-100",
+  gray: "text-muted-foreground bg-muted/50 border-border",
 };
 
 const activeMaps = {
@@ -34,7 +34,7 @@ const activeMaps = {
   green: "ring-2 ring-green-500 bg-green-50/50",
   purple: "ring-2 ring-purple-500 bg-purple-50/50",
   amber: "ring-2 ring-amber-500 bg-amber-50/50",
-  gray: "ring-2 ring-gray-500 bg-gray-50/50",
+  gray: "ring-2 ring-gray-500 bg-muted/50/50",
 };
 
 export function StatsCard({
@@ -55,7 +55,7 @@ export function StatsCard({
         onClick
           ? "hover:translate-y-[-2px] hover:shadow-md active:translate-y-0"
           : "",
-        isActive ? activeMaps[color] : "hover:border-gray-300",
+        isActive ? activeMaps[color] : "hover:border-border",
         className,
       )}
       onClick={onClick}

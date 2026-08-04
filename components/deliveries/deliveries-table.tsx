@@ -465,19 +465,19 @@ const DeliveriesTable = () => {
 
       <div className="rounded-md border overflow-hidden">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-muted/50/50">
             <TableRow>
-              <TableHead className="font-bold text-gray-900">
+              <TableHead className="font-bold text-foreground">
                 Customer
               </TableHead>
-              <TableHead className="font-bold text-gray-900">Courier</TableHead>
-              <TableHead className="font-bold text-gray-900">Status</TableHead>
-              <TableHead className="font-bold text-gray-900">Fee</TableHead>
-              <TableHead className="font-bold text-gray-900">Created</TableHead>
-              <TableHead className="font-bold text-gray-900">
+              <TableHead className="font-bold text-foreground">Courier</TableHead>
+              <TableHead className="font-bold text-foreground">Status</TableHead>
+              <TableHead className="font-bold text-foreground">Fee</TableHead>
+              <TableHead className="font-bold text-foreground">Created</TableHead>
+              <TableHead className="font-bold text-foreground">
                 Tracking ID
               </TableHead>
-              <TableHead className="text-right font-bold text-gray-900">
+              <TableHead className="text-right font-bold text-foreground">
                 Actions
               </TableHead>
             </TableRow>
@@ -496,7 +496,7 @@ const DeliveriesTable = () => {
               pageItems.map((d, index) => (
                 <TableRow
                   key={d.id || `delivery-${index}`}
-                  className="group hover:bg-gray-50/50 transition-colors"
+                  className="group hover:bg-muted/50/50 transition-colors"
                 >
                   <TableCell className="font-medium max-w-[220px] truncate">
                     {customerNames[d.customerId] ?? d.customerId}
@@ -533,7 +533,7 @@ const DeliveriesTable = () => {
                   <TableCell className="max-w-[200px]">
                     {d.trackingId ? (
                       <div className="flex items-center gap-2 group/tracking">
-                        <code className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-600 truncate max-w-[120px]">
+                        <code className="bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">
                           {d.trackingId}
                         </code>
                         <Button

@@ -341,7 +341,7 @@ export function AdminUsersPage() {
                                 src="/placeholder.svg"
                                 alt={admin.displayName}
                               />
-                              <AvatarFallback className="bg-gray-100 text-gray-700">
+                              <AvatarFallback className="bg-muted text-muted-foreground">
                                 {admin.displayName?.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>

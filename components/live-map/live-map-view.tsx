@@ -265,7 +265,7 @@ export function LiveMapView() {
                   {filteredMarkers.map((marker) => (
                     <div
                       key={marker.id}
-                      className="flex items-center justify-between p-2 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => setSelectedMarker(marker)}
                     >
                       <div className="flex items-center gap-2">

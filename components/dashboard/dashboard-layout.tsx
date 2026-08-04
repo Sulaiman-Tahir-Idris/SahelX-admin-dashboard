@@ -4,8 +4,9 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { onAdminAuthStateChanged, type AdminUser } from "@/lib/firebase/auth"
-import { DashboardNav } from "./dashboard-nav"
-import { DashboardHeader } from "./dashboard-header"
+import { AppSidebar } from "@/components/app-sidebar"
+import { SiteHeader } from "@/components/site-header"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -30,22 +31,38 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
+      <div className="flex min-h-screen bg-background">
+        <div className="hidden md:flex w-[240px] border-r flex-col gap-3 p-4">
+          <div className="w-full h-10 rounded-lg skeleton" />
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="w-full h-10 rounded-lg skeleton" style={{ opacity: 1 - i * 0.15 }} />
+          ))}
+        </div>
+        <div className="flex-1 flex flex-col">
+          <div className="h-14 border-b flex items-center px-6">
+            <div className="w-32 h-5 rounded-lg skeleton" />
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="w-48 h-8 rounded-lg skeleton" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[1,2,3,4].map(i => <div key={i} className="h-32 rounded-xl skeleton" />)}
+            </div>
+            <div className="h-64 rounded-xl skeleton" />
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen">
-      <DashboardHeader user={user} />
-      <div className="flex">
-        <DashboardNav />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-20 md:pt-24 md:ml-[240px]">{children}</main>
-      </div>
-    </div>
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/20">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

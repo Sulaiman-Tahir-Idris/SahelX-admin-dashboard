@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAbvJX4T18HBcxr1BpD-WFhYDUyMthaFR0",
-  authDomain: "sahelx-backend.firebaseapp.com",
-  projectId: "sahelx-backend",
-  storageBucket: "sahelx-backend.firebasestorage.app",
-  messagingSenderId: "838199821074",
-  appId: "1:838199821074:web:7eb6bcd1b973d616a129cb",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAbvJX4T18HBcxr1BpD-WFhYDUyMthaFR0",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "sahelx-backend.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "sahelx-backend",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "sahelx-backend.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "838199821074",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:838199821074:web:7eb6bcd1b973d616a129cb",
 }
 
 // Initialize Firebase only if it hasn't been initialized already

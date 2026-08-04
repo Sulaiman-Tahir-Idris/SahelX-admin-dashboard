@@ -41,7 +41,7 @@ const formSchema = z.object({
   vehicleType: z.enum(["bike", "car"], {
     required_error: "Please select a vehicle type.",
   }),
-  isVerified: z.boolean().default(false),
+  isVerified: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -122,7 +122,6 @@ export function RiderRegistrationForm() {
       };
 
       // In a simulation, we use it for logging or ignore it
-      // console.log("New rider defined:", newRider);
 
       // Store credentials to show to admin
       setRiderCredentials({

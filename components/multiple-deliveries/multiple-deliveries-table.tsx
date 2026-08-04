@@ -137,13 +137,13 @@ const DeliveriesByTag = () => {
               setSelectedCourierId("");
               await fetchCouriers();
             }}
-            className="cursor-pointer hover:shadow-lg transition-shadow border border-gray-200"
+            className="cursor-pointer hover:shadow-lg transition-shadow border border-border"
           >
             <CardHeader>
               <CardTitle className="capitalize">{tag}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {groupedDeliveries[tag].length} drop-offs
               </p>
             </CardContent>
@@ -174,7 +174,7 @@ const DeliveriesByTag = () => {
 
               return (
                 <div className="space-y-4 text-sm">
-                  <div className="bg-gray-50 p-3 rounded-md border space-y-1">
+                  <div className="bg-muted/50 p-3 rounded-md border space-y-1">
                     <p>
                       <strong>Customer:</strong> {customerName}
                     </p>
@@ -202,14 +202,14 @@ const DeliveriesByTag = () => {
                       {batch.map((delivery, index) => (
                         <Card
                           key={delivery.id || `idx-${index}`}
-                          className="border border-gray-200"
+                          className="border border-border"
                         >
                           <CardContent className="py-2 px-3">
-                            <p className="text-gray-800">
+                            <p className="text-foreground">
                               <strong>#{index + 1}:</strong>{" "}
                               {delivery.dropoffLocation?.address || "N/A"}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               Fee: ₦{(delivery.cost || 0).toLocaleString()}
                             </p>
                           </CardContent>

@@ -1,276 +1,188 @@
-"use client";
+"use client"
 
-import { useState } from "react";
+import { useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { motion, AnimatePresence } from "framer-motion"
 import {
-  BarChart3,
-  Box,
-  Home,
-  Map,
-  Settings,
-  Truck,
-  Users,
-  Menu,
-  Shield,
-  MessageSquare,
-  DollarSign,
-} from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-utils";
-
-type NavItem = { title: string; href: string; icon: any };
-import { Button } from "@/components/ui/button";
+  BarChart3, Box, Home, Map, Settings, Truck, Users,
+  Menu, Shield, MessageSquare, DollarSign, Layers,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useAuth } from "@/lib/auth-utils"
+import { Button } from "@/components/ui/button"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { usePathname, useRouter } from "next/navigation";
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+  SheetDescription, SheetTrigger,
+} from "@/components/ui/sheet"
+import Image from "next/image"
 
-const navItems: NavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/admin/dashboard",
-    icon: Home,
-  },
-  {
-    title: "Riders",
-    href: "/admin/riders",
-    icon: Truck,
-  },
-  {
-    title: "Customers",
-    href: "/admin/customers",
-    icon: Users,
-  },
-  {
-    title: "Deliveries",
-    href: "/admin/deliveries",
-    icon: Box,
-  },
-  {
-    title: "Multiple Deliveries",
-    href: "/admin/multiple-deliveries",
-    icon: Box,
-  },
-  {
-    title: "Revenue",
-    href: "/admin/revenue",
-    icon: DollarSign,
-  },
-  {
-    title: "Live Map",
-    href: "/admin/live-map",
-    icon: Map,
-  },
-  {
-    title: "Messages",
-    href: "/admin/messages",
-    icon: MessageSquare,
-  },
-  // {
-  //   title: "Analytics",
-  //   href: "/admin/analytics",
-  //   icon: BarChart3,
-  // },
-  {
-    title: "Admin Users",
-    href: "/admin/admin-users",
-    icon: Shield,
-  },
-  {
-    title: "Secretaries",
-    href: "/admin/create-secretary",
-    icon: Users,
-  },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
-  },
-];
+// ─── Nav Definition ────────────────────────────────────
+type NavItem  = { title: string; href: string; icon: any; section?: string }
+type NavGroup = { label: string; items: NavItem[] }
+
+const allNavItems: NavItem[] = [
+  { title: "Dashboard",           href: "/admin/dashboard",            icon: Home,         section: "overview" },
+  { title: "Riders",              href: "/admin/riders",               icon: Truck,        section: "operations" },
+  { title: "Customers",           href: "/admin/customers",            icon: Users,        section: "operations" },
+  { title: "Deliveries",          href: "/admin/deliveries",           icon: Box,          section: "operations" },
+  { title: "Multiple Deliveries", href: "/admin/multiple-deliveries",  icon: Layers,       section: "operations" },
+  { title: "Revenue",             href: "/admin/revenue",              icon: DollarSign,   section: "finance" },
+  { title: "Live Map",            href: "/admin/live-map",             icon: Map,          section: "operations" },
+  { title: "Messages",            href: "/admin/messages",             icon: MessageSquare,section: "system" },
+  { title: "Admin Users",         href: "/admin/admin-users",          icon: Shield,       section: "system" },
+  { title: "Secretaries",         href: "/admin/create-secretary",     icon: Users,        section: "system" },
+  { title: "Settings",            href: "/admin/settings",             icon: Settings,     section: "system" },
+]
+
+const navGroups: NavGroup[] = [
+  { label: "Overview",    items: allNavItems.filter(i => i.section === "overview") },
+  { label: "Operations",  items: allNavItems.filter(i => i.section === "operations") },
+  { label: "Finance",     items: allNavItems.filter(i => i.section === "finance") },
+  { label: "System",      items: allNavItems.filter(i => i.section === "system") },
+]
 
 const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
-  if (!role) return items;
-  const r = role.toLowerCase();
-  if (r === "ceo" || r === "cto") return items;
-
-  // Everyone should always see live map — include its path
-  const liveMap = "/admin/live-map";
-
+  if (!role) return items
+  const r = role.toLowerCase()
+  if (r === "ceo" || r === "cto") return items
+  const liveMap = "/admin/live-map"
   if (r === "cfo") {
-    const allowed = new Set([
-      "/admin/dashboard",
-      "/admin/revenue",
-      "/admin/riders",
-      "/admin/create-secretary",
-      "/admin/messages",
-      liveMap,
-    ]);
-    return items.filter((i) => allowed.has(i.href));
+    const allowed = new Set(["/admin/dashboard", "/admin/revenue", "/admin/riders", "/admin/create-secretary", "/admin/messages", liveMap])
+    return items.filter(i => allowed.has(i.href))
   }
-
   if (r === "coo") {
-    const allowed = new Set([
-      "/admin/dashboard",
-      "/admin/riders",
-      "/admin/customers",
-      "/admin/deliveries",
-      "/admin/multiple-deliveries",
-      "/admin/create-secretary",
-      "/admin/messages",
-      liveMap,
-    ]);
-    return items.filter((i) => allowed.has(i.href));
+    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap])
+    return items.filter(i => allowed.has(i.href))
   }
+  return items
+}
 
-  return items;
-};
+// ─── Shared Nav Item ───────────────────────────────────
+function NavItem({ item, pathname, onClick }: { item: NavItem; pathname: string; onClick: (href: string) => void }) {
+  const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+  return (
+    <motion.button
+      key={item.href}
+      onClick={() => onClick(item.href)}
+      whileTap={{ scale: 0.97 }}
+      className={cn(
+        "sidebar-item w-full text-left group",
+        isActive ? "sidebar-item-active" : "sidebar-item-inactive",
+      )}
+    >
+      <div className={cn(
+        "flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-200 shrink-0",
+        isActive ? "bg-primary/15 text-primary" : "text-muted-foreground group-hover:text-foreground",
+      )}>
+        <item.icon className="w-4 h-4" />
+      </div>
+      <span className="truncate">{item.title}</span>
+      {isActive && (
+        <motion.div
+          layoutId="active-indicator"
+          className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
+        />
+      )}
+    </motion.button>
+  )
+}
 
-// Mobile Navigation Component
+// ─── Mobile Sheet ──────────────────────────────────────
 export function MobileNav() {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, loading } = useAuth();
+  const [open, setOpen] = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
+  const { user } = useAuth()
 
   const getStoredRole = () => {
-    try {
-      const s = localStorage.getItem("adminUser");
-      if (!s) return undefined;
-      const parsed = JSON.parse(s);
-      return parsed?.role;
-    } catch {
-      return undefined;
-    }
-  };
-
-  let items: NavItem[];
-  if (user?.role) {
-    items = filterNavByRole(navItems, user.role);
-  } else {
-    const storedRole =
-      typeof window !== "undefined" ? getStoredRole() : undefined;
-    if (storedRole) {
-      items = filterNavByRole(navItems, storedRole);
-    } else {
-      // When role is unknown and we have no cached role, render nothing to avoid flashing
-      items = [];
-    }
+    try { return JSON.parse(localStorage.getItem("adminUser") || "{}").role } catch { return undefined }
   }
+  const role  = user?.role ?? (typeof window !== "undefined" ? getStoredRole() : undefined)
+  const items = filterNavByRole(allNavItems, role)
 
-  const handleNavigation = (href: string) => {
-    router.push(href);
-    setOpen(false); // Close mobile menu after navigation
-  };
+  const handleNav = (href: string) => { router.push(href); setOpen(false) }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden text-gray-600 hover:text-gray-900"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle menu</span>
+        <Button variant="ghost" size="icon" className="md:hidden w-8 h-8 rounded-lg">
+          <Menu className="h-4 w-4" />
+          <span className="sr-only">Menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[280px] sm:w-[300px] p-0">
-        <SheetHeader className="p-4 border-b border-gray-200">
-          <SheetTitle className="text-lg font-semibold text-gray-900">
-            Navigation Menu
-          </SheetTitle>
-          <SheetDescription className="text-sm text-gray-600">
-            Access all admin dashboard sections
-          </SheetDescription>
+      <SheetContent side="left" className="w-[280px] p-0 bg-sidebar border-sidebar-border">
+        <SheetHeader className="px-4 pt-5 pb-4 border-b border-sidebar-border">
+          <Image src="/images/black1.png" alt="SahelX" width={110} height={36} className="h-6 w-auto dark:invert mb-1" />
+          <SheetTitle className="text-sm font-semibold text-sidebar-foreground">Navigation</SheetTitle>
+          <SheetDescription className="text-xs text-muted-foreground">Admin portal sections</SheetDescription>
         </SheetHeader>
-        <div className="flex flex-col space-y-1 p-4">
-          {items.map((item) => (
-            <Button
-              key={item.href}
-              variant="ghost"
-              className={cn(
-                "h-12 w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-medium",
-                pathname === item.href &&
-                  "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600",
-              )}
-              onClick={() => handleNavigation(item.href)}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="ml-3">{item.title}</span>
-            </Button>
-          ))}
+        <div className="overflow-y-auto py-3 px-2 space-y-1">
+          {items.map(item => <NavItem key={item.href} item={item} pathname={pathname} onClick={handleNav} />)}
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }
 
-// Desktop Navigation Component
+// ─── Desktop Sidebar ───────────────────────────────────
 export function DashboardNav() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, loading } = useAuth();
+  const pathname = usePathname()
+  const router   = useRouter()
+  const { user } = useAuth()
 
   const getStoredRole = () => {
-    try {
-      const s = localStorage.getItem("adminUser");
-      if (!s) return undefined;
-      const parsed = JSON.parse(s);
-      return parsed?.role;
-    } catch {
-      return undefined;
-    }
-  };
-
-  let items: NavItem[];
-  if (user?.role) {
-    items = filterNavByRole(navItems, user.role);
-  } else {
-    const storedRole =
-      typeof window !== "undefined" ? getStoredRole() : undefined;
-    if (storedRole) {
-      items = filterNavByRole(navItems, storedRole);
-    } else {
-      // When role is unknown and we have no cached role, render nothing to avoid flashing
-      items = [];
-    }
+    try { return JSON.parse(localStorage.getItem("adminUser") || "{}").role } catch { return undefined }
   }
+  const role   = user?.role ?? (typeof window !== "undefined" ? getStoredRole() : undefined)
+  const items  = filterNavByRole(allNavItems, role)
 
-  const handleNavigation = (href: string) => {
-    router.push(href);
-  };
+  const groups = navGroups.map(g => ({
+    ...g,
+    items: g.items.filter(i => items.some(a => a.href === i.href)),
+  })).filter(g => g.items.length > 0)
 
   return (
-    <div className="hidden md:flex fixed left-0 top-16 bottom-0 z-40 flex-col border-r border-gray-200 bg-white px-3 py-6 w-[240px]">
-      <div className="flex flex-col space-y-1">
-        {items.map((item) => (
-          <Button
-            key={item.href}
-            variant="ghost"
-            className={cn(
-              "h-10 w-full justify-start text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-medium transition-all duration-200 group active:scale-[0.98]",
-              pathname === item.href &&
-                "bg-sahelx-50 text-sahelx-700 border-r-2 border-sahelx-600 shadow-sm shadow-sahelx-100/50",
-            )}
-            onClick={() => handleNavigation(item.href)}
-          >
-            <item.icon
-              className={cn(
-                "h-5 w-5 transition-transform duration-200",
-                pathname === item.href
-                  ? "text-sahelx-600"
-                  : "text-gray-500 group-hover:scale-110",
-              )}
-            />
-            <span className="ml-3">{item.title}</span>
-          </Button>
-        ))}
+    <motion.aside
+      initial={{ x: -20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' as const }}
+      className="hidden md:flex fixed left-0 top-16 bottom-0 z-40 flex-col w-[240px] border-r border-sidebar-border bg-sidebar overflow-y-auto"
+    >
+      {/* Brand strip */}
+      <div className="px-4 py-4 border-b border-sidebar-border">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Truck className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-sidebar-foreground">SahelX Admin</p>
+            <p className="text-[10px] text-muted-foreground">Delivery Management</p>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+
+      {/* Nav groups */}
+      <nav className="flex-1 py-3 px-2 space-y-4">
+        {groups.map(group => (
+          <div key={group.label}>
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map(item => (
+                <NavItem key={item.href} item={item} pathname={pathname} onClick={(href) => router.push(href)} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-sidebar-border">
+        <p className="text-[10px] text-muted-foreground/50 text-center">
+          SahelX · v1.0
+        </p>
+      </div>
+    </motion.aside>
+  )
 }

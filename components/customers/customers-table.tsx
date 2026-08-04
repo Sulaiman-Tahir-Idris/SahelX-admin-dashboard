@@ -350,18 +350,18 @@ export function CustomersTable() {
 
       <div className="rounded-md border">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-muted/50/50">
             <TableRow>
-              <TableHead className="font-bold text-gray-900">
+              <TableHead className="font-bold text-foreground">
                 Customer
               </TableHead>
-              <TableHead className="font-bold text-gray-900">Status</TableHead>
-              <TableHead className="font-bold text-gray-900">
+              <TableHead className="font-bold text-foreground">Status</TableHead>
+              <TableHead className="font-bold text-foreground">
                 Total Orders
               </TableHead>
-              <TableHead className="font-bold text-gray-900">Phone</TableHead>
-              <TableHead className="font-bold text-gray-900">Joined</TableHead>
-              <TableHead className="text-right font-bold text-gray-900">
+              <TableHead className="font-bold text-foreground">Phone</TableHead>
+              <TableHead className="font-bold text-foreground">Joined</TableHead>
+              <TableHead className="text-right font-bold text-foreground">
                 Actions
               </TableHead>
             </TableRow>
@@ -379,7 +379,7 @@ export function CustomersTable() {
               pageItems.map((customer) => (
                 <TableRow
                   key={customer.id}
-                  className="group hover:bg-gray-50/50 transition-colors"
+                  className="group hover:bg-muted/50/50 transition-colors"
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -468,7 +468,7 @@ export function CustomersTable() {
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium">Rows:</label>
             <select
-              className="bg-white border rounded px-1 py-1 text-xs outline-none focus:ring-1 focus:ring-primary"
+              className="bg-background border rounded px-1 py-1 text-xs outline-none focus:ring-1 focus:ring-primary"
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
@@ -481,7 +481,7 @@ export function CustomersTable() {
                 </option>
               ))}
             </select>
-            <div className="h-4 w-px bg-gray-200 mx-1"></div>
+            <div className="h-4 w-px bg-muted mx-1"></div>
             <Button
               variant="outline"
               size="sm"

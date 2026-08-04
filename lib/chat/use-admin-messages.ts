@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-export function useAdminMessages() {
+export function useAdminMessages(chatId: string = "global") {
   const [messages, setMessages] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!chatId) return;
+    
     const q = query(
-      collection(db, "adminChats", "global", "messages"),
+      collection(db, "adminChats", chatId, "messages"),
       orderBy("createdAt", "asc"),
     );
 
@@ -16,7 +18,7 @@ export function useAdminMessages() {
     });
 
     return () => unsub();
-  }, []);
+  }, [chatId]);
 
   return messages;
 }

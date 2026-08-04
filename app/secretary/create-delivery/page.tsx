@@ -266,7 +266,7 @@ export default function CreateDeliveryPage() {
     <SecretaryDashboardLayout>
       <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8 bg-grid-pattern min-h-screen">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
             Create Delivery
           </h1>
           <p className="text-muted-foreground text-lg">
@@ -275,16 +275,16 @@ export default function CreateDeliveryPage() {
         </div>
 
         <Tabs defaultValue="single" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-md h-12 mb-8 bg-gray-100 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-2 max-w-md h-12 mb-8 bg-muted p-1 rounded-xl">
             <TabsTrigger
               value="single"
-              className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all h-full"
+              className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all h-full"
             >
               Single Delivery
             </TabsTrigger>
             <TabsTrigger
               value="bulk"
-              className="rounded-lg font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all h-full"
+              className="rounded-lg font-bold data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all h-full"
             >
               Bulk Delivery
             </TabsTrigger>
@@ -295,8 +295,8 @@ export default function CreateDeliveryPage() {
               {/* Left Column: Form */}
               <div className="lg:col-span-2 space-y-6">
                 {/* Customer Section */}
-                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-gray-300 transition-all">
-                  <CardHeader className="bg-gray-50/50 border-b pb-4">
+                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-border transition-all">
+                  <CardHeader className="bg-muted/50/50 border-b pb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                         <User className="h-5 w-5" />
@@ -326,8 +326,8 @@ export default function CreateDeliveryPage() {
                 </Card>
 
                 {/* Pickup Section */}
-                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-gray-300 transition-all">
-                  <CardHeader className="bg-gray-50/50 border-b pb-4">
+                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-border transition-all">
+                  <CardHeader className="bg-muted/50/50 border-b pb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
                         <Building2 className="h-5 w-5" />
@@ -373,8 +373,8 @@ export default function CreateDeliveryPage() {
                 </Card>
 
                 {/* Dropoff Section */}
-                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-gray-300 transition-all">
-                  <CardHeader className="bg-gray-50/50 border-b pb-4">
+                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-border transition-all">
+                  <CardHeader className="bg-muted/50/50 border-b pb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-green-50 text-green-600 rounded-lg">
                         <MapPin className="h-5 w-5" />
@@ -422,8 +422,8 @@ export default function CreateDeliveryPage() {
                 </Card>
 
                 {/* Package Section */}
-                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-gray-300 transition-all">
-                  <CardHeader className="bg-gray-50/50 border-b pb-4">
+                <Card className="border shadow-none rounded-2xl overflow-hidden hover:border-border transition-all">
+                  <CardHeader className="bg-muted/50/50 border-b pb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
                         <Package className="h-5 w-5" />
@@ -494,7 +494,7 @@ export default function CreateDeliveryPage() {
 
               {/* Right Column: Summary & Actions */}
               <div className="space-y-6">
-                <Card className="border-2 border-primary/10 shadow-lg rounded-2xl bg-white sticky top-8">
+                <Card className="border-2 border-primary/10 shadow-lg rounded-2xl bg-background sticky top-8">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <CreditCard className="h-5 w-5 text-primary" />
@@ -558,7 +558,7 @@ export default function CreateDeliveryPage() {
               {/* Left Column: Form */}
               <div className="lg:col-span-2 space-y-6">
                 <Card className="border shadow-none rounded-2xl overflow-hidden">
-                  <CardHeader className="bg-gray-50/50 border-b pb-4">
+                  <CardHeader className="bg-muted/50/50 border-b pb-4">
                     <CardTitle className="text-lg">
                       Common Information
                     </CardTitle>
@@ -629,7 +629,7 @@ export default function CreateDeliveryPage() {
                   {bulkDropoffs.map((_, i) => (
                     <Card
                       key={i}
-                      className="border shadow-none rounded-2xl relative group bg-white/50 hover:bg-white transition-all"
+                      className="border shadow-none rounded-2xl relative group bg-background/50 hover:bg-background transition-all"
                     >
                       <CardContent className="pt-6 pb-6">
                         <div className="flex gap-4 items-start">
@@ -644,7 +644,7 @@ export default function CreateDeliveryPage() {
                                     copy[i] = e.target.value;
                                     setBulkDropoffs(copy);
                                   }}
-                                  className="h-11 rounded-xl border-gray-200"
+                                  className="h-11 rounded-xl border-border"
                                   placeholder="Recipient's destination"
                                 />
                               </div>
@@ -657,7 +657,7 @@ export default function CreateDeliveryPage() {
                                     copy[i] = e.target.value;
                                     setBulkReceiverPhones(copy);
                                   }}
-                                  className="h-11 rounded-xl border-gray-200"
+                                  className="h-11 rounded-xl border-border"
                                   placeholder="+234 ..."
                                 />
                               </div>
@@ -692,7 +692,7 @@ export default function CreateDeliveryPage() {
 
               {/* Right Column: Bulk Summary */}
               <div className="space-y-6">
-                <Card className="border-2 border-primary/10 shadow-lg rounded-2xl bg-white sticky top-8">
+                <Card className="border-2 border-primary/10 shadow-lg rounded-2xl bg-background sticky top-8">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <CreditCard className="h-5 w-5 text-primary" />
@@ -720,7 +720,7 @@ export default function CreateDeliveryPage() {
                           <span className="text-muted-foreground">
                             Unit Price
                           </span>
-                          <span className="font-semibold text-gray-900">
+                          <span className="font-semibold text-foreground">
                             ₦{(Number(bulkFee) || 0).toLocaleString()}
                           </span>
                         </div>

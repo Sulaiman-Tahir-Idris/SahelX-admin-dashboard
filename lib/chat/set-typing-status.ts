@@ -5,8 +5,9 @@ export async function setTypingStatus(
   adminId: string,
   name: string,
   typing: boolean,
+  chatId: string = "global"
 ) {
-  const ref = doc(db, "adminChats", "global", "typing", adminId);
+  const ref = doc(db, "adminChats", chatId, "typing", adminId);
 
   if (typing) {
     await setDoc(ref, {

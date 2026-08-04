@@ -324,7 +324,7 @@ export default function AdminSecretariesPage() {
                                   src="/placeholder.svg"
                                   alt={s.displayName}
                                 />
-                                <AvatarFallback className="bg-gray-100 text-gray-700">
+                                <AvatarFallback className="bg-muted text-muted-foreground">
                                   {s.displayName?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>

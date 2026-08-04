@@ -11,8 +11,9 @@ export const toggleMessageReaction = async (
   messageId: string,
   emoji: string,
   userId: string,
+  chatId: string = "global"
 ) => {
-  const messageRef = doc(db, "adminChats", "global", "messages", messageId);
+  const messageRef = doc(db, "adminChats", chatId, "messages", messageId);
 
   const snapshot = await getDoc(messageRef);
   if (!snapshot.exists()) return;

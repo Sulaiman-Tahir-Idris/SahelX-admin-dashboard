@@ -442,19 +442,19 @@ export function RidersTable() {
 
       <div className="rounded-md border">
         <Table>
-          <TableHeader className="bg-gray-50/50">
+          <TableHeader className="bg-muted/50/50">
             <TableRow>
-              <TableHead className="font-bold text-gray-900">Rider</TableHead>
-              <TableHead className="font-bold text-gray-900">Status</TableHead>
-              <TableHead className="font-bold text-gray-900">Vehicle</TableHead>
-              <TableHead className="font-bold text-gray-900">Phone</TableHead>
-              <TableHead className="font-bold text-gray-900">Total</TableHead>
-              <TableHead className="font-bold text-gray-900">Rating</TableHead>
-              <TableHead className="font-bold text-gray-900">
+              <TableHead className="font-bold text-foreground">Rider</TableHead>
+              <TableHead className="font-bold text-foreground">Status</TableHead>
+              <TableHead className="font-bold text-foreground">Vehicle</TableHead>
+              <TableHead className="font-bold text-foreground">Phone</TableHead>
+              <TableHead className="font-bold text-foreground">Total</TableHead>
+              <TableHead className="font-bold text-foreground">Rating</TableHead>
+              <TableHead className="font-bold text-foreground">
                 Verification
               </TableHead>
-              <TableHead className="font-bold text-gray-900">Joined</TableHead>
-              <TableHead className="text-right font-bold text-gray-900">
+              <TableHead className="font-bold text-foreground">Joined</TableHead>
+              <TableHead className="text-right font-bold text-foreground">
                 Actions
               </TableHead>
             </TableRow>
@@ -472,7 +472,7 @@ export function RidersTable() {
               filteredRiders.map((rider) => (
                 <TableRow
                   key={rider.id}
-                  className="group hover:bg-gray-50/50 transition-colors"
+                  className="group hover:bg-muted/50/50 transition-colors"
                 >
                   <TableCell>
                     <div className="flex items-center gap-3">

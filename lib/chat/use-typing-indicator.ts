@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-export function useTypingIndicator(currentUserId: string) {
+export function useTypingIndicator(currentUserId: string, chatId: string = "global") {
   const [typers, setTypers] = useState<string[]>([]);
 
   useEffect(() => {
-    const ref = collection(db, "adminChats", "global", "typing");
+    if (!chatId) return;
+    
+    const ref = collection(db, "adminChats", chatId, "typing");
 
     const unsub = onSnapshot(ref, (snap) => {
       const names = snap.docs
@@ -17,7 +19,7 @@ export function useTypingIndicator(currentUserId: string) {
     });
 
     return () => unsub();
-  }, [currentUserId]);
+  }, [currentUserId, chatId]);
 
   return typers;
 }

@@ -64,9 +64,9 @@ export function AnalyticsDashboard() {
               <CardTitle>Weekly Delivery Trends</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="h-[300px] flex items-center justify-center border-2 border-dashed border-border rounded-lg">
                 <div className="text-center">
-                  <p className="text-gray-500">Chart visualization will be displayed here</p>
+                  <p className="text-muted-foreground">Chart visualization will be displayed here</p>
                   <p className="text-sm text-gray-400 mt-2">
                     Weekly deliveries: {deliveryData.reduce((sum, d) => sum + d.deliveries, 0)}
                   </p>
@@ -113,7 +113,7 @@ export function AnalyticsDashboard() {
                   </div>
                   <div className="text-right">
                     <div className="font-bold">{rider.deliveries} deliveries</div>
-                    <div className="text-sm text-gray-500">{rider.rating}/5 rating</div>
+                    <div className="text-sm text-muted-foreground">{rider.rating}/5 rating</div>
                   </div>
                 </div>
               ))}
@@ -128,9 +128,9 @@ export function AnalyticsDashboard() {
             <CardTitle>Revenue Trends</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+            <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-border rounded-lg">
               <div className="text-center">
-                <p className="text-gray-500">Revenue chart will be displayed here</p>
+                <p className="text-muted-foreground">Revenue chart will be displayed here</p>
                 <p className="text-sm text-gray-400 mt-2">
                   Total weekly revenue: ₦{deliveryData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}
                 </p>

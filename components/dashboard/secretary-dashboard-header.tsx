@@ -1,130 +1,158 @@
-"use client";
+"use client"
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
-import {
-  signOutSecretary,
-  type SecretaryUser,
-} from "@/lib/firebase/secretaryAuth";
-import { useAdminMessages } from "@/lib/chat/use-admin-messages";
-import { MessageBell } from "@/components/dashboard/message-bell";
-import { MobileNav } from "./secretary-dashboard-nav";
-import Image from "next/image";
+} from "@/components/ui/dropdown-menu"
+import { LogOut, User, Sun, Moon, ChevronDown } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
+import { signOutSecretary, type SecretaryUser } from "@/lib/firebase/secretaryAuth"
+import { MobileNav } from "./secretary-dashboard-nav"
+import Image from "next/image"
+
+function useTheme() {
+  const [dark, setDark] = useState(false)
+  useEffect(() => {
+    const stored = localStorage.getItem("sahelx-theme")
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+    const isDark = stored ? stored === "dark" : prefersDark
+    setDark(isDark)
+    document.documentElement.classList.toggle("dark", isDark)
+  }, [])
+  const toggle = () => {
+    const next = !dark
+    setDark(next)
+    localStorage.setItem("sahelx-theme", next ? "dark" : "light")
+    document.documentElement.classList.toggle("dark", next)
+  }
+  return { dark, toggle }
+}
 
 export function SecretaryDashboardHeader({ user }: { user?: SecretaryUser }) {
-  const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<SecretaryUser | null>(null);
+  const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<SecretaryUser | null>(null)
+  const { dark, toggle } = useTheme()
 
   useEffect(() => {
     if (!user) {
-      const storedUser = localStorage.getItem("secretaryUser");
-      if (storedUser) {
-        setCurrentUser(JSON.parse(storedUser));
-      }
+      const stored = localStorage.getItem("secretaryUser")
+      if (stored) setCurrentUser(JSON.parse(stored))
     } else {
-      setCurrentUser(user);
+      setCurrentUser(user)
     }
-  }, [user]);
+  }, [user])
+
+  const initials = (currentUser?.displayName || "S").charAt(0).toUpperCase()
 
   const handleLogout = async () => {
     try {
-      await signOutSecretary();
-      localStorage.removeItem("isSecretaryLoggedIn");
-      localStorage.removeItem("secretaryUser");
-
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of the secretary dashboard.",
-      });
-
-      router.push("/secretary/login");
+      await signOutSecretary()
+      localStorage.removeItem("isSecretaryLoggedIn")
+      localStorage.removeItem("secretaryUser")
+      toast({ title: "Logged out", description: "See you next time!" })
+      router.push("/secretary/login")
     } catch (error: any) {
-      toast({
-        title: "Logout failed",
-        description: error.message || "Failed to logout",
-        variant: "destructive",
-      });
+      toast({ title: "Logout failed", description: error.message, variant: "destructive" })
     }
-  };
-
-  const handleProfileClick = () => {
-    router.push("/secretary/profile");
-  };
+  }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white/95 backdrop-blur-sm px-4 md:px-6 shadow-sm">
-      <div className="flex items-center space-x-3 md:space-x-4">
+    <header className="fixed top-0 left-0 right-0 z-50 flex h-16 w-full items-center justify-between border-b border-border/50 bg-background/90 backdrop-blur-xl px-4 md:px-6">
+      {/* Left */}
+      <div className="flex items-center gap-3">
         <MobileNav />
         <Image
           src="/images/black1.png"
-          alt="SahelX Logo"
-          width={120}
-          height={40}
-          className="h-6 w-auto md:h-8"
+          alt="SahelX"
+          width={110}
+          height={36}
+          className="h-6 w-auto md:h-7 dark:invert"
+          priority
         />
-        <div className="h-4 w-px bg-gray-300 md:h-6"></div>
-        <h1 className="text-sm font-medium text-gray-900 md:text-lg">
+        <div className="hidden sm:block h-4 w-px bg-border" />
+        <motion.span
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+          className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           Secretary Portal
-        </h1>
+        </motion.span>
       </div>
 
-      <div className="flex items-center space-x-2 md:space-x-3">
+      {/* Right */}
+      <div className="flex items-center gap-1.5 md:gap-2">
+        <button
+          onClick={toggle}
+          aria-label="Toggle theme"
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-7 w-7 md:h-8 md:w-8 border-2 border-gray-200">
-                <AvatarFallback className="bg-desertred text-desertred font-semibold text-xs md:text-sm">
-                  {(currentUser?.displayName || "S").charAt(0).toUpperCase()}
+            <Button variant="ghost" className="flex items-center gap-2 h-9 px-2 rounded-xl hover:bg-muted">
+              <Avatar className="h-7 w-7 border-2 border-amber-500/30">
+                <AvatarFallback className="bg-amber-500/10 text-amber-600 text-xs font-bold">
+                  {initials}
                 </AvatarFallback>
               </Avatar>
+              <div className="hidden md:flex flex-col items-start">
+                <span className="text-xs font-semibold text-foreground leading-none">
+                  {currentUser?.displayName || "Secretary"}
+                </span>
+                <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Operations Staff</span>
+              </div>
+              <ChevronDown className="hidden md:block w-3 h-3 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="border-gray-200 w-64">
-            <div className="flex items-center gap-3 p-4">
-              <Avatar className="h-12 w-12 border-2 border-gray-200 rounded-full">
-                <AvatarFallback className="bg-desertred text-desertred font-bold text-lg">
-                  {(currentUser?.displayName || "S").charAt(0).toUpperCase()}
+
+          <DropdownMenuContent align="end" className="w-64 rounded-xl border-border shadow-card-lg p-1.5">
+            <div className="flex items-center gap-3 px-3 py-3 mb-1">
+              <Avatar className="h-10 w-10 border-2 border-amber-500/30">
+                <AvatarFallback className="bg-amber-500/10 text-amber-600 font-bold text-base">
+                  {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col">
-                <p className="font-semibold text-gray-900 text-sm md:text-base">
+              <div className="flex flex-col min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
                   {currentUser?.displayName || "Secretary User"}
                 </p>
-                <p className="text-xs text-gray-600 md:text-sm">
-                  {currentUser?.email || "secretary@sahelx.com"}
+                <p className="text-xs text-muted-foreground truncate">
+                  {currentUser?.email}
                 </p>
+                <span className="mt-1 inline-flex self-start text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                  Secretary
+                </span>
               </div>
             </div>
-            <DropdownMenuSeparator className="bg-gray-200" />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={handleProfileClick}
-              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
+              onClick={() => router.push("/secretary/profile")}
+              className="rounded-lg cursor-pointer gap-2 text-sm"
             >
-              <User className="mr-2 h-4 w-4" />
-              Profile
+              <User className="w-4 h-4" /> Profile
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-gray-200" />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="text-gray-700 hover:bg-gray-50 cursor-pointer"
+              className="rounded-lg cursor-pointer gap-2 text-sm text-destructive focus:text-destructive focus:bg-destructive/10"
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
+              <LogOut className="w-4 h-4" /> Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
-  );
+  )
 }

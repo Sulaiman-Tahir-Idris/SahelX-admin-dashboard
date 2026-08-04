@@ -274,9 +274,9 @@ export function DeliveryMap() {
   if (!isLoaded) return <div>Loading Map...</div>;
 
   return (
-    <Card className="col-span-full border-gray-200 bg-white shadow-sm">
+    <Card className="col-span-full border-border bg-background shadow-sm">
       <CardHeader>
-        {/* <CardTitle className="text-gray-900">Live Delivery Map</CardTitle> */}
+        {/* <CardTitle className="text-foreground">Live Delivery Map</CardTitle> */}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -382,7 +382,7 @@ export function DeliveryMap() {
                   onCloseClick={() => setSelectedMarker(null)}
                 >
                   <div className="p-2 min-w-[200px]">
-                    <h3 className="font-bold text-sm text-gray-900">
+                    <h3 className="font-bold text-sm text-foreground">
                       {selectedMarker.name}
                     </h3>
 
@@ -415,7 +415,7 @@ export function DeliveryMap() {
                                   <div className="text-xs font-bold">
                                     ID: {d.id?.substring(0, 8)}...
                                   </div>
-                                  <div className="text-[10px] text-gray-600">
+                                  <div className="text-[10px] text-muted-foreground">
                                     Status: {d.status}
                                   </div>
                                 </div>
@@ -432,17 +432,17 @@ export function DeliveryMap() {
                           <p className="text-xs font-medium text-desertred uppercase">
                             {selectedMarker.type} Point
                           </p>
-                          <p className="text-xs text-gray-600">
+                          <p className="text-xs text-muted-foreground">
                             Status: {selectedMarker.status}
                           </p>
-                          <p className="text-[10px] text-gray-500 mt-1">
+                          <p className="text-[10px] text-muted-foreground mt-1">
                             Delivery ID: {selectedMarker.deliveryId}
                           </p>
                         </div>
                       )}
 
                     {selectedMarker.id === "sahelx_office" && (
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Main headquarters and dispatch center.
                       </p>
                     )}
@@ -457,7 +457,7 @@ export function DeliveryMap() {
             </GoogleMap>
 
             {/* Legend */}
-            <div className="absolute bottom-2 md:bottom-4 right-2 md:right-4 rounded-lg bg-white/90 p-2 md:p-3 shadow-lg">
+            <div className="absolute bottom-2 md:bottom-4 right-2 md:right-4 rounded-lg bg-background/90 p-2 md:p-3 shadow-lg">
               <div className="text-xs md:text-sm font-medium mb-2">Legend</div>
               <div className="space-y-1 text-xs">
                 <div className="flex items-center gap-2">

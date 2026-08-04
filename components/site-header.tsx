@@ -1,10 +1,11 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { Separator } from "@/components/ui/separator"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useAuth } from "@/lib/auth-utils"
+import { UserCircle, Sun, Moon, LogOut, User, ChevronDown } from "lucide-react"
 import { useEffect, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,54 +13,42 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, User, Sun, Moon, ChevronDown } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { signOutAdmin } from "@/lib/firebase/auth"
 import { toast } from "@/components/ui/use-toast"
-import { MobileNav } from "./dashboard-nav"
-import Image from "next/image"
-import { signOutAdmin, type AdminUser } from "@/lib/firebase/auth"
-import { MessageBell } from "@/components/dashboard/message-bell"
-import { useAdminMessages } from "@/lib/chat/use-admin-messages"
 
-function useTheme() {
-  const [dark, setDark] = useState(false)
-  useEffect(() => {
-    const stored = localStorage.getItem("sahelx-theme")
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    const isDark = stored ? stored === "dark" : prefersDark
-    setDark(isDark)
-    document.documentElement.classList.toggle("dark", isDark)
-  }, [])
-  const toggle = () => {
-    const next = !dark
-    setDark(next)
-    localStorage.setItem("sahelx-theme", next ? "dark" : "light")
-    document.documentElement.classList.toggle("dark", next)
-  }
-  return { dark, toggle }
-}
+import { useTheme } from "next-themes"
 
 const roleLabels: Record<string, string> = {
   ceo: "CEO", cto: "CTO", cfo: "CFO", coo: "COO",
   admin: "Admin", superadmin: "Super Admin",
 }
 
-export function DashboardHeader({ user }: { user?: AdminUser }) {
+export function SiteHeader() {
+  const pathname = usePathname()
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null)
-  const { dark, toggle } = useTheme()
-  const messages = useAdminMessages()
+  const { user } = useAuth()
+  const { theme, setTheme } = useTheme()
+  const isDark = theme === "dark"
 
-  useEffect(() => {
-    if (!user) {
-      const stored = localStorage.getItem("adminUser")
-      if (stored) setCurrentUser(JSON.parse(stored))
-    } else {
-      setCurrentUser(user)
-    }
-  }, [user])
+  const getTitle = () => {
+    if (pathname.includes("/admin/dashboard")) return "Dashboard"
+    if (pathname.includes("/admin/riders")) return "Riders"
+    if (pathname.includes("/admin/customers")) return "Customers"
+    if (pathname.includes("/admin/deliveries")) return "Deliveries"
+    if (pathname.includes("/admin/multiple-deliveries")) return "Multiple Deliveries"
+    if (pathname.includes("/admin/revenue")) return "Revenue"
+    if (pathname.includes("/admin/live-map")) return "Live Map"
+    if (pathname.includes("/admin/messages")) return "Messages"
+    if (pathname.includes("/admin/admin-users")) return "Admin Users"
+    if (pathname.includes("/admin/create-secretary")) return "Secretaries"
+    if (pathname.includes("/admin/settings")) return "Settings"
+    return "Admin Portal"
+  }
 
-  const roleLabel = roleLabels[(currentUser?.role || "").toLowerCase()] || (currentUser?.role ?? "Admin")
-  const initials  = (currentUser?.displayName || "A").charAt(0).toUpperCase()
+  const roleLabel = roleLabels[(user?.role || "").toLowerCase()] || (user?.role ?? "Admin")
+  const initials  = (user?.displayName || "A").charAt(0).toUpperCase()
 
   const handleLogout = async () => {
     try {
@@ -74,42 +63,20 @@ export function DashboardHeader({ user }: { user?: AdminUser }) {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex h-16 w-full items-center justify-between border-b border-border/50 bg-background/90 backdrop-blur-xl px-4 md:px-6">
-      {/* Left — Mobile menu + Logo + Portal badge */}
-      <div className="flex items-center gap-3">
-        <MobileNav />
-        <Image
-          src="/images/black1.png"
-          alt="SahelX"
-          width={110}
-          height={36}
-          className="h-6 w-auto md:h-7 dark:invert"
-          priority
-        />
-        <div className="hidden sm:block h-4 w-px bg-border" />
-        <motion.span
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-full"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-          {roleLabel} Portal
-        </motion.span>
+    <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-14 shrink-0 items-center justify-between border-b bg-background px-4 lg:px-6 transition-[width,height] ease-linear">
+      <div className="flex items-center gap-2">
+        <SidebarTrigger className="-ml-1" />
+        <Separator orientation="vertical" className="mx-2 h-4" />
+        <h1 className="text-sm font-semibold">{getTitle()}</h1>
       </div>
-
-      {/* Right — Notifications, Theme, User Menu */}
       <div className="flex items-center gap-1.5 md:gap-2">
-        {/* Message Bell */}
-        <MessageBell messages={messages || []} />
-
         {/* Theme Toggle */}
         <button
-          onClick={toggle}
+          onClick={() => setTheme(isDark ? "light" : "dark")}
           aria-label="Toggle theme"
           className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
-          {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
         {/* User Dropdown */}
@@ -126,7 +93,7 @@ export function DashboardHeader({ user }: { user?: AdminUser }) {
               </Avatar>
               <div className="hidden md:flex flex-col items-start">
                 <span className="text-xs font-semibold text-foreground leading-none">
-                  {currentUser?.displayName || "Admin User"}
+                  {user?.displayName || "Admin User"}
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-none mt-0.5">
                   {roleLabel}
@@ -145,10 +112,10 @@ export function DashboardHeader({ user }: { user?: AdminUser }) {
               </Avatar>
               <div className="flex flex-col min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">
-                  {currentUser?.displayName || "Admin User"}
+                  {user?.displayName || "Admin User"}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {currentUser?.email}
+                  {user?.email}
                 </p>
                 <span className="mt-1 inline-flex self-start text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
                   {roleLabel}

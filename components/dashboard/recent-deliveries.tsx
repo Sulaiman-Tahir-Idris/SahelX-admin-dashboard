@@ -86,9 +86,9 @@ export function RecentDeliveries() {
   }
 
   return (
-    <Card className="border-gray-200 bg-white shadow-sm">
+    <Card className="border-border bg-background shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        {/* <CardTitle className="text-gray-900">Recent Deliveries</CardTitle> */}
+        {/* <CardTitle className="text-foreground">Recent Deliveries</CardTitle> */}
         {/* <Button
           variant="outline"
           size="sm"
@@ -109,18 +109,18 @@ export function RecentDeliveries() {
         ) : (
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-gray-50/50">
+              <TableHeader className="bg-muted/50/50">
                 <TableRow>
-                  <TableHead className="text-xs md:text-sm font-semibold text-gray-900">
+                  <TableHead className="text-xs md:text-sm font-semibold text-foreground">
                     ID
                   </TableHead>
-                  <TableHead className="text-xs md:text-sm font-semibold text-gray-900">
+                  <TableHead className="text-xs md:text-sm font-semibold text-foreground">
                     Customer
                   </TableHead>
-                  <TableHead className="text-xs md:text-sm font-semibold text-gray-900">
+                  <TableHead className="text-xs md:text-sm font-semibold text-foreground">
                     Status
                   </TableHead>
-                  <TableHead className="text-xs md:text-sm hidden md:table-cell font-semibold text-gray-900">
+                  <TableHead className="text-xs md:text-sm hidden md:table-cell font-semibold text-foreground">
                     Date
                   </TableHead>
                 </TableRow>
@@ -129,7 +129,7 @@ export function RecentDeliveries() {
                 {deliveries.map((delivery) => (
                   <TableRow
                     key={delivery.id}
-                    className="group hover:bg-gray-50/50 transition-colors"
+                    className="group hover:bg-muted/50/50 transition-colors"
                   >
                     <TableCell className="font-medium text-xs md:text-sm">
                       <span className="hover:underline cursor-pointer">

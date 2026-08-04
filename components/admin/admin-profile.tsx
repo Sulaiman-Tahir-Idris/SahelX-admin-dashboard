@@ -127,15 +127,15 @@ export function AdminProfile() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-gray-200">
+      <Card className="border-border">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-gray-900">Profile Information</CardTitle>
+          <CardTitle className="text-foreground">Profile Information</CardTitle>
           {!isEditing ? (
             <Button
               onClick={() => setIsEditing(true)}
               variant="outline"
               size="sm"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="border-border text-muted-foreground hover:bg-muted/50"
             >
               <Edit className="mr-2 h-4 w-4" />
               Edit Profile
@@ -154,7 +154,7 @@ export function AdminProfile() {
                 onClick={handleCancelEdit}
                 variant="outline"
                 size="sm"
-                className="border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
+                className="border-border text-muted-foreground hover:bg-muted/50 bg-transparent"
               >
                 <X className="mr-2 h-4 w-4" />
                 Cancel
@@ -166,14 +166,14 @@ export function AdminProfile() {
         <CardContent>
           <div className="flex flex-col gap-6 md:flex-row">
             <div className="flex flex-col items-center gap-4 md:w-1/3">
-              <Avatar className="h-32 w-32 border-4 border-gray-200 rounded-full">
+              <Avatar className="h-32 w-32 border-4 border-border rounded-full">
                 <AvatarFallback className="flex items-center justify-center bg-desertred text-desertred font-bold text-5xl">
                   {(displayName || "A").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-bold text-foreground">
                   {displayName}
                 </h2>
                 <Badge className="mt-2 bg-red-600 hover:bg-red-700">
@@ -186,7 +186,7 @@ export function AdminProfile() {
             <div className="flex flex-col space-y-4 md:w-2/3">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="displayName" className="text-gray-700">
+                  <Label htmlFor="displayName" className="text-muted-foreground">
                     Display Name
                   </Label>
                   {isEditing ? (
@@ -199,33 +199,33 @@ export function AdminProfile() {
                           displayName: e.target.value,
                         })
                       }
-                      className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                      className="border-border focus:border-gray-500 focus:ring-gray-500"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50">
-                      <User className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-900">{displayName}</span>
+                    <div className="flex items-center gap-2 p-2 rounded border border-border bg-muted/50">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-foreground">{displayName}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-700">
+                  <Label htmlFor="email" className="text-muted-foreground">
                     Email
                   </Label>
-                  <div className="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50">
-                    <Mail className="h-4 w-4 text-gray-600" />
-                    <span className="text-gray-900">
+                  <div className="flex items-center gap-2 p-2 rounded border border-border bg-muted/50">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-foreground">
                       {currentUser.email || "N/A"}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Email cannot be changed
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-gray-700">
+                  <Label htmlFor="phone" className="text-muted-foreground">
                     Phone
                   </Label>
                   {isEditing ? (
@@ -235,12 +235,12 @@ export function AdminProfile() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, phone: e.target.value })
                       }
-                      className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                      className="border-border focus:border-gray-500 focus:ring-gray-500"
                       placeholder="Enter phone number"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50">
-                      <span className="text-gray-900">
+                    <div className="flex items-center gap-2 p-2 rounded border border-border bg-muted/50">
+                      <span className="text-foreground">
                         {editForm.phone || "Not provided"}
                       </span>
                     </div>
@@ -248,7 +248,7 @@ export function AdminProfile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location" className="text-gray-700">
+                  <Label htmlFor="location" className="text-muted-foreground">
                     Location
                   </Label>
                   {isEditing ? (
@@ -258,13 +258,13 @@ export function AdminProfile() {
                       onChange={(e) =>
                         setEditForm({ ...editForm, location: e.target.value })
                       }
-                      className="border-gray-300 focus:border-gray-500 focus:ring-gray-500"
+                      className="border-border focus:border-gray-500 focus:ring-gray-500"
                       placeholder="Enter location"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50">
-                      <MapPin className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-900">
+                    <div className="flex items-center gap-2 p-2 rounded border border-border bg-muted/50">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-foreground">
                         {editForm.location || "Not provided"}
                       </span>
                     </div>
@@ -272,9 +272,9 @@ export function AdminProfile() {
                 </div>
               </div>
 
-              <Separator className="bg-gray-200" />
+              <Separator className="bg-muted" />
 
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Member Since:{" "}
                 {currentUser?.createdAt
                   ? new Date(

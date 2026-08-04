@@ -49,8 +49,8 @@ const formSchema = z.object({
   street: z.string().min(1, { message: "Street address is required." }),
   city: z.string().min(1, { message: "City is required." }),
   state: z.string().min(1, { message: "State is required." }),
-  isVerified: z.boolean().default(false),
-  isActive: z.boolean().default(true),
+  isVerified: z.boolean(),
+  isActive: z.boolean(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
