@@ -84,6 +84,8 @@ SahelX-admin-dashboard/
 | [`lib/firebase/riders.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/lib/firebase/riders.ts) | Rider profiles and real-time GPS location subscriptions |
 | [`app/admin/dashboard/page.tsx`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/app/admin/dashboard/page.tsx) | Main Admin Dashboard view |
 | [`app/api/admin/create-courier/route.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/app/api/admin/create-courier/route.ts) | API route for creating courier user accounts via Admin SDK |
+| [`app/admin/messages/page.tsx`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/app/admin/messages/page.tsx) | Messaging interface for Admins |
+| [`app/secretary/messages/page.tsx`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/app/secretary/messages/page.tsx) | Messaging interface for Secretaries |
 
 ---
 
@@ -124,3 +126,4 @@ SahelX-admin-dashboard/
 | 2026-08-04 | Antigravity | Created `.env.local`, `.env.example`, updated `lib/firebase/config.ts`, and initialized `REPO_BRAIN.md`. |
 | 2026-08-04 | Antigravity | Added Firebase Admin SDK credentials (`client_email` and `private_key`) to `.env.local`. |
 | 2026-08-04 | Antigravity | Full UI redesign: installed framer-motion, updated globals.css & tailwind.config.ts with SahelX design system, generated hero/login images, redesigned landing page, admin login, secretary login, both headers, both sidebars, both layout loading states, and overview stats cards. |
+| 2026-08-05 | Antigravity | Added unified messaging between admins and secretaries, created secretary messaging portal, updated auth hooks. |

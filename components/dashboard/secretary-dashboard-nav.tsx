@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Home, Truck, Users, Box, Map, Menu, Layers, PlusCircle } from "lucide-react"
+import { Home, Truck, Users, Box, Map, Menu, Layers, PlusCircle, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { title: "Deliveries",          href: "/secretary/deliveries",          icon: Box,        section: "operations" },
   { title: "Create Delivery",     href: "/secretary/create-delivery",     icon: PlusCircle, section: "operations" },
   { title: "Multiple Deliveries", href: "/secretary/multiple-deliveries", icon: Layers,     section: "operations" },
+  { title: "Messages",            href: "/secretary/messages",            icon: MessageSquare, section: "tools" },
   { title: "Live Map",            href: "/secretary/live-map",            icon: Map,        section: "tools" },
 ]
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/lib/auth-utils";
+import { useSecretaryAuth } from "@/lib/auth-utils";
 import { useAdminMessages } from "@/lib/chat/use-admin-messages";
 import { sendAdminMessage } from "@/lib/chat/send-admin-message";
 import { markMessagesAsSeen } from "@/lib/chat/mark-messages-seen";
@@ -26,12 +26,12 @@ interface ChatUser {
   role: string;
 }
 
-export default function AdminMessagesPage() {
-  const { user } = useAuth();
+export default function SecretaryMessagesPage() {
+  const { user } = useSecretaryAuth();
   const router = useRouter();
   
-  const [activeChatId, setActiveChatId] = useState<string>("global");
-  const [activeChatName, setActiveChatName] = useState<string>("Global Group Chat");
+  const [activeChatId, setActiveChatId] = useState<string>("secretaries_group");
+  const [activeChatName, setActiveChatName] = useState<string>("Secretaries Group");
   const [activeChatIsGroup, setActiveChatIsGroup] = useState<boolean>(true);
   
   const [users, setUsers] = useState<ChatUser[]>([]);
@@ -95,13 +95,13 @@ export default function AdminMessagesPage() {
 
     const messageText = text;
     setText(""); // Optimistic clear
-    setTypingStatus(user.userId, user.displayName ?? "Admin", false, activeChatId);
+    setTypingStatus(user.userId, user.displayName ?? "Secretary", false, activeChatId);
 
     await sendAdminMessage(
       messageText,
       {
         userId: user.userId,
-        displayName: user.displayName ?? "Admin",
+        displayName: user.displayName ?? "Secretary",
         role: user.role,
       },
       activeChatId
@@ -120,12 +120,6 @@ export default function AdminMessagesPage() {
     setActiveChatIsGroup(false);
   };
 
-  const handleSelectGlobal = () => {
-    setActiveChatId("global");
-    setActiveChatName("Global Group Chat");
-    setActiveChatIsGroup(true);
-  };
-
   if (!user) return null;
 
   return (
@@ -140,22 +134,6 @@ export default function AdminMessagesPage() {
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-1">
-            {/* Global Chat Item */}
-            <button
-              onClick={handleSelectGlobal}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-                activeChatId === "global" ? "bg-primary/10 text-primary" : "hover:bg-muted"
-              }`}
-            >
-              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${activeChatId === "global" ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20"}`}>
-                <Users size={20} />
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="font-medium truncate">Global Group Chat</p>
-                <p className="text-xs text-muted-foreground truncate">Team announcements & chatter</p>
-              </div>
-            </button>
-            
             {/* Secretaries Group Item */}
             <button
               onClick={() => {
@@ -163,7 +141,7 @@ export default function AdminMessagesPage() {
                 setActiveChatName("Secretaries Group");
                 setActiveChatIsGroup(true);
               }}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors mt-1 ${
+              className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
                 activeChatId === "secretaries_group" ? "bg-primary/10 text-primary" : "hover:bg-muted"
               }`}
             >
@@ -358,11 +336,11 @@ export default function AdminMessagesPage() {
               onChange={(e) => {
                 setText(e.target.value);
                 if (!user?.userId) return;
-                setTypingStatus(user.userId, user.displayName ?? "Admin", true, activeChatId);
+                setTypingStatus(user.userId, user.displayName ?? "Secretary", true, activeChatId);
               }}
               onBlur={() => {
                 if (!user?.userId) return;
-                setTypingStatus(user.userId, user.displayName ?? "Admin", false, activeChatId);
+                setTypingStatus(user.userId, user.displayName ?? "Secretary", false, activeChatId);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSend();
