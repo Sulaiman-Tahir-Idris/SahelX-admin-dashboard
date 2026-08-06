@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-utils"
+import { useRole } from "@/lib/hooks/use-role"
 import { getSalaryConfig, updateSalaryConfig, getPayrollRecords, savePayrollRecord, markPayrollAsPaid, deletePayrollRecord, type SalaryConfig, type PayrollRecord } from "@/lib/firebase/salary"
 import { getAllRiders, type Rider } from "@/lib/firebase/riders"
 import { getRevenueEntries, getBankAccounts, addExpense, addCashTransaction, addBankTransaction } from "@/lib/firebase/finance"
@@ -23,13 +24,11 @@ import { toast } from "sonner"
 import { Banknote, Users, Download, Save, ShieldAlert, CheckCircle2, Trash2 } from "lucide-react"
 import { formatNGN } from "@/lib/finance/calculations"
 import type { BankAccount } from "@/lib/finance/types"
-import * as XLSX from "xlsx-js-style"
 import { saveAs } from "file-saver"
 
 export function SalaryPage() {
   const { user } = useAuth()
-  const getStoredRole = () => { try { return JSON.parse(localStorage.getItem('adminUser') || '{}').role } catch { return undefined } }
-  const role = (user?.role ?? (typeof window !== 'undefined' ? getStoredRole() : '')).toLowerCase()
+  const role = useRole()
   const canEditSettings = role === 'ceo' || role === 'cfo' || role === 'admin'
 
   const [loading, setLoading] = useState(true)
@@ -468,7 +467,8 @@ export function SalaryPage() {
     }
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx-js-style')
     const ws = XLSX.utils.json_to_sheet(allPayrolls.map(p => ({
       "Role": p.role,
       "Name": p.employeeName,
@@ -496,13 +496,13 @@ export function SalaryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Salary & Payroll</h1>
           <p className="text-sm text-muted-foreground">Automated payroll calculation based on performance.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
           <Input 
             type="month" 
             value={selectedMonth} 
@@ -515,8 +515,8 @@ export function SalaryPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Unpaid Total Payroll</CardTitle>
             <Banknote className="h-4 w-4 text-muted-foreground" />
@@ -525,7 +525,7 @@ export function SalaryPage() {
             <div className="text-2xl font-bold text-red-600">{formatNGN(grandTotal)}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Unpaid Rider Payroll</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -535,7 +535,7 @@ export function SalaryPage() {
             <p className="text-xs text-muted-foreground mt-1">Based on {totalDeliveryFees > 0 ? formatNGN(totalDeliveryFees) : "0"} delivery fees</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Unpaid Exec Payroll</CardTitle>
             <ShieldAlert className="h-4 w-4 text-muted-foreground" />
@@ -548,14 +548,14 @@ export function SalaryPage() {
       </div>
 
       <Tabs defaultValue="riders">
-        <TabsList>
+        <TabsList className="w-full flex-wrap justify-start h-auto">
           <TabsTrigger value="riders">Riders Payroll</TabsTrigger>
           <TabsTrigger value="execs">Executives Payroll</TabsTrigger>
           {canEditSettings && <TabsTrigger value="settings">Salary Settings</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="riders" className="mt-4">
-          <Card>
+          <Card className="overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -628,7 +628,7 @@ export function SalaryPage() {
         </TabsContent>
 
         <TabsContent value="execs" className="mt-4">
-          <Card>
+          <Card className="overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -705,8 +705,8 @@ export function SalaryPage() {
 
         {canEditSettings && draftConfig && (
           <TabsContent value="settings" className="mt-4">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
+            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle>Rider Settings</CardTitle>
                 </CardHeader>
@@ -730,7 +730,7 @@ export function SalaryPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle>Secretary Settings</CardTitle>
                 </CardHeader>
@@ -754,7 +754,7 @@ export function SalaryPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle>CEO Settings</CardTitle>
                 </CardHeader>
@@ -778,7 +778,7 @@ export function SalaryPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader>
                   <CardTitle>CFO Settings</CardTitle>
                 </CardHeader>

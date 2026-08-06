@@ -23,7 +23,7 @@ import { DateRangeFilter } from '@/components/finance/shared/date-range-filter'
 import { DataImporter } from '@/components/finance/shared/data-importer'
 import { db } from '@/lib/firebase/config'
 import { collection, addDoc, Timestamp } from 'firebase/firestore'
-import * as XLSX from 'xlsx'
+
 import { saveAs } from 'file-saver'
 
 const addAccountSchema = z.object({
@@ -196,10 +196,10 @@ export function BankAccountsPage() {
   if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Bank Accounts</h1>
+    <div className="space-y-6 overflow-hidden">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Bank Accounts</h1>
             <p className="text-sm text-muted-foreground">Manage corporate accounts and transactions</p>
           </div>
           <div className="flex gap-2">
@@ -217,7 +217,7 @@ export function BankAccountsPage() {
           </div>
         </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {accounts.map(account => (
           <Card key={account.id} className={`cursor-pointer hover:border-primary/50 transition-colors ${selectedAccount?.id === account.id ? 'border-primary' : ''}`} onClick={() => selectAccount(account)}>
             <CardHeader className="pb-2">
@@ -247,7 +247,7 @@ export function BankAccountsPage() {
       {selectedAccount && (
         <Card className="mt-8">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>{selectedAccount.bankName} — {selectedAccount.accountName}</CardTitle>
                 <CardDescription>Current Balance: {formatNGN(currentBankBalance)} | Account: {selectedAccount.accountNumber}</CardDescription>
@@ -258,7 +258,7 @@ export function BankAccountsPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             {txnLoading ? (
                <div className="p-4"><Skeleton className="h-32 w-full" /></div>
             ) : (
@@ -349,7 +349,7 @@ export function BankAccountsPage() {
 
       {/* Add Account Dialog */}
       <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
-        <DialogContent className="w-[95vw] max-w-xl">
+        <DialogContent className="sm:max-w-xl md:w-full">
           <DialogHeader>
             <DialogTitle>Add Bank Account</DialogTitle>
           </DialogHeader>
@@ -378,7 +378,7 @@ export function BankAccountsPage() {
 
       {/* Add Transaction Dialog */}
       <Dialog open={isAddTxnOpen} onOpenChange={setIsAddTxnOpen}>
-        <DialogContent className="w-[95vw] max-w-xl">
+        <DialogContent className="sm:max-w-xl md:w-full">
           <DialogHeader>
             <DialogTitle>Record Bank Transaction</DialogTitle>
           </DialogHeader>

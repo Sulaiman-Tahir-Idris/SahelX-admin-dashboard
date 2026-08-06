@@ -3,8 +3,9 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SecretaryDashboardHeader } from "./secretary-dashboard-header";
-import { SecretaryDashboardNav } from "./secretary-dashboard-nav";
+import { SecretaryAppSidebar } from "@/components/secretary-app-sidebar";
+import { SecretarySiteHeader } from "@/components/secretary-site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
   getCurrentSecretary,
   type SecretaryUser,
@@ -76,14 +77,14 @@ export function SecretaryDashboardLayout({
   }
 
   return (
-    <div className="min-h-screen">
-      <SecretaryDashboardHeader user={user || undefined} />
-      <div className="flex">
-        <SecretaryDashboardNav />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pt-20 md:pt-24 md:ml-[240px]">
+    <SidebarProvider>
+      <SecretaryAppSidebar />
+      <SidebarInset className="min-w-0">
+        <SecretarySiteHeader user={user || undefined} />
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0 min-w-0">
           {children}
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -6,11 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileText, FileSpreadsheet, Download } from 'lucide-react'
 import { toast } from 'sonner'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import * as XLSX from 'xlsx-js-style'
 import { saveAs } from 'file-saver'
-import { LOGO_BASE64 } from '@/lib/finance/logo-base64'
 
 import { getAllPayments } from '@/lib/firebase/payments'
 import { getRevenueEntries, getExpenses, getCashTransactions } from '@/lib/firebase/finance'
@@ -165,38 +161,43 @@ export function ReportsPage() {
 
   const exportPDF = async (reportId: string) => {
     const { head, rows, title } = getReportData(reportId)
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ])
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.width
 
-    // 1. Add SVG Logo synchronously via Data URL & Canvas
+    // 1. Fetch logo from public folder (no base64 bundle overhead)
     try {
-      const img = new Image()
-      img.src = LOGO_BASE64
-      await new Promise((resolve, reject) => {
-        img.onload = resolve
-        img.onerror = reject
+      const resp = await fetch('/images/sahelx-logo.png')
+      const blob = await resp.blob()
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(blob)
       })
-      
+      const imgWidth = 35
+      const img = new Image()
+      img.src = dataUrl
+      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject })
       const canvas = document.createElement('canvas')
-      // default dimensions if SVG doesn't provide them
-      canvas.width = img.width || 500 
+      canvas.width = img.width || 500
       canvas.height = img.height || 200
       const ctx = canvas.getContext('2d')
       if (ctx) {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
         const pngData = canvas.toDataURL('image/png')
-        
-        const imgWidth = 35
         const imgHeight = imgWidth * (canvas.height / canvas.width)
         doc.addImage(pngData, 'PNG', (pageWidth - imgWidth) / 2, 12, imgWidth, imgHeight)
       }
     } catch (e) {
-      console.error("Failed to load logo", e)
+      // Logo fetch failed — continue without it
     }
 
     // 2. Add Titles & Meta (Centered)
     doc.setFontSize(16)
-    doc.setTextColor(217, 60, 60) // SahelX Red
+    doc.setTextColor(217, 60, 60)
     const titleWidth = doc.getTextWidth(title)
     doc.text(title, (pageWidth - titleWidth) / 2, 45)
     
@@ -224,7 +225,8 @@ export function ReportsPage() {
     toast.success("PDF exported successfully")
   }
 
-  const exportExcel = (reportId: string) => {
+  const exportExcel = async (reportId: string) => {
+    const XLSX = await import('xlsx-js-style')
     const { head, rows, title } = getReportData(reportId)
     
     // Add meta-headers for Excel to make it look like a report
@@ -312,15 +314,15 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       <div>
         <h1 className="font-heading text-2xl font-bold">Financial Reports</h1>
         <p className="text-sm text-muted-foreground">Export your financial data in multiple formats</p>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Select Month" />
           </SelectTrigger>
           <SelectContent>
@@ -328,7 +330,7 @@ export function ReportsPage() {
           </SelectContent>
         </Select>
         <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger className="w-[120px]">
+          <SelectTrigger className="w-full sm:w-[120px]">
             <SelectValue placeholder="Select Year" />
           </SelectTrigger>
           <SelectContent>
@@ -337,7 +339,7 @@ export function ReportsPage() {
         </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {reports.map(report => (
           <Card key={report.id}>
             <CardHeader>

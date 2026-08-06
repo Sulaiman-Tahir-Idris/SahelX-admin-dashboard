@@ -124,7 +124,7 @@ export function FinanceAnalyticsPage() {
         <p className="text-sm text-muted-foreground">Automated financial insights</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Revenue Growth</CardTitle></CardHeader>
           <CardContent>
@@ -156,7 +156,7 @@ export function FinanceAnalyticsPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full flex-wrap justify-start h-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>

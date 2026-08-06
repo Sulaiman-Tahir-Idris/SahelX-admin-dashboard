@@ -7,10 +7,11 @@ import {
   Home, Users, Truck, Box, Layers, Map,
   LayoutDashboard, DollarSign, Receipt, BookOpen, Building2,
   FileBarChart2, PieChart, SlidersHorizontal, MessageSquare, Shield, Settings,
-  Menu, X, ChevronRight, LogOut, Banknote
+  Menu, ChevronRight, LogOut, Banknote
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-utils"
+import { useRole } from "@/lib/hooks/use-role"
 import { Button } from "@/components/ui/button"
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -104,10 +105,7 @@ export function MobileNav() {
   const router = useRouter()
   const { user } = useAuth()
 
-  const getStoredRole = () => {
-    try { return JSON.parse(localStorage.getItem("adminUser") || "{}").role } catch { return undefined }
-  }
-  const role  = user?.role ?? (typeof window !== "undefined" ? getStoredRole() : undefined)
+  const role  = useRole() || undefined
   const items = filterNavByRole(allNavItems, role)
 
   const handleNav = (href: string) => { router.push(href); setOpen(false) }
@@ -140,10 +138,7 @@ export function DashboardNav() {
   const router   = useRouter()
   const { user } = useAuth()
 
-  const getStoredRole = () => {
-    try { return JSON.parse(localStorage.getItem("adminUser") || "{}").role } catch { return undefined }
-  }
-  const role   = user?.role ?? (typeof window !== "undefined" ? getStoredRole() : undefined)
+  const role   = useRole() || undefined
   const items  = filterNavByRole(allNavItems, role)
 
   const groups = navGroups.map(g => ({

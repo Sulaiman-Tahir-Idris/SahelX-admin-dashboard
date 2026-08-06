@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye } from "lucide-react";
 import Link from "next/link";
 import { fetchRiderDeliveryHistory } from "@/lib/firebase/deliveries";
+import { formatDate } from "@/lib/utils/format-date"
 
 const statusColors: Record<string, string> = {
   requested: "bg-yellow-500",
@@ -50,20 +51,6 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
 
     loadDeliveries();
   }, [riderId]);
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A";
-
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-    }).format(date);
-  };
 
   const filteredDeliveries =
     filter === "all"

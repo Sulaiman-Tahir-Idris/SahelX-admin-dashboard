@@ -4,8 +4,6 @@ import { useState, useRef } from "react"
 import { Upload, Download, FileSpreadsheet, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import * as XLSX from "xlsx-js-style"
-import * as ExcelJS from "exceljs"
 import { saveAs } from "file-saver"
 
 interface DataImporterProps {
@@ -22,6 +20,7 @@ export function DataImporter({ title, templateName, columns, dropdownLists, onIm
 
   const handleDownloadTemplate = async () => {
     try {
+      const ExcelJS = await import('exceljs')
       const workbook = new ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet("Template")
 
@@ -90,6 +89,7 @@ export function DataImporter({ title, templateName, columns, dropdownLists, onIm
 
     reader.onload = async (evt) => {
       try {
+        const XLSX = await import('xlsx-js-style')
         const bstr = evt.target?.result
         const wb = XLSX.read(bstr, { type: "binary", cellDates: true })
         const wsname = wb.SheetNames[0]

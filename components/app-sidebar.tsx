@@ -18,7 +18,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/lib/auth-utils"
-import { auth } from "@/lib/firebase"
+import { useRole } from "@/lib/hooks/use-role"
+import { auth } from "@/lib/firebase/config"
 import { signOut } from "firebase/auth"
 
 type NavItem = { title: string; url: string; icon: any; section: string }
@@ -74,10 +75,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter()
   const { user } = useAuth()
 
-  const getStoredRole = () => {
-    try { return JSON.parse(localStorage.getItem("adminUser") || "{}").role } catch { return undefined }
-  }
-  const role = user?.role ?? (typeof window !== "undefined" ? getStoredRole() : undefined)
+  const role = useRole() || undefined
   const items = filterNavByRole(allNavItems, role)
 
   const groups = [

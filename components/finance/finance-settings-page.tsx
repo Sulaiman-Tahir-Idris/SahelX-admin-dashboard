@@ -25,6 +25,7 @@ import { formatNGN } from "@/lib/finance/calculations"
 import type { FinanceSettings, ExpenseCategory, Department } from "@/lib/finance/types"
 import { DEPARTMENTS } from "@/lib/finance/types"
 import { useAuth } from "@/lib/auth-utils"
+import { useRole } from "@/lib/hooks/use-role"
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 const balanceSchema = z.object({
@@ -42,10 +43,7 @@ type CategoryForm = z.infer<typeof categorySchema>
 // ─── Component ────────────────────────────────────────────────────────────────
 export function FinanceSettingsPage() {
   const { user } = useAuth()
-  const getStoredRole = () => {
-    try { return JSON.parse(localStorage.getItem("adminUser") || "{}").role } catch { return undefined }
-  }
-  const role = (user?.role ?? (typeof window !== "undefined" ? getStoredRole() : "")).toLowerCase()
+  const role = useRole()
   const canEdit = role === "ceo" || role === "cfo"
 
   const [settings, setSettings] = useState<FinanceSettings | null>(null)
@@ -122,9 +120,9 @@ export function FinanceSettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-hidden">
         <div className="h-8 w-52 rounded-md skeleton" />
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {[1, 2].map((i) => (
             <Card key={i} className="p-6 space-y-4">
               <div className="h-5 w-32 rounded-md skeleton" />
@@ -157,11 +155,11 @@ export function FinanceSettingsPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Opening Balance */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
               <Wallet className="h-4 w-4 text-primary" />
               <CardTitle className="text-base">Opening Cash Balance</CardTitle>
             </div>
@@ -204,9 +202,9 @@ export function FinanceSettingsPage() {
         </Card>
 
         {/* Category summary */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
               <Tag className="h-4 w-4 text-primary" />
               <CardTitle className="text-base">Category Overview</CardTitle>
             </div>
@@ -232,7 +230,7 @@ export function FinanceSettingsPage() {
 
       {/* Expense Categories */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-foreground">Expense Categories</h2>
             <p className="text-sm text-muted-foreground">Appear in the Expense form, filtered by department.</p>
@@ -297,7 +295,7 @@ export function FinanceSettingsPage() {
 
       {/* Add Category Dialog */}
       <Dialog open={addCatOpen} onOpenChange={setAddCatOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] md:w-full">
           <DialogHeader>
             <DialogTitle>Add Expense Category</DialogTitle>
           </DialogHeader>

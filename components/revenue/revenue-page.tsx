@@ -44,7 +44,6 @@ import { db } from '@/lib/firebase/config'
 import { collection, addDoc, Timestamp } from 'firebase/firestore'
 import { getAllRiders, type Rider } from '@/lib/firebase/riders'
 
-import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
 
 const revenueEntrySchema = z.object({
@@ -346,7 +345,8 @@ export function RevenuePage() {
     style: "currency", currency: "NGN", minimumFractionDigits: 0,
   }).format(amt)
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx-js-style')
     const companyName = "SahelX Delivery System"
     const generatedAt = new Date()
     const summaryValues: Record<string, number> = {
@@ -395,9 +395,9 @@ export function RevenuePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
       {/* Revenue Cards matching dashboard-01 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -446,12 +446,12 @@ export function RevenuePage() {
 
       <Tabs defaultValue="overview" className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <TabsList>
+          <TabsList className="w-full flex-wrap justify-start h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="manual">Manual Entries</TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 shadow-sm">
@@ -660,7 +660,7 @@ export function RevenuePage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Manual Revenue</CardTitle>
@@ -816,7 +816,7 @@ export function RevenuePage() {
       </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-xl">
+        <DialogContent className="sm:max-w-xl md:w-full">
           <DialogHeader>
             <DialogTitle>{dialogMode === 'add' ? 'Add Revenue Entry' : 'Edit Revenue Entry'}</DialogTitle>
           </DialogHeader>

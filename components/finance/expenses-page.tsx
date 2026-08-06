@@ -28,9 +28,9 @@ import { formatNGN, filterByDateRange, filterBySearch, calcDepartmentBreakdown, 
 import type { Expense, ExpenseCategory, Department, DateRangeState } from '@/lib/finance/types'
 import { DEPARTMENTS, DEPARTMENT_COLORS, EXPENSE_PAYMENT_METHODS } from '@/lib/finance/types'
 import { useAuth } from '@/lib/auth-utils'
+import { useRole } from '@/lib/hooks/use-role'
 import { db } from '@/lib/firebase/config'
 import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
-import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
 const expenseSchema = z.object({
@@ -49,15 +49,7 @@ type ExpenseFormValues = z.infer<typeof expenseSchema>
 export function ExpensesPage() {
   const { user } = useAuth ? useAuth() : { user: null }
   
-  const getStoredRole = () => {
-    try {
-      return JSON.parse(localStorage.getItem('adminUser') || '{}').role
-    } catch {
-      return undefined
-    }
-  }
-  
-  const role = (user?.role ?? (typeof window !== 'undefined' ? getStoredRole() : '')).toLowerCase()
+  const role = useRole()
   const canApprove = role === 'ceo' || role === 'cfo' || role === 'cto'
 
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -220,7 +212,8 @@ export function ExpensesPage() {
     }
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx-js-style')
     const summaryWb = XLSX.utils.book_new()
     
     // Summary
@@ -268,10 +261,10 @@ export function ExpensesPage() {
   const topDepartment = deptBreakdown.length > 0 ? deptBreakdown[0].department : 'N/A'
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-            <div>
-              <h1 className="font-heading text-2xl font-bold">Expenses</h1>
+    <div className="space-y-6 overflow-hidden">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-bold">Expenses</h1>
               <p className="text-sm text-muted-foreground">Track and manage all company expenses</p>
             </div>
             <div className="flex gap-2">
@@ -290,8 +283,8 @@ export function ExpensesPage() {
             </div>
           </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
           </CardHeader>
@@ -299,7 +292,7 @@ export function ExpensesPage() {
             <div className="text-2xl font-bold">{formatNGN(thisMonthExpenses)}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
           </CardHeader>
@@ -307,7 +300,7 @@ export function ExpensesPage() {
             <div className="text-2xl font-bold">{pendingApprovals}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Approved This Month</CardTitle>
           </CardHeader>
@@ -315,19 +308,19 @@ export function ExpensesPage() {
             <div className="text-2xl font-bold">{approvedThisMonth}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Top Department</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{topDepartment}</div>
-          </CardContent>
-        </Card>
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 min-w-0">
+              <CardTitle className="text-sm font-medium truncate">Top Department</CardTitle>
+            </CardHeader>
+            <CardContent className="min-w-0">
+              <div className="text-2xl font-bold truncate" title={topDepartment || ''}>{topDepartment}</div>
+            </CardContent>
+          </Card>
       </div>
 
       <Tabs defaultValue="all">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <TabsList>
+          <TabsList className="w-full flex-wrap justify-start h-auto">
             <TabsTrigger value="all">All Expenses</TabsTrigger>
             <TabsTrigger value="by-department">By Department</TabsTrigger>
             <TabsTrigger value="by-category">By Category</TabsTrigger>
@@ -366,8 +359,8 @@ export function ExpensesPage() {
         </div>
 
         <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardContent className="p-0">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -473,7 +466,7 @@ export function ExpensesPage() {
         </TabsContent>
 
         <TabsContent value="by-department" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {DEPARTMENTS.map(dept => {
               const deptExpenses = expenses.filter(e => e.department === dept && e.status !== 'rejected')
               const total = sumExpenses(deptExpenses)
@@ -504,8 +497,8 @@ export function ExpensesPage() {
         </TabsContent>
 
         <TabsContent value="by-category" className="space-y-4">
-          <Card>
-            <CardContent className="p-0">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -544,7 +537,7 @@ export function ExpensesPage() {
       </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-2xl">
+        <DialogContent className="sm:max-w-2xl md:w-full">
           <DialogHeader>
             <DialogTitle>{dialogMode === 'add' ? 'Add Expense' : 'Edit Expense'}</DialogTitle>
           </DialogHeader>

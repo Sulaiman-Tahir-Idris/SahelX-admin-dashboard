@@ -22,7 +22,6 @@ import { DateRangeFilter } from '@/components/finance/shared/date-range-filter'
 import { DataImporter } from '@/components/finance/shared/data-importer'
 import { db } from '@/lib/firebase/config'
 import { collection, addDoc, Timestamp } from 'firebase/firestore'
-import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { StatsCard } from '@/components/dashboard/stats-card'
 
@@ -139,7 +138,8 @@ export function CashBookPage() {
     }
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx-js-style')
     const rows = displayTxns.map(t => ({
       Date: t.date.toLocaleDateString(),
       Type: t.type,
@@ -161,8 +161,8 @@ export function CashBookPage() {
   if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 overflow-hidden">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Cash Book</h1>
           <p className="text-sm text-muted-foreground">Manage physical cash in the office</p>
@@ -181,14 +181,14 @@ export function CashBookPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <StatsCard title="Opening Balance" value={formatNGN(openingBalance)} icon={Wallet} color="gray" />
         <StatsCard title="Current Balance" value={formatNGN(currentBalance)} icon={TrendingUp} color={currentBalance >= 0 ? "green" : "red"} />
         <StatsCard title="Net Movement (This Month)" value={formatNGN(monthIn - monthOut)} icon={Activity} color="blue" />
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      <Card className="overflow-hidden">
+        <CardContent className="p-0 overflow-x-auto">
           <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border-b">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -278,7 +278,7 @@ export function CashBookPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-xl">
+        <DialogContent className="sm:max-w-xl md:w-full">
           <DialogHeader>
             <DialogTitle>Record Cash Transaction</DialogTitle>
           </DialogHeader>

@@ -22,6 +22,7 @@ import {
   getDeliveryCountForCourier,
 } from "@/lib/firebase/deliveries";
 import type { Rider } from "@/lib/firebase/riders";
+import { formatDate } from "@/lib/utils/format-date"
 
 interface RiderProfileProps {
   riderId: string;
@@ -62,25 +63,6 @@ export function RiderProfile({ riderId }: RiderProfileProps) {
       mounted = false;
     };
   }, [riderId]);
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A";
-
-    let date: Date;
-    if (timestamp.toDate) {
-      date = timestamp.toDate();
-    } else if (timestamp.seconds) {
-      date = new Date(timestamp.seconds * 1000);
-    } else {
-      date = new Date(timestamp);
-    }
-
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(date);
-  };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
