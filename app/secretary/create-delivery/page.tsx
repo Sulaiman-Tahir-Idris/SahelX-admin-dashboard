@@ -133,7 +133,7 @@ export default function CreateDeliveryPage() {
         goodsSize: singleSize,
         cost: Number(singleFee),
         status: "pending",
-        type: "traditional",
+        type: "manual",
         timestamp: Timestamp.now(),
         createdAt: Timestamp.now(),
         assignedAt: null,
@@ -149,7 +149,21 @@ export default function CreateDeliveryPage() {
         updatedAt: null,
       };
 
-      await addDoc(collection(db, "deliveries"), delivery);
+      const docRef = await addDoc(collection(db, "deliveries"), delivery);
+
+      // Auto-generate a payment record so it instantly appears in the Finance Module
+      await addDoc(collection(db, "payments"), {
+        amount: Number(singleFee),
+        createdAt: Timestamp.now(),
+        customerId: singleCustomer,
+        deliveryId: docRef.id,
+        gateway: "Manual",
+        gatewayResponse: "Secretary Entry",
+        paidAt: Timestamp.now(),
+        reference: `MANUAL_${Date.now()}`,
+        status: "paid",
+        type: "manual"
+      });
       toast({
         title: "Success",
         description: "Delivery created successfully",
@@ -217,7 +231,7 @@ export default function CreateDeliveryPage() {
           goodsSize: bulkSize,
           cost: Number(bulkFee),
           status: "pending",
-          type: "traditional",
+          type: "manual",
           timestamp: Timestamp.now(),
           createdAt: Timestamp.now(),
           assignedAt: null,
@@ -233,7 +247,21 @@ export default function CreateDeliveryPage() {
           updatedAt: null,
         };
 
-        await addDoc(collection(db, "deliveries"), delivery);
+        const docRef = await addDoc(collection(db, "deliveries"), delivery);
+
+        // Auto-generate a payment record for the bulk item
+        await addDoc(collection(db, "payments"), {
+          amount: Number(bulkFee),
+          createdAt: Timestamp.now(),
+          customerId: bulkCustomer,
+          deliveryId: docRef.id,
+          gateway: "Manual",
+          gatewayResponse: "Secretary Bulk Entry",
+          paidAt: Timestamp.now(),
+          reference: `BULK_${Date.now()}_${i}`,
+          status: "paid",
+          type: "manual"
+        });
       }
 
       toast({

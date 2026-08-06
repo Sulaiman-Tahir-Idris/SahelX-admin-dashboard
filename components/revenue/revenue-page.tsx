@@ -8,8 +8,22 @@ import { Button } from "@/components/ui/button"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { TrendingUp, Calendar, Download, Filter, DollarSign, CreditCard, Activity } from "lucide-react"
+import { TrendingUp, Calendar, Download, Filter, DollarSign, CreditCard, Activity, Pencil, Trash2, Plus, Search } from "lucide-react"
 import { getAllPayments, type Payment } from "@/lib/firebase/payments"
+import { getRevenueEntries, addRevenueEntry, updateRevenueEntry, deleteRevenueEntry } from '@/lib/firebase/finance'
+import type { RevenueEntry } from '@/lib/finance/types'
+import { formatNGN, filterByDateRange, filterBySearch, startOfMonth } from '@/lib/finance/calculations'
+import { DateRangeFilter } from '@/components/finance/shared/date-range-filter'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { toast } from 'sonner'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
+import { useAuth } from '@/lib/auth-utils'
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis
 } from "recharts"
@@ -25,8 +39,25 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 
+import { DataImporter } from '@/components/finance/shared/data-importer'
+import { db } from '@/lib/firebase/config'
+import { collection, addDoc, Timestamp } from 'firebase/firestore'
+import { getAllRiders, type Rider } from '@/lib/firebase/riders'
+
 import * as XLSX from "xlsx"
 import { saveAs } from "file-saver"
+
+const revenueEntrySchema = z.object({
+  date: z.string().min(1, "Date is required"),
+  customer: z.string().min(1, "Customer name is required"),
+  rider: z.string().min(1, "Rider name is required"),
+  deliveryCount: z.coerce.number().min(1, "At least 1 delivery"),
+  amount: z.coerce.number().min(0, "Amount cannot be negative"),
+  paymentMethod: z.enum(["Cash", "Transfer", "Card", "Gateway"]),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
+})
+type RevenueEntryFormValues = z.infer<typeof revenueEntrySchema>
 
 const chartConfig = {
   revenue: {
@@ -47,15 +78,118 @@ export function RevenuePage() {
     status: "all", gateway: "all", startDate: "", endDate: "",
   })
 
+  const handleImportRevenue = async (data: any[]) => {
+    // Generate historical deliveries and payments
+    for (const row of data) {
+      const dateVal = row["Date"] instanceof Date ? row["Date"] : new Date(row["Date"])
+      
+      // Extract courierId from "Name (ID)" format
+      const riderField = row["Rider Name"] || ""
+      const match = riderField.match(/\(([^)]+)\)$/)
+      const courierId = match ? match[1] : (riderField || "Unknown Rider")
+      const courierName = riderField.replace(/\s*\([^)]+\)$/, "") || "Unknown Rider"
+      
+      const delivery = {
+        trackingId: `HIST_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        customerId: row["Customer Name"] || "Historical Customer",
+        courierId: courierId,
+        courierName: courierName,
+        pickupLocation: { address: row["Pickup Address"] || "", phone: "", lat: null, lng: null },
+        pickupPhoneNumber: "",
+        dropoffLocation: { address: row["Dropoff Address"] || "", lat: null, lng: null },
+        receiverPhoneNumber: "",
+        goodsType: row["Package Type"] || "Others",
+        goodsSize: row["Size"] || "Medium",
+        cost: Number(row["Amount"]) || 0,
+        status: "delivered",
+        type: "historical",
+        timestamp: Timestamp.fromDate(dateVal),
+        createdAt: Timestamp.fromDate(dateVal),
+        assignedAt: Timestamp.fromDate(dateVal),
+        tag: null,
+        deliveryEvidence: null,
+        eta: null,
+        distance: null,
+        rating: null,
+        paymentLink: null,
+        paymentReference: `HIST_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        paymentStatus: "paid",
+        history: [{ status: "delivered", timestamp: Timestamp.fromDate(dateVal) }],
+        updatedAt: Timestamp.fromDate(dateVal),
+      }
+
+      const docRef = await addDoc(collection(db, "deliveries"), delivery)
+
+      await addDoc(collection(db, "payments"), {
+        amount: Number(row["Amount"]) || 0,
+        createdAt: Timestamp.fromDate(dateVal),
+        customerId: row["Customer Name"] || "Historical Customer",
+        deliveryId: docRef.id,
+        gateway: row["Payment Method"] || "Cash",
+        gatewayResponse: "Historical Import",
+        paidAt: Timestamp.fromDate(dateVal),
+        reference: `HIST_PAY_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        status: "paid",
+        type: "historical"
+      })
+    }
+    
+    // Refresh
+    const freshData = await getAllPayments()
+    setPayments(freshData)
+  }
+
+  // Manual Entries State
+  const { user } = useAuth ? useAuth() : { user: { uid: 'system' } }
+  const [entries, setEntries] = useState<RevenueEntry[]>([])
+  const [riders, setRiders] = useState<Rider[]>([])
+  const [entriesLoading, setEntriesLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchEntriesAndRiders = async () => {
+      try {
+        const [data, ridersData] = await Promise.all([getRevenueEntries(), getAllRiders()])
+        setEntries(data)
+        setRiders(ridersData)
+      } catch (error) {
+        console.error('Failed to load manual entries or riders', error)
+      } finally {
+        setEntriesLoading(false)
+      }
+    }
+    fetchEntriesAndRiders()
+  }, [])
+  const [manualSearch, setManualSearch] = useState('')
+  const [manualDateRange, setManualDateRange] = useState({ startDate: '', endDate: '' })
+  const [manualMethod, setManualMethod] = useState('all')
+  const [manualPage, setManualPage] = useState(1)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [dialogMode, setDialogMode] = useState<'add'|'edit'>('add')
+  const [editingEntry, setEditingEntry] = useState<RevenueEntry | null>(null)
+
+  const form = useForm<RevenueEntryFormValues>({
+    resolver: zodResolver(revenueEntrySchema),
+    defaultValues: {
+      date: new Date().toISOString().split('T')[0],
+      customer: '', rider: '', deliveryCount: 1, amount: 0,
+      paymentMethod: 'Cash', reference: '', notes: ''
+    }
+  })
+
   useEffect(() => {
     setIsClient(true)
-    getAllPayments().then(data => {
-      setPayments(data.map(p => ({
+    Promise.all([getAllPayments(), getRevenueEntries()]).then(([paymentsData, entriesData]) => {
+      setPayments(paymentsData.map(p => ({
         ...p,
         paidAt: p.paidAt ? new Date(p.paidAt) : new Date(p.createdAt),
       })))
+      setEntries(entriesData)
+      setEntriesLoading(false)
       setLoading(false)
-    }).catch(() => setLoading(false))
+    }).catch(() => {
+      setLoading(false)
+      setEntriesLoading(false)
+    })
   }, [])
 
   if (!isClient || loading) {
@@ -79,6 +213,68 @@ export function RevenuePage() {
   })
 
   const filteredPaidPayments = filteredPayments.filter(p => p.status === "paid")
+
+  const loadEntries = async () => {
+    setEntriesLoading(true)
+    const data = await getRevenueEntries()
+    setEntries(data)
+    setEntriesLoading(false)
+  }
+
+  const handleOpenAdd = () => {
+    setDialogMode('add')
+    setEditingEntry(null)
+    form.reset({ date: new Date().toISOString().split('T')[0], customer: '', rider: '', deliveryCount: 1, amount: 0, paymentMethod: 'Cash', reference: '', notes: '' })
+    setIsDialogOpen(true)
+  }
+
+  const handleOpenEdit = (entry: RevenueEntry) => {
+    setDialogMode('edit')
+    setEditingEntry(entry)
+    form.reset({ date: new Date(entry.date).toISOString().split('T')[0], customer: entry.customer, rider: entry.rider, deliveryCount: entry.deliveryCount, amount: entry.amount, paymentMethod: entry.paymentMethod, reference: entry.reference || '', notes: entry.notes || '' })
+    setIsDialogOpen(true)
+  }
+
+  const onSubmitEntry = async (values: RevenueEntryFormValues) => {
+    try {
+      if (dialogMode === 'add') {
+        await addRevenueEntry({ ...values, date: new Date(values.date), source: 'manual', createdBy: user?.uid || 'system' })
+        toast.success('Revenue entry saved')
+      } else if (editingEntry) {
+        await updateRevenueEntry(editingEntry.id, { ...values, date: new Date(values.date) })
+        toast.success('Revenue entry updated')
+      }
+      setIsDialogOpen(false)
+      loadEntries()
+    } catch (err) {
+      toast.error('Failed to save entry')
+    }
+  }
+
+  const handleDeleteEntry = async (id: string) => {
+    try {
+      await deleteRevenueEntry(id)
+      toast.success('Entry deleted')
+      loadEntries()
+    } catch (err) {
+      toast.error('Failed to delete entry')
+    }
+  }
+
+  const filteredEntries = filterBySearch(
+    filterByDateRange(entries, manualDateRange.startDate, manualDateRange.endDate),
+    manualSearch, ['customer', 'rider', 'reference']
+  ).filter(e => manualMethod === 'all' || e.paymentMethod === manualMethod)
+
+  const ITEMS_PER_PAGE = 10
+  const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE)
+  const paginatedEntries = filteredEntries.slice((manualPage - 1) * ITEMS_PER_PAGE, manualPage * ITEMS_PER_PAGE)
+  
+  const manualTotalAmount = entries.reduce((s, e) => s + e.amount, 0)
+  const manualThisMonth = entries.filter(e => new Date(e.date) >= startOfMonth(new Date())).reduce((s, e) => s + e.amount, 0)
+  const manualTotalCount = entries.length
+  const manualTotalDeliveries = entries.reduce((s, e) => s + e.deliveryCount, 0)
+  const manualAvgPerDelivery = manualTotalDeliveries > 0 ? manualTotalAmount / manualTotalDeliveries : 0
 
   const totalRevenue = filteredPaidPayments.reduce((sum, p) => sum + Number(p.amount), 0)
   const totalDeliveries = filteredPaidPayments.length
@@ -185,6 +381,10 @@ export function RevenuePage() {
     wsTrans["!cols"] = keys.map((k) => ({ wch: Math.max(k.length + 2, 15) }))
     XLSX.utils.book_append_sheet(wb, wsTrans, "Transactions")
 
+    const manualRows = filteredEntries.map(e => ({ Date: new Date(e.date).toLocaleDateString(), Customer: e.customer, Rider: e.rider, Deliveries: e.deliveryCount, Amount: e.amount, Method: e.paymentMethod, Reference: e.reference || '' }))
+    const wsManual = XLSX.utils.json_to_sheet(manualRows)
+    XLSX.utils.book_append_sheet(wb, wsManual, "Manual Revenue")
+
     const fileName = `${companyName.replace(/\s+/g, "_")}_Revenue_Report_${generatedAt.toISOString().split("T")[0]}.xlsx`
     const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" })
     try {
@@ -249,6 +449,7 @@ export function RevenuePage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            <TabsTrigger value="manual">Manual Entries</TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <Popover>
@@ -436,7 +637,267 @@ export function RevenuePage() {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="manual" className="space-y-6 outline-none">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Revenue</h1>
+              <p className="text-sm text-muted-foreground">Monitor and analyze income from all sources</p>
+            </div>
+            <div className="flex gap-2">
+              <DataImporter 
+                title="Import History" 
+                templateName="Historical_Revenue"
+                columns={["Date", "Customer Name", "Pickup Address", "Dropoff Address", "Package Type", "Size", "Amount", "Payment Method", "Rider Name"]}
+                dropdownLists={{
+                  "Rider Name": riders.map(r => `${r.displayName} (${r.id})`)
+                }}
+                onImport={handleImportRevenue}
+              />
+              <Button variant="outline" className="gap-2" onClick={handleExport}>
+                <Download className="h-4 w-4" /> Export Report
+              </Button>
+              <Button onClick={handleOpenAdd}><Plus className="mr-2 h-4 w-4" /> Add Entry</Button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Manual Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNGN(manualTotalAmount)}</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">This Month</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNGN(manualThisMonth)}</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Entries</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{manualTotalCount}</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg per Delivery</CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatNGN(manualAvgPerDelivery)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="shadow-sm">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex flex-1 items-center gap-4">
+                  <div className="relative w-64">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search entries..." value={manualSearch} onChange={e => setManualSearch(e.target.value)} className="pl-8" />
+                  </div>
+                  <DateRangeFilter value={manualDateRange} onChange={setManualDateRange} />
+                  <Select value={manualMethod} onValueChange={setManualMethod}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Payment Method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Methods</SelectItem>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="Transfer">Transfer</SelectItem>
+                      <SelectItem value="Card">Card</SelectItem>
+                      <SelectItem value="Gateway">Gateway</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export</Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Rider</TableHead>
+                      <TableHead>Deliveries</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Reference</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entriesLoading ? (
+                      <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
+                    ) : paginatedEntries.length > 0 ? (
+                      paginatedEntries.map(entry => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="whitespace-nowrap">{new Date(entry.date).toLocaleDateString('en-GB')}</TableCell>
+                          <TableCell>{entry.customer}</TableCell>
+                          <TableCell>{entry.rider}</TableCell>
+                          <TableCell>{entry.deliveryCount}</TableCell>
+                          <TableCell className="font-medium">{formatNGN(entry.amount)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
+                              entry.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                              entry.paymentMethod === 'Transfer' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                              entry.paymentMethod === 'Card' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                              'bg-gray-100 text-gray-800 border-gray-200'
+                            }>
+                              {entry.paymentMethod}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{entry.reference}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(entry)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Entry?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No manual entries found.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {totalPages > 1 && (
+                <div className="mt-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious onClick={() => setManualPage(p => Math.max(1, p - 1))} className={manualPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
+                      </PaginationItem>
+                      <PaginationItem>
+                        <span className="text-sm text-muted-foreground mx-4">Page {manualPage} of {totalPages}</span>
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationNext onClick={() => setManualPage(p => Math.min(totalPages, p + 1))} className={manualPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{dialogMode === 'add' ? 'Add Revenue Entry' : 'Edit Revenue Entry'}</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmitEntry)} className="space-y-4">
+              <FormField control={form.control} name="date" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="customer" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer</FormLabel>
+                  <FormControl><Input placeholder="Customer name" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="rider" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rider</FormLabel>
+                  <FormControl><Input placeholder="Rider name" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="deliveryCount" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Delivery Count</FormLabel>
+                    <FormControl><Input type="number" min={1} {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="amount" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount (₦)</FormLabel>
+                    <FormControl><Input type="number" min={0} {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="paymentMethod" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payment Method</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="Transfer">Transfer</SelectItem>
+                      <SelectItem value="Card">Card</SelectItem>
+                      <SelectItem value="Gateway">Gateway</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="reference" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reference / Transaction ID</FormLabel>
+                  <FormControl><Input placeholder="Optional" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="notes" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl><Textarea placeholder="Optional" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Entry</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

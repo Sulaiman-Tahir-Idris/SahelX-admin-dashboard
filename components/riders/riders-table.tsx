@@ -11,6 +11,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -43,8 +54,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   getRiders,
   getAllRiders,
-  updateRiderVerification,
   updateRiderActiveStatus,
+  deleteRider,
+  retireRider,
   type Rider,
 } from "@/lib/firebase/riders";
 import {
@@ -262,15 +274,57 @@ export function RidersTable() {
     }
   };
 
+  const handleDelete = async (riderId: string) => {
+    try {
+      setUpdatingRider(riderId);
+      await deleteRider(riderId);
+      setRiders((prev) => prev.filter((r) => r.id !== riderId));
+      toast({
+        title: "Success",
+        description: "Rider deleted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete rider.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingRider(null);
+    }
+  };
+
+  const handleRetire = async (riderId: string) => {
+    try {
+      setUpdatingRider(riderId);
+      await retireRider(riderId);
+      setRiders((prev) => prev.filter((r) => r.id !== riderId));
+      toast({
+        title: "Success",
+        description: "Rider retired successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to retire rider.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingRider(null);
+    }
+  };
+
   const filteredRiders = useMemo(() => {
     let result = riders.filter(
       (rider: RiderWithRating) =>
-        rider.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rider.phone?.includes(searchQuery) ||
-        rider.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rider.vehicleInfo?.plateNumber
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()),
+        rider.status !== "retired" && (
+          rider.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          rider.phone?.includes(searchQuery) ||
+          rider.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          rider.vehicleInfo?.plateNumber
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase())
+        )
     );
 
     if (filterStatus !== "all") {
@@ -348,16 +402,16 @@ export function RidersTable() {
 
   const availableCount = riders.filter(
     (r: RiderWithRating) =>
-      r.isActive && !activeDeliveryRiderIds.has(r.userId || r.id || ""),
+      r.status !== "retired" && r.isActive && !activeDeliveryRiderIds.has(r.userId || r.id || ""),
   ).length;
 
   const onDeliveryCount = riders.filter(
     (r: RiderWithRating) =>
-      r.isActive && activeDeliveryRiderIds.has(r.userId || r.id || ""),
+      r.status !== "retired" && r.isActive && activeDeliveryRiderIds.has(r.userId || r.id || ""),
   ).length;
 
   const offlineCount = riders.filter(
-    (r: RiderWithRating) => !r.isActive,
+    (r: RiderWithRating) => r.status !== "retired" && !r.isActive,
   ).length;
 
   return (
@@ -365,7 +419,7 @@ export function RidersTable() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Riders"
-          value={riders.length}
+          value={riders.filter(r => r.status !== "retired").length}
           icon={Bike}
           color="blue"
           isActive={filterStatus === "all" && sortKey === "none"}
@@ -463,7 +517,7 @@ export function RidersTable() {
             {filteredRiders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="h-24 text-center">
-                  {riders.length === 0
+                  {riders.filter(r => r.status !== "retired").length === 0
                     ? "No riders found. Register some riders to get started."
                     : "No riders match your search."}
                 </TableCell>
@@ -633,6 +687,27 @@ export function RidersTable() {
                               Activate
                             </>
                           )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            if(confirm("Are you sure you want to retire this rider? They will be hidden from the active system but their records will remain.")) {
+                              handleRetire(rider.id!);
+                            }
+                          }}
+                          className="text-amber-600 focus:text-amber-600"
+                        >
+                          <UserX className="mr-2 h-4 w-4" /> Retire Rider
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            if(confirm("Are you sure you want to permanently delete this rider? This cannot be undone.")) {
+                              handleDelete(rider.id!);
+                            }
+                          }}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <AlertCircle className="mr-2 h-4 w-4" /> Delete Rider
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

@@ -45,6 +45,7 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+    "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "firebase": "latest",
     "firebase-admin": "^13.6.0",
@@ -66,6 +67,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
     "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0",
     "zod": "latest"
   },
   "devDependencies": {

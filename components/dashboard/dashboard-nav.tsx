@@ -4,8 +4,10 @@ import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  BarChart3, Box, Home, Map, Settings, Truck, Users,
-  Menu, Shield, MessageSquare, DollarSign, Layers,
+  Home, Users, Truck, Box, Layers, Map,
+  LayoutDashboard, DollarSign, Receipt, BookOpen, Building2,
+  FileBarChart2, PieChart, SlidersHorizontal, MessageSquare, Shield, Settings,
+  Menu, X, ChevronRight, LogOut, Banknote
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-utils"
@@ -21,17 +23,25 @@ type NavItem  = { title: string; href: string; icon: any; section?: string }
 type NavGroup = { label: string; items: NavItem[] }
 
 const allNavItems: NavItem[] = [
-  { title: "Dashboard",           href: "/admin/dashboard",            icon: Home,         section: "overview" },
-  { title: "Riders",              href: "/admin/riders",               icon: Truck,        section: "operations" },
-  { title: "Customers",           href: "/admin/customers",            icon: Users,        section: "operations" },
-  { title: "Deliveries",          href: "/admin/deliveries",           icon: Box,          section: "operations" },
-  { title: "Multiple Deliveries", href: "/admin/multiple-deliveries",  icon: Layers,       section: "operations" },
-  { title: "Revenue",             href: "/admin/revenue",              icon: DollarSign,   section: "finance" },
-  { title: "Live Map",            href: "/admin/live-map",             icon: Map,          section: "operations" },
-  { title: "Messages",            href: "/admin/messages",             icon: MessageSquare,section: "system" },
-  { title: "Admin Users",         href: "/admin/admin-users",          icon: Shield,       section: "system" },
-  { title: "Secretaries",         href: "/admin/create-secretary",     icon: Users,        section: "system" },
-  { title: "Settings",            href: "/admin/settings",             icon: Settings,     section: "system" },
+  { title: "Dashboard",           href: "/admin/dashboard",                icon: Home,              section: "overview" },
+  { title: "Riders",              href: "/admin/riders",                   icon: Truck,             section: "operations" },
+  { title: "Customers",           href: "/admin/customers",                icon: Users,             section: "operations" },
+  { title: "Deliveries",          href: "/admin/deliveries",               icon: Box,               section: "operations" },
+  { title: "Multiple Deliveries", href: "/admin/multiple-deliveries",      icon: Layers,            section: "operations" },
+  { title: "Live Map",            href: "/admin/live-map",                 icon: Map,               section: "operations" },
+  { title: "Finance Dashboard",   href: "/admin/finance/dashboard",        icon: LayoutDashboard,   section: "finance" },
+  { title: "Revenue",             href: "/admin/revenue",                  icon: DollarSign,        section: "finance" },
+  { title: "Expenses",            href: "/admin/finance/expenses",         icon: Receipt,           section: "finance" },
+  { title: "Cash Book",           href: "/admin/finance/cash",             icon: BookOpen,          section: "finance" },
+  { title: "Bank Accounts",       href: "/admin/finance/bank",             icon: Building2,         section: "finance" },
+  { title: "Salary",              href: "/admin/finance/salary",           icon: Banknote,          section: "finance" },
+  { title: "Reports",             href: "/admin/finance/reports",          icon: FileBarChart2,     section: "finance" },
+  { title: "Analytics",           href: "/admin/finance/analytics",        icon: PieChart,          section: "finance" },
+  { title: "Finance Settings",    href: "/admin/finance/settings",         icon: SlidersHorizontal, section: "finance" },
+  { title: "Messages",            href: "/admin/messages",                 icon: MessageSquare,     section: "system" },
+  { title: "Admin Users",         href: "/admin/admin-users",              icon: Shield,            section: "system" },
+  { title: "Secretaries",         href: "/admin/create-secretary",         icon: Users,             section: "system" },
+  { title: "Settings",            href: "/admin/settings",                 icon: Settings,          section: "system" },
 ]
 
 const navGroups: NavGroup[] = [
@@ -47,7 +57,7 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
   if (r === "ceo" || r === "cto") return items
   const liveMap = "/admin/live-map"
   if (r === "cfo") {
-    const allowed = new Set(["/admin/dashboard", "/admin/revenue", "/admin/riders", "/admin/create-secretary", "/admin/messages", liveMap])
+    const allowed = new Set(["/admin/dashboard", "/admin/finance/dashboard", "/admin/revenue", "/admin/finance/expenses", "/admin/finance/cash", "/admin/finance/bank", "/admin/finance/reports", "/admin/finance/analytics", "/admin/finance/settings", "/admin/finance/salary", "/admin/messages", "/admin/settings"])
     return items.filter(i => allowed.has(i.href))
   }
   if (r === "coo") {

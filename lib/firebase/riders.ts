@@ -286,3 +286,4 @@ export const getRidersByStatus = async (
     }
   }
 };
+export const retireRider = async (riderId: string): Promise<void> => { try { const riderRef = doc(db, "Couriers", riderId); await updateDoc(riderRef, { isActive: false, status: "retired" }); } catch (error) { throw error; } };

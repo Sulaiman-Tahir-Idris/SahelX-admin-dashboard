@@ -39,7 +39,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   phone: z.string().min(10, { message: "Please enter a valid phone number." }),
   vehicleType: z.enum(["bike", "car"], {
-    required_error: "Please select a vehicle type.",
+    errorMap: () => ({ message: "Please select a vehicle type." }),
   }),
   isVerified: z.boolean(),
 });
