@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import {
-  Home, Truck, Users, Box, Layers, Map, MessageSquare, PlusCircle, LogOut
+  Home, Truck, Users, Box, Layers, Map, MessageSquare, PlusCircle, LogOut, Receipt
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
@@ -28,6 +28,7 @@ const secretaryNavItems: NavItem[] = [
   { title: "Deliveries",          url: "/secretary/deliveries",          icon: Box,        section: "operations" },
   { title: "Create Delivery",     url: "/secretary/create-delivery",     icon: PlusCircle, section: "operations" },
   { title: "Multiple Deliveries", url: "/secretary/multiple-deliveries", icon: Layers,     section: "operations" },
+  { title: "Expenses",            url: "/secretary/expenses",            icon: Receipt,    section: "operations" },
   { title: "Messages",            url: "/secretary/messages",            icon: MessageSquare, section: "tools" },
   { title: "Live Map",            url: "/secretary/live-map",            icon: Map,        section: "tools" },
 ]

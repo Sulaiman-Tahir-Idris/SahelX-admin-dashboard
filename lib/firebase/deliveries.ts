@@ -201,14 +201,18 @@ export const updateDelivery = async (
 ): Promise<void> => {
   try {
     const deliveryRef = doc(db, "deliveries", id);
+    const historyEntry: any = {
+      timestamp: Timestamp.now(),
+      status: updates.status || "updated",
+    };
+    if (updates.paymentStatus !== undefined) {
+      historyEntry.paymentStatus = updates.paymentStatus;
+    }
+
     await updateDoc(deliveryRef, {
       ...updates,
       updatedAt: serverTimestamp(),
-      history: arrayUnion({
-        timestamp: Timestamp.now(),
-        status: updates.status || "updated",
-        paymentStatus: updates.paymentStatus,
-      }),
+      history: arrayUnion(historyEntry),
     });
   } catch (error: any) {
     throw new Error("Failed to update delivery");

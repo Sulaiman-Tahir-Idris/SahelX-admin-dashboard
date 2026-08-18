@@ -24,6 +24,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type User = {
   id: string;
@@ -46,6 +54,20 @@ const DeliveriesByTag = () => {
   const [selectedCourierId, setSelectedCourierId] = useState("");
   const [showAssign, setShowAssign] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  const DELIVERY_STATUSES = [
+    "pending",
+    "assigned",
+    "picked_up",
+    "at_station",
+    "out_for_delivery",
+    "delivered",
+    "received",
+    "cancelled",
+  ];
+
+  const PAYMENT_STATUSES = ["pending", "paid", "unpaid", "partially_paid"];
 
   useEffect(() => {}, []);
 
@@ -100,6 +122,87 @@ const DeliveriesByTag = () => {
       // handled
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateBatchStatus = async (status: string) => {
+    if (!selectedTag || !groupedDeliveries[selectedTag]) return;
+    setUpdateLoading(true);
+    try {
+      const batchWrite = writeBatch(db);
+      const batchDeliveries = groupedDeliveries[selectedTag];
+
+      batchDeliveries.forEach((delivery) => {
+        if (!delivery?.id) return;
+        const docRef = doc(db, "deliveries", delivery.id);
+        
+        const historyEntry: any = {
+          timestamp: Timestamp.now(),
+          status: status,
+        };
+
+        batchWrite.update(docRef, {
+          status,
+          updatedAt: serverTimestamp(),
+          history: arrayUnion(historyEntry),
+        });
+      });
+
+      await batchWrite.commit();
+      toast({
+        title: "Batch Status Updated",
+        description: `All deliveries in batch ${selectedTag} updated to ${status}`,
+      });
+      await fetchDeliveries(); // Refresh data
+    } catch (err) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update batch status",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const handleUpdateBatchPayment = async (paymentStatus: string) => {
+    if (!selectedTag || !groupedDeliveries[selectedTag]) return;
+    setUpdateLoading(true);
+    try {
+      const batchWrite = writeBatch(db);
+      const batchDeliveries = groupedDeliveries[selectedTag];
+
+      batchDeliveries.forEach((delivery) => {
+        if (!delivery?.id) return;
+        const docRef = doc(db, "deliveries", delivery.id);
+        
+        const historyEntry: any = {
+          timestamp: Timestamp.now(),
+          status: delivery.status || "updated",
+          paymentStatus: paymentStatus,
+        };
+
+        batchWrite.update(docRef, {
+          paymentStatus,
+          updatedAt: serverTimestamp(),
+          history: arrayUnion(historyEntry),
+        });
+      });
+
+      await batchWrite.commit();
+      toast({
+        title: "Batch Payment Updated",
+        description: `Payment status for batch ${selectedTag} updated to ${paymentStatus}`,
+      });
+      await fetchDeliveries(); // Refresh data
+    } catch (err) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update batch payment status",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdateLoading(false);
     }
   };
 
@@ -215,6 +318,52 @@ const DeliveriesByTag = () => {
                           </CardContent>
                         </Card>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase text-muted-foreground">
+                        Update Batch Delivery Status
+                      </label>
+                      <Select
+                        value={first.status || ""}
+                        onValueChange={handleUpdateBatchStatus}
+                        disabled={updateLoading}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DELIVERY_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.replace(/_/g, " ").toUpperCase()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase text-muted-foreground">
+                        Update Batch Payment Status
+                      </label>
+                      <Select
+                        value={first.paymentStatus || "pending"}
+                        onValueChange={handleUpdateBatchPayment}
+                        disabled={updateLoading}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select payment status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.replace(/_/g, " ").toUpperCase()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 

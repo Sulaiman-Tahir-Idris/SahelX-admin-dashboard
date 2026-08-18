@@ -23,9 +23,9 @@ import { Pagination, PaginationContent, PaginationItem, PaginationNext, Paginati
 import { Progress } from '@/components/ui/progress'
 import { DateRangeFilter } from '@/components/finance/shared/date-range-filter'
 import { DataImporter } from '@/components/finance/shared/data-importer'
-import { getExpenses, addExpense, updateExpense, updateExpenseStatus, deleteExpense, getExpenseCategories } from '@/lib/firebase/finance'
+import { getExpenses, addExpense, updateExpense, updateExpenseStatus, deleteExpense, getExpenseCategories, getBankAccounts, addBankTransaction } from '@/lib/firebase/finance'
 import { formatNGN, filterByDateRange, filterBySearch, calcDepartmentBreakdown, calcCategoryTotals, startOfMonth, sumExpenses } from '@/lib/finance/calculations'
-import type { Expense, ExpenseCategory, Department, DateRangeState } from '@/lib/finance/types'
+import type { Expense, ExpenseCategory, Department, DateRangeState, BankAccount } from '@/lib/finance/types'
 import { DEPARTMENTS, DEPARTMENT_COLORS, EXPENSE_PAYMENT_METHODS } from '@/lib/finance/types'
 import { useAuth } from '@/lib/auth-utils'
 import { useRole } from '@/lib/hooks/use-role'
@@ -41,6 +41,7 @@ const expenseSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   amount: z.coerce.number().min(1, 'Amount must be greater than 0'),
   paymentMethod: z.enum(['Cash','Transfer','Card','Cheque']),
+  bankAccountId: z.string().optional(),
   notes: z.string().optional(),
 })
 
@@ -54,6 +55,7 @@ export function ExpensesPage() {
 
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [categories, setCategories] = useState<ExpenseCategory[]>([])
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [loading, setLoading] = useState(true)
 
   // Filters
@@ -104,6 +106,7 @@ export function ExpensesPage() {
       description: '',
       amount: 0,
       paymentMethod: 'Transfer',
+      bankAccountId: 'none',
       notes: ''
     }
   })
@@ -114,9 +117,10 @@ export function ExpensesPage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [expData, catData] = await Promise.all([getExpenses(), getExpenseCategories()])
+      const [expData, catData, bankData] = await Promise.all([getExpenses(), getExpenseCategories(), getBankAccounts()])
       setExpenses(expData)
       setCategories(catData)
+      setBankAccounts(bankData)
     } catch (err) {
       console.error(err)
       toast.error('Failed to load expenses')
@@ -139,6 +143,7 @@ export function ExpensesPage() {
       description: '',
       amount: 0,
       paymentMethod: 'Transfer',
+      bankAccountId: 'none',
       notes: ''
     })
     setIsDialogOpen(true)
@@ -155,6 +160,7 @@ export function ExpensesPage() {
       description: expense.description,
       amount: expense.amount,
       paymentMethod: expense.paymentMethod,
+      bankAccountId: expense.bankAccountId || 'none',
       notes: expense.notes || ''
     })
     setIsDialogOpen(true)
@@ -162,18 +168,22 @@ export function ExpensesPage() {
 
   const onSubmit = async (values: ExpenseFormValues) => {
     try {
+      const payload: any = {
+        ...values,
+        date: new Date(values.date)
+      }
+      if (payload.bankAccountId === 'none') {
+        delete payload.bankAccountId
+      }
+
       if (dialogMode === 'add') {
         await addExpense({
-          ...values,
-          date: new Date(values.date),
+          ...payload,
           createdBy: user?.uid || 'system'
         })
         toast.success('Expense submitted for approval')
       } else if (editingExpense) {
-        await updateExpense(editingExpense.id, {
-          ...values,
-          date: new Date(values.date)
-        })
+        await updateExpense(editingExpense.id, payload)
         toast.success('Expense updated')
       }
       setIsDialogOpen(false)
@@ -186,6 +196,20 @@ export function ExpensesPage() {
   const handleStatusUpdate = async (expense: Expense, status: 'approved' | 'rejected') => {
     try {
       await updateExpenseStatus(expense.id, status)
+      
+      // If approved and a bank account is tied, record the deduction
+      if (status === 'approved' && expense.bankAccountId) {
+        await addBankTransaction({
+          bankAccountId: expense.bankAccountId,
+          type: 'debit',
+          amount: expense.amount,
+          reference: `EXP-${expense.id.slice(-6).toUpperCase()}`,
+          description: `Expense: ${expense.description}`,
+          date: new Date(),
+          createdBy: user?.uid ?? 'system'
+        })
+      }
+
       await addDoc(collection(db, 'messages'), {
         senderId: user?.uid ?? 'system',
         senderName: user?.displayName ?? 'Finance Team',
@@ -600,13 +624,34 @@ export function ExpensesPage() {
                 )} />
               </div>
 
-              <FormField control={form.control} name="vendor" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Vendor / Payee</FormLabel>
-                  <FormControl><Input placeholder="Vendor name" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="bankAccountId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Paid From Bank (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None (Cash / Other)</SelectItem>
+                        {bankAccounts.map(b => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.bankName} - {b.accountName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="vendor" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vendor / Payee</FormLabel>
+                    <FormControl><Input placeholder="Vendor name" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
               
               <FormField control={form.control} name="amount" render={({ field }) => (
                 <FormItem>

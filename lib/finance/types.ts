@@ -73,6 +73,7 @@ export interface Expense {
   paymentMethod: PaymentMethod
   receiptUrl?: string
   status: ExpenseStatus
+  bankAccountId?: string
   notes?: string
   createdBy: string
   createdAt: Date

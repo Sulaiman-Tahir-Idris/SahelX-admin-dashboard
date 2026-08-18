@@ -344,7 +344,6 @@ const DeliveriesTable = () => {
           color="gray"
           isActive={filter === "all"}
           onClick={() => setFilter("all")}
-          className="p-4"
         />
         <StatsCard
           title="Unassigned"
@@ -353,7 +352,6 @@ const DeliveriesTable = () => {
           color="red"
           isActive={filter === "unassigned"}
           onClick={() => setFilter("unassigned")}
-          className="p-4"
         />
         <StatsCard
           title="Pending"
@@ -362,7 +360,6 @@ const DeliveriesTable = () => {
           color="amber"
           isActive={filter === "pending"}
           onClick={() => setFilter("pending")}
-          className="p-4"
         />
         <StatsCard
           title="Active"
@@ -371,7 +368,6 @@ const DeliveriesTable = () => {
           color="blue"
           isActive={filter === "active"}
           onClick={() => setFilter("active")}
-          className="p-4"
         />
         <StatsCard
           title="Completed"
@@ -380,7 +376,6 @@ const DeliveriesTable = () => {
           color="green"
           isActive={filter === "completed"}
           onClick={() => setFilter("completed")}
-          className="p-4"
         />
         <StatsCard
           title="Traditional"
@@ -389,7 +384,6 @@ const DeliveriesTable = () => {
           color="purple"
           isActive={filter === "traditional"}
           onClick={() => setFilter("traditional")}
-          className="p-4"
         />
       </div>
 

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SecretaryDashboardLayout } from "@/components/dashboard/secretary-dashboard-layout";
 import { toast } from "@/components/ui/use-toast";
 import { db } from "@/lib/firebase/config";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { getRiders, type Rider } from "@/lib/firebase/riders";
+import { getBankAccounts, addBankTransaction } from "@/lib/firebase/finance";
+import type { BankAccount } from "@/lib/finance/types";
 import {
   Card,
   CardContent,
@@ -64,6 +67,8 @@ export default function CreateDeliveryPage() {
   const [singlePackageType, setSinglePackageType] = useState("");
   const [singleSize, setSingleSize] = useState("");
   const [singleFee, setSingleFee] = useState("");
+  const [singleCourierId, setSingleCourierId] = useState("");
+  const [singleBankAccountId, setSingleBankAccountId] = useState("");
 
   /* ---------- BULK ---------- */
   const [bulkCustomer, setBulkCustomer] = useState("");
@@ -75,19 +80,44 @@ export default function CreateDeliveryPage() {
   const [bulkReceiverPhones, setBulkReceiverPhones] = useState<string[]>([""]);
   const [bulkPackageType, setBulkPackageType] = useState("");
   const [bulkSize, setBulkSize] = useState("");
-  const [bulkFee, setBulkFee] = useState("");
+  const [bulkFees, setBulkFees] = useState<string[]>([""]);
+  const [bulkCourierId, setBulkCourierId] = useState("");
+  const [bulkBankAccountId, setBulkBankAccountId] = useState("");
+
+  /* ---------------- COURIERS & BANKS ---------------- */
+  const [couriers, setCouriers] = useState<Rider[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [ridersRes, banksRes] = await Promise.all([
+          getRiders(),
+          getBankAccounts()
+        ]);
+        setCouriers(ridersRes);
+        setBankAccounts(banksRes);
+      } catch (err) {
+        setCouriers([]);
+        setBankAccounts([]);
+      }
+    };
+    fetchData();
+  }, []);
 
   /* ---------------- HELPERS ---------------- */
 
   const addBulkDropoff = () => {
     setBulkDropoffs([...bulkDropoffs, ""]);
     setBulkReceiverPhones([...bulkReceiverPhones, ""]);
+    setBulkFees([...bulkFees, ""]);
   };
 
   const removeBulkDropoff = (index: number) => {
     if (bulkDropoffs.length <= 1) return;
     setBulkDropoffs(bulkDropoffs.filter((_, i) => i !== index));
     setBulkReceiverPhones(bulkReceiverPhones.filter((_, i) => i !== index));
+    setBulkFees(bulkFees.filter((_, i) => i !== index));
   };
 
   /* ---------------- SAVE SINGLE ---------------- */
@@ -115,7 +145,7 @@ export default function CreateDeliveryPage() {
       const delivery = {
         trackingId: null,
         customerId: singleCustomer,
-        courierId: null,
+        courierId: (singleCourierId && singleCourierId !== "none") ? singleCourierId : null,
         pickupLocation: {
           address: singlePickupAddress,
           phone: singlePickupPhone,
@@ -132,11 +162,11 @@ export default function CreateDeliveryPage() {
         goodsType: singlePackageType,
         goodsSize: singleSize,
         cost: Number(singleFee),
-        status: "pending",
+        status: (singleCourierId && singleCourierId !== "none") ? "assigned" : "pending",
         type: "manual",
         timestamp: Timestamp.now(),
         createdAt: Timestamp.now(),
-        assignedAt: null,
+        assignedAt: (singleCourierId && singleCourierId !== "none") ? Timestamp.now() : null,
         tag: null,
         deliveryEvidence: null,
         eta: null,
@@ -145,7 +175,12 @@ export default function CreateDeliveryPage() {
         paymentLink: null,
         paymentReference: null,
         paymentStatus: "paid",
-        history: [{ status: "pending", timestamp: Timestamp.now() }],
+        history: [
+          { status: "pending", timestamp: Timestamp.now() },
+          ...((singleCourierId && singleCourierId !== "none")
+            ? [{ status: "assigned", timestamp: Timestamp.now() }]
+            : []),
+        ],
         updatedAt: null,
       };
 
@@ -164,6 +199,23 @@ export default function CreateDeliveryPage() {
         status: "paid",
         type: "manual"
       });
+
+      // Add to bank account if selected
+      if (singleBankAccountId && singleBankAccountId !== "none") {
+        try {
+          await addBankTransaction(singleBankAccountId, {
+            date: new Date(),
+            description: `Payment for manual delivery ${docRef.id} - ${singleCustomer}`,
+            credit: Number(singleFee),
+            debit: 0,
+            reference: `MANUAL_${Date.now()}`,
+            createdBy: "Secretary"
+          });
+        } catch (e) {
+          console.error("Failed to record bank transaction", e);
+        }
+      }
+
       toast({
         title: "Success",
         description: "Delivery created successfully",
@@ -178,6 +230,8 @@ export default function CreateDeliveryPage() {
       setSinglePackageType("");
       setSingleSize("");
       setSingleFee("");
+      setSingleCourierId("");
+      setSingleBankAccountId("");
     } catch (error) {
       toast({
         title: "Error",
@@ -196,9 +250,9 @@ export default function CreateDeliveryPage() {
       !bulkCustomer ||
       bulkDropoffs.some((d) => !d) ||
       bulkReceiverPhones.some((p) => !p) ||
+      bulkFees.some((f) => !f) ||
       !bulkPackageType ||
-      !bulkSize ||
-      !bulkFee
+      !bulkSize
     ) {
       toast({
         title: "Missing Fields",
@@ -217,7 +271,7 @@ export default function CreateDeliveryPage() {
         const delivery = {
           trackingId: null,
           customerId: bulkCustomer,
-          courierId: null,
+          courierId: (bulkCourierId && bulkCourierId !== "none") ? bulkCourierId : null,
           pickupLocation: {
             address: bulkPickupAddress,
             phone: bulkPickupPhone,
@@ -229,12 +283,12 @@ export default function CreateDeliveryPage() {
           receiverPhoneNumber: bulkReceiverPhones[i],
           goodsType: bulkPackageType,
           goodsSize: bulkSize,
-          cost: Number(bulkFee),
-          status: "pending",
+          cost: Number(bulkFees[i]),
+          status: (bulkCourierId && bulkCourierId !== "none") ? "assigned" : "pending",
           type: "manual",
           timestamp: Timestamp.now(),
           createdAt: Timestamp.now(),
-          assignedAt: null,
+          assignedAt: (bulkCourierId && bulkCourierId !== "none") ? Timestamp.now() : null,
           tag,
           deliveryEvidence: null,
           eta: null,
@@ -243,7 +297,12 @@ export default function CreateDeliveryPage() {
           paymentLink: null,
           paymentReference: null,
           paymentStatus: "paid",
-          history: [{ status: "pending", timestamp: Timestamp.now() }],
+          history: [
+            { status: "pending", timestamp: Timestamp.now() },
+            ...((bulkCourierId && bulkCourierId !== "none")
+              ? [{ status: "assigned", timestamp: Timestamp.now() }]
+              : []),
+          ],
           updatedAt: null,
         };
 
@@ -251,7 +310,7 @@ export default function CreateDeliveryPage() {
 
         // Auto-generate a payment record for the bulk item
         await addDoc(collection(db, "payments"), {
-          amount: Number(bulkFee),
+          amount: Number(bulkFees[i]),
           createdAt: Timestamp.now(),
           customerId: bulkCustomer,
           deliveryId: docRef.id,
@@ -262,6 +321,22 @@ export default function CreateDeliveryPage() {
           status: "paid",
           type: "manual"
         });
+
+        // Add to bank account if selected
+        if (bulkBankAccountId && bulkBankAccountId !== "none") {
+          try {
+            await addBankTransaction(bulkBankAccountId, {
+              date: new Date(),
+              description: `Payment for bulk delivery ${docRef.id} - ${bulkCustomer}`,
+              credit: Number(bulkFees[i]),
+              debit: 0,
+              reference: `BULK_${Date.now()}_${i}`,
+              createdBy: "Secretary"
+            });
+          } catch (e) {
+            console.error("Failed to record bank transaction", e);
+          }
+        }
       }
 
       toast({
@@ -276,7 +351,9 @@ export default function CreateDeliveryPage() {
       setBulkReceiverPhones([""]);
       setBulkPackageType("");
       setBulkSize("");
-      setBulkFee("");
+      setBulkFees([""]);
+      setBulkCourierId("");
+      setBulkBankAccountId("");
     } catch (error) {
       toast({
         title: "Error",
@@ -515,6 +592,48 @@ export default function CreateDeliveryPage() {
                           className="h-11 rounded-xl"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Assign Courier (Optional)</Label>
+                        <Select
+                          value={singleCourierId}
+                          onValueChange={setSingleCourierId}
+                        >
+                          <SelectTrigger className="h-11 rounded-xl">
+                            <SelectValue placeholder="Select a courier" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground italic">None (Unassigned)</span>
+                            </SelectItem>
+                            {couriers.map((c) => (
+                              <SelectItem key={c.id ?? c.userId} value={c.userId ?? c.id ?? ""}>
+                                {c.displayName ?? c.userId ?? c.id}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Receiving Bank (Optional)</Label>
+                        <Select
+                          value={singleBankAccountId}
+                          onValueChange={setSingleBankAccountId}
+                        >
+                          <SelectTrigger className="h-11 rounded-xl">
+                            <SelectValue placeholder="Select a bank" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground italic">None (Do not record)</span>
+                            </SelectItem>
+                            {bankAccounts.map((b) => (
+                              <SelectItem key={b.id} value={b.id ?? ""}>
+                                {b.bankName} - {b.accountName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -595,7 +714,7 @@ export default function CreateDeliveryPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-2">
                         <Label>Customer Name</Label>
                         <Input
@@ -624,14 +743,46 @@ export default function CreateDeliveryPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Fee per Drop-off (₦)</Label>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={bulkFee}
-                          onChange={(e) => setBulkFee(e.target.value)}
-                          className="h-11 rounded-xl"
-                        />
+                        <Label>Assign Courier (Optional)</Label>
+                        <Select
+                          value={bulkCourierId}
+                          onValueChange={setBulkCourierId}
+                        >
+                          <SelectTrigger className="h-11 rounded-xl">
+                            <SelectValue placeholder="Select a courier" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground italic">None (Unassigned)</span>
+                            </SelectItem>
+                            {couriers.map((c) => (
+                              <SelectItem key={c.id ?? c.userId} value={c.userId ?? c.id ?? ""}>
+                                {c.displayName ?? c.userId ?? c.id}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Receiving Bank (Optional)</Label>
+                        <Select
+                          value={bulkBankAccountId}
+                          onValueChange={setBulkBankAccountId}
+                        >
+                          <SelectTrigger className="h-11 rounded-xl">
+                            <SelectValue placeholder="Select a bank" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground italic">None (Do not record)</span>
+                            </SelectItem>
+                            {bankAccounts.map((b) => (
+                              <SelectItem key={b.id} value={b.id ?? ""}>
+                                {b.bankName} - {b.accountName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </CardContent>
@@ -662,7 +813,7 @@ export default function CreateDeliveryPage() {
                       <CardContent className="pt-6 pb-6">
                         <div className="flex gap-4 items-start">
                           <div className="flex-1 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div className="space-y-2">
                                 <Label>Drop-off #{i + 1} Address</Label>
                                 <Input
@@ -687,6 +838,20 @@ export default function CreateDeliveryPage() {
                                   }}
                                   className="h-11 rounded-xl border-border"
                                   placeholder="+234 ..."
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Delivery Fee (₦)</Label>
+                                <Input
+                                  type="number"
+                                  value={bulkFees[i]}
+                                  onChange={(e) => {
+                                    const copy = [...bulkFees];
+                                    copy[i] = e.target.value;
+                                    setBulkFees(copy);
+                                  }}
+                                  className="h-11 rounded-xl border-border"
+                                  placeholder="0.00"
                                 />
                               </div>
                             </div>
@@ -745,19 +910,11 @@ export default function CreateDeliveryPage() {
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between items-center pt-2">
-                          <span className="text-muted-foreground">
-                            Unit Price
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            ₦{(Number(bulkFee) || 0).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2">
                           <span className="text-lg font-bold">Grand Total</span>
                           <span className="text-2xl font-black text-primary">
                             ₦
                             {(
-                              bulkDropoffs.length * Number(bulkFee) || 0
+                              bulkFees.reduce((sum, fee) => sum + (Number(fee) || 0), 0)
                             ).toLocaleString()}
                           </span>
                         </div>

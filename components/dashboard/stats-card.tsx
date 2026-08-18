@@ -60,10 +60,10 @@ export function StatsCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+      <CardContent className="p-4 md:p-5 lg:p-4 xl:p-6">
+        <div className="flex items-center justify-between gap-2">
+          <div className="space-y-1 min-w-0 flex-1">
+            <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors truncate">
               {title}
             </p>
             <div className="flex items-baseline gap-2">
@@ -88,11 +88,11 @@ export function StatsCard({
           </div>
           <div
             className={cn(
-              "p-3 rounded-2xl border transition-transform group-hover:scale-110 duration-300",
+              "p-2 lg:p-3 rounded-2xl border transition-transform group-hover:scale-110 duration-300 shrink-0",
               colorMaps[color],
             )}
           >
-            <Icon className="h-6 w-6" />
+            <Icon className="h-5 w-5 lg:h-6 lg:w-6" />
           </div>
         </div>
       </CardContent>
