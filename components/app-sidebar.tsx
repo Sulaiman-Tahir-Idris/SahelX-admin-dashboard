@@ -3,7 +3,7 @@
 import * as React from "react"
 import {
   Home, Truck, Users, Box, Layers, DollarSign, Map, MessageSquare, Shield, Settings, LogOut,
-  LayoutDashboard, Receipt, BookOpen, Building2, FileBarChart2, PieChart, SlidersHorizontal, Banknote
+  LayoutDashboard, Receipt, BookOpen, Building2, FileBarChart2, PieChart, SlidersHorizontal, Banknote, TrendingUp
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
@@ -40,6 +40,7 @@ const allNavItems: NavItem[] = [
   { title: "Salary",              url: "/admin/finance/salary",            icon: Banknote,          section: "finance" },
   { title: "Reports",             url: "/admin/finance/reports",           icon: FileBarChart2,     section: "finance" },
   { title: "Analytics",           url: "/admin/finance/analytics",         icon: PieChart,          section: "finance" },
+  { title: "Investors",           url: "/admin/finance/investors",         icon: TrendingUp,        section: "finance" },
   { title: "Finance Settings",    url: "/admin/finance/settings",          icon: SlidersHorizontal, section: "finance" },
   // ── System ─────────────────────────────────────────────────────────────────
   { title: "Messages",            url: "/admin/messages",                  icon: MessageSquare,     section: "system" },

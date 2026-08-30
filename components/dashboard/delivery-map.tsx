@@ -57,8 +57,9 @@ export function DeliveryMap() {
     Record<string, { lat: number; lng: number }>
   >({});
 
+  const mapKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    googleMapsApiKey: mapKey,
     libraries,
   });
 

@@ -14,6 +14,10 @@ const firebaseConfig = {
 // Initialize Firebase only if it hasn't been initialized already
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
 
+// Initialize a secondary app strictly for creating users without signing out the admin
+const secondaryApp = getApps().find(a => a.name === "SecondaryApp") || initializeApp(firebaseConfig, "SecondaryApp");
+export const secondaryAuth = getAuth(secondaryApp);
+
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app)
 

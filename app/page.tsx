@@ -205,6 +205,20 @@ export default function SplashScreen() {
               <>Secretary Login <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" /></>
             )}
           </button>
+
+          <button
+            onClick={() => {
+              const el = document.getElementById('investor-loading');
+              if (el) el.style.display = 'inline-block';
+              router.push("/investor/login");
+            }}
+            id="investor-login-btn"
+            className="group flex items-center justify-center gap-2 w-full h-12 px-6 rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold text-sm transition-all duration-300"
+          >
+            <span id="investor-loading" className="hidden"><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></span>
+            <span>Investor Login</span>
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </button>
         </motion.div>
 
         {/* Footer */}

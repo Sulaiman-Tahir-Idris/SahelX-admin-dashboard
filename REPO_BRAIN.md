@@ -10,7 +10,7 @@ Primary source of truth for repository structure, architecture, conventions, and
 - **Delivery Management**: Order creation, tracking, status updates, batch/multiple deliveries.
 - **Fleet & Rider Operations**: Live GPS tracking, rider onboarding, availability management.
 - **Customer & Financial Management**: Customer profiles, delivery history, revenue reports.
-- **Role-based Authentication**: Firebase Auth for Admin and Secretary portals.
+- **Role-based Authentication**: Firebase Auth for Admin, Secretary, and Investor portals.
 
 ---
 
@@ -80,6 +80,7 @@ SahelX-admin-dashboard/
 | [`lib/firebase/admin.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/lib/firebase/admin.ts) | Server-side Firebase Admin SDK initialization using service credentials |
 | [`lib/firebase/auth.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/lib/firebase/auth.ts) | Admin authentication helpers and state listeners |
 | [`lib/firebase/secretaryAuth.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/lib/firebase/secretaryAuth.ts) | Secretary authentication helpers |
+| [`lib/firebase/investorAuth.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/lib/firebase/investorAuth.ts) | Investor authentication helpers |
 | [`lib/firebase/deliveries.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/lib/firebase/deliveries.ts) | Delivery query and mutation operations |
 | [`lib/firebase/riders.ts`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/lib/firebase/riders.ts) | Rider profiles and real-time GPS location subscriptions |
 | [`app/admin/dashboard/page.tsx`](file:///c:/Users/DELL/Documents/GitHub/SahelX-admin-dashboard/app/admin/dashboard/page.tsx) | Main Admin Dashboard view |
@@ -136,3 +137,4 @@ SahelX-admin-dashboard/
 | 2026-08-06 | Antigravity | Copied SahelX web icons to sahelxLanding public folder and updated `src/app/layout.tsx` with matching favicon, Open Graph, and Twitter card metadata. |
 | 2026-08-06 | Antigravity | Applied full mobile/tablet/desktop responsiveness to all 7 finance pages: stacked page headers, wrapping filter bars, flex-wrap TabsLists, and properly stepped grid layouts (1→2→4 cols). Build verified clean. |
 | 2026-08-06 | Antigravity | Executed Engineering Audit: Lazy-loaded spreadsheet/PDF libraries (`xlsx-js-style`, `jspdf`, `exceljs`), uninstalled duplicate `xlsx`, removed 212KB static logo base64, deleted 3.5MB unused assets, added global loading/error boundaries, and centralized `useRole` hook. |
+| 2026-08-30 | Antigravity | Added new Investor role, Investor portal (/investor), and Admin Investor Management pages under Finance.

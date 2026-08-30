@@ -11,7 +11,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth, db } from "./config";
+import { auth, db, secondaryAuth } from "./config";
 
 export interface CourierUser {
   id?: string;
@@ -62,13 +62,9 @@ export const createCourierWithoutLogout = async (
   },
 ): Promise<string> => {
   try {
-    // Store current admin user info
-    const currentUser = auth.currentUser;
-    const currentUserEmail = currentUser?.email;
-
-    // Create Firebase Auth user for courier
+    // Create Firebase Auth user for courier using secondary auth to avoid overriding session
     const userCredential = await createUserWithEmailAndPassword(
-      auth,
+      secondaryAuth,
       courierData.email,
       courierData.password,
     );
@@ -91,16 +87,8 @@ export const createCourierWithoutLogout = async (
 
     const docRef = await addDoc(collection(db, "User"), newCourier);
 
-    // Sign out the newly created courier user
-    await signOut(auth);
-
-    // Re-authenticate the admin user if they were logged in
-    if (currentUser && currentUserEmail) {
-      // Note: In production, you should use Firebase Admin SDK on the server side
-      // to create users without affecting the current session
-      // For now, we'll just redirect to login if needed
-      // The admin will need to log back in
-    }
+    // Sign out the newly created courier user from the secondary instance
+    await signOut(secondaryAuth);
 
     return docRef.id;
   } catch (error: any) {
