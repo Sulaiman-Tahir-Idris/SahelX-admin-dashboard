@@ -3,7 +3,7 @@
 import * as React from "react"
 import {
   Home, Truck, Users, Box, Layers, DollarSign, Map, MessageSquare, Shield, Settings, LogOut,
-  LayoutDashboard, Receipt, BookOpen, Building2, FileBarChart2, PieChart, SlidersHorizontal, Banknote, TrendingUp
+  LayoutDashboard, Receipt, BookOpen, Building2, FileBarChart2, PieChart, SlidersHorizontal, Banknote, TrendingUp, Package
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
@@ -31,6 +31,7 @@ const allNavItems: NavItem[] = [
   { title: "Deliveries",          url: "/admin/deliveries",                icon: Box,               section: "operations" },
   { title: "Multiple Deliveries", url: "/admin/multiple-deliveries",       icon: Layers,            section: "operations" },
   { title: "Live Map",            url: "/admin/live-map",                  icon: Map,               section: "operations" },
+  { title: "Assets",              url: "/admin/assets",                    icon: Package,           section: "operations" },
   // ── Finance ────────────────────────────────────────────────────────────────
   { title: "Finance Dashboard",   url: "/admin/finance/dashboard",         icon: LayoutDashboard,   section: "finance" },
   { title: "Revenue",             url: "/admin/revenue",                   icon: DollarSign,        section: "finance" },
@@ -60,12 +61,12 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
       "/admin/finance/dashboard", "/admin/revenue", "/admin/finance/expenses",
       "/admin/finance/cash", "/admin/finance/bank", "/admin/finance/salary", "/admin/finance/reports",
       "/admin/finance/analytics", "/admin/finance/settings",
-      "/admin/riders", "/admin/create-secretary", "/admin/messages", liveMap,
+      "/admin/riders", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"
     ])
     return items.filter(i => allowed.has(i.url))
   }
   if (r === "coo") {
-    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap])
+    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"])
     return items.filter(i => allowed.has(i.url))
   }
   return items

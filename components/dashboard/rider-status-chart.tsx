@@ -35,7 +35,8 @@ export function RiderStatusChart() {
                 d.status?.toLowerCase() !== "completed" &&
                 d.status?.toLowerCase() !== "cancelled" &&
                 d.status?.toLowerCase() !== "received" &&
-                d.status?.toLowerCase() !== "recieved",
+                d.status?.toLowerCase() !== "recieved" &&
+                d.status?.toLowerCase() !== "delivered",
             )
             .map((d) => d.courierId),
         );

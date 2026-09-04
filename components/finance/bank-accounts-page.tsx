@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Plus, Building2, X, Download, Filter, Search, Trash2 } from 'lucide-react'
-import { getBankAccounts, addBankAccount, getBankTransactions, addBankTransaction, deleteBankTransaction } from '@/lib/firebase/finance'
+import { Plus, Building2, X, Download, Filter, Search, Trash2, Pencil } from 'lucide-react'
+import { getBankAccounts, addBankAccount, updateBankAccount, deleteBankAccount, getBankTransactions, addBankTransaction, deleteBankTransaction } from '@/lib/firebase/finance'
 import { formatNGN, calcBankBalance, buildBankRunningBalance, filterByDateRange, filterBySearch } from '@/lib/finance/calculations'
 import type { BankAccount, BankTransaction, DateRangeState } from '@/lib/finance/types'
 import { useAuth } from '@/lib/auth-utils'
@@ -50,6 +50,8 @@ export function BankAccountsPage() {
   const [txnLoading, setTxnLoading] = useState(false)
   
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false)
+  const [isEditAccountOpen, setIsEditAccountOpen] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
   const [isAddTxnOpen, setIsAddTxnOpen] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -130,6 +132,11 @@ export function BankAccountsPage() {
       .finally(() => setTxnLoading(false))
   }
 
+  const editAccountForm = useForm<z.infer<typeof addAccountSchema>>({
+    resolver: zodResolver(addAccountSchema),
+    defaultValues: { bankName: '', accountName: '', accountNumber: '', openingBalance: 0 },
+  })
+
   const onAddAccount = async (values: z.infer<typeof addAccountSchema>) => {
     try {
       await addBankAccount({ ...values })
@@ -139,6 +146,48 @@ export function BankAccountsPage() {
       loadAccounts()
     } catch (error) {
       toast.error("Failed to add account")
+    }
+  }
+
+  const handleOpenEdit = (account: BankAccount) => {
+    setEditingAccount(account)
+    editAccountForm.reset({
+      bankName: account.bankName,
+      accountName: account.accountName,
+      accountNumber: account.accountNumber,
+      openingBalance: account.openingBalance,
+    })
+    setIsEditAccountOpen(true)
+  }
+
+  const onEditAccount = async (values: z.infer<typeof addAccountSchema>) => {
+    if (!editingAccount) return
+    try {
+      await updateBankAccount(editingAccount.id, { ...values })
+      toast.success("Bank account updated")
+      setIsEditAccountOpen(false)
+      setEditingAccount(null)
+      // Update local state to reflect changes
+      setAccounts(prev => prev.map(a => a.id === editingAccount.id ? { ...a, ...values } : a))
+      if (selectedAccount?.id === editingAccount.id) {
+        setSelectedAccount(prev => prev ? { ...prev, ...values } : null)
+      }
+    } catch (error) {
+      toast.error("Failed to update account")
+    }
+  }
+
+  const handleDeleteAccount = async (accountId: string) => {
+    try {
+      await deleteBankAccount(accountId)
+      toast.success("Bank account deleted")
+      setAccounts(prev => prev.filter(a => a.id !== accountId))
+      if (selectedAccount?.id === accountId) {
+        setSelectedAccount(null)
+        setTransactions([])
+      }
+    } catch (error) {
+      toast.error("Failed to delete account")
     }
   }
 
@@ -226,7 +275,30 @@ export function BankAccountsPage() {
                   <CardTitle className="text-base">{account.bankName}</CardTitle>
                   <CardDescription>{account.accountName}</CardDescription>
                 </div>
-                <Building2 className="h-8 w-8 text-muted-foreground" />
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(account)} title="Edit account">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" title="Delete account">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Bank Account?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete <strong>{account.bankName} — {account.accountName}</strong>? This will remove the account record but will not delete associated transactions.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeleteAccount(account.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -412,6 +484,35 @@ export function BankAccountsPage() {
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsAddTxnOpen(false)}>Cancel</Button>
                 <Button type="submit">Record Transaction</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Account Dialog */}
+      <Dialog open={isEditAccountOpen} onOpenChange={(open) => { setIsEditAccountOpen(open); if (!open) setEditingAccount(null) }}>
+        <DialogContent className="sm:max-w-xl md:w-full">
+          <DialogHeader>
+            <DialogTitle>Edit Bank Account</DialogTitle>
+          </DialogHeader>
+          <Form {...editAccountForm}>
+            <form onSubmit={editAccountForm.handleSubmit(onEditAccount)} className="space-y-4">
+              <FormField control={editAccountForm.control} name="bankName" render={({ field }) => (
+                <FormItem><FormLabel>Bank Name</FormLabel><FormControl><Input placeholder="E.g. GTBank" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={editAccountForm.control} name="accountName" render={({ field }) => (
+                <FormItem><FormLabel>Account Name</FormLabel><FormControl><Input placeholder="E.g. SahelX Operations" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={editAccountForm.control} name="accountNumber" render={({ field }) => (
+                <FormItem><FormLabel>Account Number</FormLabel><FormControl><Input placeholder="0123456789" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={editAccountForm.control} name="openingBalance" render={({ field }) => (
+                <FormItem><FormLabel>Opening Balance (₦)</FormLabel><FormControl><Input type="number" min="0" step="0.01" {...field} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : 0)} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditAccountOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
               </DialogFooter>
             </form>
           </Form>

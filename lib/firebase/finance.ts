@@ -150,6 +150,17 @@ export async function addBankAccount(
   return ref.id
 }
 
+export async function updateBankAccount(
+  id: string,
+  data: Partial<Omit<BankAccount, "id" | "createdAt">>
+): Promise<void> {
+  await updateDoc(doc(db, "bankAccounts", id), data)
+}
+
+export async function deleteBankAccount(id: string): Promise<void> {
+  await deleteDoc(doc(db, "bankAccounts", id))
+}
+
 // Bank transactions stored as a sub-collection under each bank account
 export async function getBankTransactions(accountId: string): Promise<BankTransaction[]> {
   const ref = collection(db, "bankAccounts", accountId, "transactions")

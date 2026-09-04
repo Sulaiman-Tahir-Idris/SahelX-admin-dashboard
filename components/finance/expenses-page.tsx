@@ -23,7 +23,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationNext, Paginati
 import { Progress } from '@/components/ui/progress'
 import { DateRangeFilter } from '@/components/finance/shared/date-range-filter'
 import { DataImporter } from '@/components/finance/shared/data-importer'
-import { getExpenses, addExpense, updateExpense, updateExpenseStatus, deleteExpense, getExpenseCategories, getBankAccounts, addBankTransaction } from '@/lib/firebase/finance'
+import { getExpenses, addExpense, updateExpense, updateExpenseStatus, deleteExpense, getExpenseCategories, getBankAccounts, addBankTransaction, addCashTransaction } from '@/lib/firebase/finance'
 import { formatNGN, filterByDateRange, filterBySearch, calcDepartmentBreakdown, calcCategoryTotals, startOfMonth, sumExpenses } from '@/lib/finance/calculations'
 import type { Expense, ExpenseCategory, Department, DateRangeState, BankAccount } from '@/lib/finance/types'
 import { DEPARTMENTS, DEPARTMENT_COLORS, EXPENSE_PAYMENT_METHODS } from '@/lib/finance/types'
@@ -51,7 +51,7 @@ export function ExpensesPage() {
   const { user } = useAuth ? useAuth() : { user: null }
   
   const role = useRole()
-  const canApprove = role === 'ceo' || role === 'cfo' || role === 'cto'
+  const isAdmin = role === 'ceo' || role === 'cfo' || role === 'cto' || role === 'admin'
 
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [categories, setCategories] = useState<ExpenseCategory[]>([])
@@ -177,11 +177,34 @@ export function ExpensesPage() {
       }
 
       if (dialogMode === 'add') {
-        await addExpense({
+        const expId = await addExpense({
           ...payload,
+          status: 'approved',
           createdBy: user?.uid || 'system'
         })
-        toast.success('Expense submitted for approval')
+        
+        // Auto deduct
+        if (payload.paymentMethod === 'Cash') {
+          await addCashTransaction({
+            date: payload.date,
+            description: `Expense: ${payload.description}`,
+            amount: payload.amount,
+            type: 'cash_out',
+            reference: `EXP-${expId.slice(-6).toUpperCase()}`,
+            createdBy: user?.uid ?? 'system'
+          })
+        } else if (payload.bankAccountId) {
+          await addBankTransaction(payload.bankAccountId, {
+            date: payload.date,
+            description: `Expense: ${payload.description}`,
+            credit: 0,
+            debit: payload.amount,
+            reference: `EXP-${expId.slice(-6).toUpperCase()}`,
+            createdBy: user?.uid ?? 'system'
+          })
+        }
+
+        toast.success('Expense recorded and deducted')
       } else if (editingExpense) {
         await updateExpense(editingExpense.id, payload)
         toast.success('Expense updated')
@@ -193,43 +216,32 @@ export function ExpensesPage() {
     }
   }
 
-  const handleStatusUpdate = async (expense: Expense, status: 'approved' | 'rejected') => {
-    try {
-      await updateExpenseStatus(expense.id, status)
-      
-      // If approved and a bank account is tied, record the deduction
-      if (status === 'approved' && expense.bankAccountId) {
-        await addBankTransaction({
-          bankAccountId: expense.bankAccountId,
-          type: 'debit',
-          amount: expense.amount,
-          reference: `EXP-${expense.id.slice(-6).toUpperCase()}`,
-          description: `Expense: ${expense.description}`,
-          date: new Date(),
-          createdBy: user?.uid ?? 'system'
-        })
-      }
-
-      await addDoc(collection(db, 'messages'), {
-        senderId: user?.uid ?? 'system',
-        senderName: user?.displayName ?? 'Finance Team',
-        recipientId: expense.createdBy,
-        message: `Your expense of ${formatNGN(expense.amount)} for "${expense.description}" has been ${status}.`,
-        type: 'expense_approval',
-        read: false,
-        createdAt: serverTimestamp(),
-      })
-      toast.success(`Expense ${status}`)
-      loadData()
-    } catch (err) {
-      toast.error('Failed to update status')
-    }
-  }
-
   const handleDelete = async (id: string) => {
     try {
+      const expense = expenses.find(e => e.id === id);
+      if (expense) {
+        if (expense.paymentMethod === 'Cash') {
+          await addCashTransaction({
+            date: new Date(),
+            description: `Refund for Deleted Expense: ${expense.description}`,
+            amount: expense.amount,
+            type: 'cash_in',
+            reference: `REFUND-EXP-${expense.id.slice(-6).toUpperCase()}`,
+            createdBy: user?.uid ?? 'system'
+          })
+        } else if (expense.bankAccountId) {
+          await addBankTransaction(expense.bankAccountId, {
+            date: new Date(),
+            description: `Refund for Deleted Expense: ${expense.description}`,
+            credit: expense.amount,
+            debit: 0,
+            reference: `REFUND-EXP-${expense.id.slice(-6).toUpperCase()}`,
+            createdBy: user?.uid ?? 'system'
+          })
+        }
+      }
       await deleteExpense(id)
-      toast.success('Expense deleted')
+      toast.success('Expense deleted and refunded')
       loadData()
     } catch (err) {
       toast.error('Failed to delete expense')
@@ -427,22 +439,12 @@ export function ExpensesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            {expense.status === 'pending' && (
+                            {isAdmin && (
                               <Button variant="ghost" size="icon" onClick={() => handleOpenEdit(expense)} title="Edit">
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
-                            {expense.status === 'pending' && canApprove && (
-                              <>
-                                <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => handleStatusUpdate(expense, 'approved')} title="Approve">
-                                  <CheckCircle2 className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleStatusUpdate(expense, 'rejected')} title="Reject">
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                            {expense.status === 'pending' && (
+                            {isAdmin && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" title="Delete">
@@ -452,7 +454,7 @@ export function ExpensesPage() {
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
-                                    <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                    <AlertDialogDescription>This action cannot be undone. The amount will be refunded to the appropriate account.</AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>

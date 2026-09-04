@@ -9,6 +9,8 @@ import { getCurrentInvestor, type InvestorUser } from "@/lib/firebase/investorAu
 import { getRiders } from "@/lib/firebase/riders"
 import { getCustomers, getCouriers } from "@/lib/firebase/users"
 import { getDeliveries } from "@/lib/firebase/deliveries"
+import { getCompanyContacts, type CompanyContacts } from "@/lib/firebase/companyContacts"
+import { Phone, Mail } from "lucide-react"
 import dynamic from "next/dynamic"
 
 const ChartAreaInteractive = dynamic(
@@ -57,6 +59,7 @@ export default function InvestorDashboardPage() {
   const [investorName, setInvestorName] = useState("")
   const [todayLabel, setTodayLabel] = useState("")
   const [data, setData] = useState({ totalDeliveries: 0, totalRiders: 0, totalCustomers: 0, todayDeliveries: 0 })
+  const [contacts, setContacts] = useState<CompanyContacts | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -68,13 +71,15 @@ export default function InvestorDashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [investor, riders, customers, deliveries] = await Promise.all([
+        const [investor, riders, customers, deliveries, companyContactsData] = await Promise.all([
           getCurrentInvestor(),
           getCouriers(),
           getCustomers(),
           getDeliveries(),
+          getCompanyContacts()
         ])
         if (investor) setInvestorName(investor.displayName?.split(" ")[0] || "Investor")
+        if (companyContactsData) setContacts(companyContactsData)
 
         const today = new Date(); today.setHours(0, 0, 0, 0)
         const todayCount = deliveries.filter(d => {
@@ -172,7 +177,7 @@ export default function InvestorDashboardPage() {
           <ChartAreaInteractive />
         </motion.section>
 
-        {/* ── Fleet Status ── */}
+        {/* ── Fleet Status & Contacts ── */}
         <motion.section
           variants={sectionVariants}
           className="grid grid-cols-1 gap-6 lg:grid-cols-5"
@@ -183,6 +188,55 @@ export default function InvestorDashboardPage() {
               <h2 className="font-heading text-base font-semibold text-foreground">Fleet Status</h2>
             </div>
             <RiderStatusChart />
+          </div>
+
+          <div className="lg:col-span-3 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
+              <h2 className="font-heading text-base font-semibold text-foreground">Company Contacts</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Chief Executive Officer</CardTitle>
+                  <p className="text-sm font-medium text-emerald-600">{contacts?.ceoName || "Abdulsalam Tahir Idris"}</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <a href={`tel:${contacts?.ceoPhone || "+2348000000000"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
+                      <Phone className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    {contacts?.ceoPhone || "+234 800 000 0000"}
+                  </a>
+                  <a href={`mailto:${contacts?.ceoEmail || "[email protected]"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
+                      <Mail className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    {contacts?.ceoEmail || "[email protected]"}
+                  </a>
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Chief Financial Officer</CardTitle>
+                  <p className="text-sm font-medium text-emerald-600">{contacts?.cfoName || "Finance Team"}</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <a href={`tel:${contacts?.cfoPhone || "+2348000000000"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
+                      <Phone className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    {contacts?.cfoPhone || "+234 800 000 0000"}
+                  </a>
+                  <a href={`mailto:${contacts?.cfoEmail || "[email protected]"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                    <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
+                      <Mail className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    {contacts?.cfoEmail || "[email protected]"}
+                  </a>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </motion.section>
       </motion.div>

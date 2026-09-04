@@ -137,4 +137,6 @@ SahelX-admin-dashboard/
 | 2026-08-06 | Antigravity | Copied SahelX web icons to sahelxLanding public folder and updated `src/app/layout.tsx` with matching favicon, Open Graph, and Twitter card metadata. |
 | 2026-08-06 | Antigravity | Applied full mobile/tablet/desktop responsiveness to all 7 finance pages: stacked page headers, wrapping filter bars, flex-wrap TabsLists, and properly stepped grid layouts (1→2→4 cols). Build verified clean. |
 | 2026-08-06 | Antigravity | Executed Engineering Audit: Lazy-loaded spreadsheet/PDF libraries (`xlsx-js-style`, `jspdf`, `exceljs`), uninstalled duplicate `xlsx`, removed 212KB static logo base64, deleted 3.5MB unused assets, added global loading/error boundaries, and centralized `useRole` hook. |
-| 2026-08-30 | Antigravity | Added new Investor role, Investor portal (/investor), and Admin Investor Management pages under Finance.
+| 2026-08-30 | Antigravity | Added new Investor role, Investor portal (/investor), and Admin Investor Management pages under Finance. |
+| 2026-09-04 | Antigravity | Updated Dashboard: Fixed rider delivery status bug, auto-approve & delete expenses with auto-refunds, cross-deleted salaries with linked expenses, added bank account edit/delete, split Secretaries payroll tab, added Investor Portfolio ROI line chart, and built Investor Settings Contacts module. |
+| 2026-09-04 | Antigravity | Added new Assets module (`app/admin/assets`) to track and manage company property. |

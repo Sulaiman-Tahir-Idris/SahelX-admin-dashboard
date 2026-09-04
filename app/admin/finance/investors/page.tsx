@@ -203,13 +203,17 @@ export default function AdminInvestorsPage() {
             className="max-w-sm"
           />
 
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button className="bg-sahelx-600 hover:bg-sahelx-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Investor
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => router.push('/admin/finance/investors/settings')}>
+              Settings
+            </Button>
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-sahelx-600 hover:bg-sahelx-700">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Investor
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Investor</DialogTitle>
@@ -305,6 +309,7 @@ export default function AdminInvestorsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="rounded-md border bg-card">

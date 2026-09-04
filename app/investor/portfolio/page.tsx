@@ -17,6 +17,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  Legend,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  TooltipProps,
+} from "recharts"
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -161,18 +174,172 @@ export default function InvestorPortfolioPage() {
               <motion.div variants={cardVariants}>
                 <Card className="h-full shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Number of Payouts</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Amount of Payouts</CardTitle>
                     <ListOrdered className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{payouts.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Payouts received</p>
+                    <div className="text-2xl font-bold">
+                      ₦{payouts.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Total revenue received</p>
                   </CardContent>
                 </Card>
               </motion.div>
             </motion.div>
           )}
         </motion.section>
+
+        {/* ── Charts Section ── */}
+        {!isLoading && payouts.length > 0 && (
+          <motion.section variants={sectionVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* ROI Line Chart */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
+                <h2 className="font-heading text-base font-semibold text-foreground">ROI Timeline (Remaining Capital)</h2>
+              </div>
+              <Card className="shadow-sm">
+                <CardContent className="p-6 h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={(() => {
+                        const sorted = [...payouts].sort((a, b) => a.date.getTime() - b.date.getTime());
+                        let cumulativePayout = 0;
+                        const initialInvested = investor?.totalInvested || 0;
+                        
+                        const chartData = [
+                          {
+                            date: "Initial",
+                            roi: initialInvested,
+                          }
+                        ];
+                        
+                        sorted.forEach(p => {
+                          cumulativePayout += p.amount;
+                          chartData.push({
+                            date: p.date.toLocaleDateString("en-US", { month: 'short', year: '2-digit' }),
+                            roi: initialInvested - cumulativePayout,
+                          });
+                        });
+                        
+                        return chartData;
+                      })()}
+                      margin={{ top: 10, right: 10, left: 20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={false} 
+                        tickLine={false}
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                        dy={10}
+                      />
+                      <YAxis 
+                        axisLine={false} 
+                        tickLine={false}
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                        tickFormatter={(value) => `₦${value.toLocaleString()}`}
+                      />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-background border border-border rounded-lg shadow-sm p-3">
+                                <p className="text-sm font-medium mb-1">{label}</p>
+                                <p className="text-sm font-bold text-emerald-600">
+                                  ₦{payload[0].value?.toLocaleString()}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">Remaining Capital</p>
+                              </div>
+                            )
+                          }
+                          return null
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="roi"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
+                        activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Invested vs Payout Bar Chart */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
+                <h2 className="font-heading text-base font-semibold text-foreground">Invested vs Paid Out</h2>
+              </div>
+              <Card className="shadow-sm">
+                <CardContent className="p-6 h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        {
+                          name: "Comparison",
+                          invested: investor?.totalInvested || 0,
+                          payouts: payouts.reduce((sum, p) => sum + p.amount, 0)
+                        }
+                      ]}
+                      margin={{ top: 10, right: 10, left: 20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="name" 
+                        axisLine={false} 
+                        tickLine={false}
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                        dy={10}
+                      />
+                      <YAxis 
+                        axisLine={false} 
+                        tickLine={false}
+                        tick={{ fill: '#6b7280', fontSize: 12 }}
+                        tickFormatter={(value) => `₦${value.toLocaleString()}`}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'transparent' }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-background border border-border rounded-lg shadow-sm p-3 space-y-2">
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                    <span className="text-sm font-medium">Total Invested</span>
+                                  </div>
+                                  <span className="text-sm font-bold">₦{payload[0].value?.toLocaleString()}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                    <span className="text-sm font-medium">Total Paid Out</span>
+                                  </div>
+                                  <span className="text-sm font-bold">₦{payload[1].value?.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            )
+                          }
+                          return null
+                        }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                      <Bar dataKey="invested" name="Total Invested" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
+                      <Bar dataKey="payouts" name="Total Paid Out" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.section>
+        )}
 
         {/* ── Payout History ── */}
         <motion.section variants={sectionVariants} className="flex flex-col gap-3">

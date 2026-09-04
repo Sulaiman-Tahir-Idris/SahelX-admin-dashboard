@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-utils"
 import { useRole } from "@/lib/hooks/use-role"
 import { getSalaryConfig, updateSalaryConfig, getPayrollRecords, savePayrollRecord, markPayrollAsPaid, deletePayrollRecord, type SalaryConfig, type PayrollRecord } from "@/lib/firebase/salary"
 import { getAllRiders, type Rider } from "@/lib/firebase/riders"
-import { getRevenueEntries, getBankAccounts, addExpense, addCashTransaction, addBankTransaction } from "@/lib/firebase/finance"
+import { getRevenueEntries, getBankAccounts, addExpense, addCashTransaction, addBankTransaction, getExpenses, deleteExpense } from "@/lib/firebase/finance"
 import { getAllPayments, type Payment } from "@/lib/firebase/payments"
 import { getAdminUsers, type AdminUser } from "@/lib/firebase/admin-users"
 import { getSecretaryUsers, type SecretaryUser } from "@/lib/firebase/secretary-users"
@@ -188,8 +188,7 @@ export function SalaryPage() {
   const calculatedExecPayrolls = useMemo(() => {
     if (!config) return []
     
-    // Map Admins
-    const adminPayrolls = admins
+    return admins
       .filter(a => ["ceo", "cfo", "cto", "admin"].includes((a.role || "").toLowerCase()))
       .map(adm => {
         let r = (adm.role || "").toLowerCase()
@@ -201,48 +200,51 @@ export function SalaryPage() {
           else if (email.includes("cfo")) r = "cfo"
           else if (email.includes("cto")) r = "cto"
         }
-          let base = 0
-          let commPct = 0
-          let roleName = "Executive"
-          
-          if (r === "ceo") { base = config.ceoBase; commPct = config.ceoComm; roleName = "Chief Executive Officer" }
-          else if (r === "cfo") { base = config.cfoBase; commPct = config.cfoComm; roleName = "Chief Financial Officer" }
-          else if (r === "cto") { base = config.ctoBase; commPct = config.ctoComm; roleName = "Chief Technology Officer" }
-  
-          const commission = (totalRevenue * commPct) / 100
-  
-          const existing = payrolls.find(p => p.employeeId === adm.id)
-          const b = existing?.bonus || 0
-          const d = existing?.deduction || 0
-          const adv = existing?.advancePaid || 0
-          
-          const totalPay = base + commission + b - d
-          const remaining = totalPay - adv
-          
-          let status = existing?.status || "unpaid"
-          if (adv > 0) {
-            status = remaining <= 0 ? "paid" : "partial"
-          }
-  
-          return {
-            id: existing?.id || `draft_${adm.id}`,
-            monthYear: selectedMonth,
-            role: roleName,
-            employeeId: adm.id || "unknown",
-            employeeName: adm.displayName || adm.email || "Admin",
-            basePay: base,
-            commissionEarned: commission,
-            bonus: b,
-            deduction: d,
-            advancePaid: adv,
-            totalPay,
-            status: status as "unpaid" | "partial" | "paid",
-            updatedAt: existing?.updatedAt
-          }
-      })
+        let base = 0
+        let commPct = 0
+        let roleName = "Executive"
+        
+        if (r === "ceo") { base = config.ceoBase; commPct = config.ceoComm; roleName = "Chief Executive Officer" }
+        else if (r === "cfo") { base = config.cfoBase; commPct = config.cfoComm; roleName = "Chief Financial Officer" }
+        else if (r === "cto") { base = config.ctoBase; commPct = config.ctoComm; roleName = "Chief Technology Officer" }
 
-    // Map Secretaries
-    const secPayrolls = secretaries.map(sec => {
+        const commission = (totalRevenue * commPct) / 100
+
+        const existing = payrolls.find(p => p.employeeId === adm.id)
+        const b = existing?.bonus || 0
+        const d = existing?.deduction || 0
+        const adv = existing?.advancePaid || 0
+        
+        const totalPay = base + commission + b - d
+        const remaining = totalPay - adv
+        
+        let status = existing?.status || "unpaid"
+        if (adv > 0) {
+          status = remaining <= 0 ? "paid" : "partial"
+        }
+
+        return {
+          id: existing?.id || `draft_${adm.id}`,
+          monthYear: selectedMonth,
+          role: roleName,
+          employeeId: adm.id || "unknown",
+          employeeName: adm.displayName || adm.email || "Admin",
+          basePay: base,
+          commissionEarned: commission,
+          bonus: b,
+          deduction: d,
+          advancePaid: adv,
+          totalPay,
+          status: status as "unpaid" | "partial" | "paid",
+          updatedAt: existing?.updatedAt
+        }
+    })
+  }, [admins, totalRevenue, config, payrolls, selectedMonth])
+
+  const calculatedSecretaryPayrolls = useMemo(() => {
+    if (!config) return []
+
+    return secretaries.map(sec => {
       const commission = (totalDeliveryFees * config.secretaryComm) / 100
 
       const existing = payrolls.find(p => p.employeeId === sec.id)
@@ -274,14 +276,14 @@ export function SalaryPage() {
         updatedAt: existing?.updatedAt
       }
     })
+  }, [secretaries, totalDeliveryFees, config, payrolls, selectedMonth])
 
-    return [...adminPayrolls, ...secPayrolls]
-  }, [admins, secretaries, totalRevenue, totalDeliveryFees, config, payrolls, selectedMonth])
-
-  const allPayrolls = [...calculatedExecPayrolls, ...calculatedRiderPayrolls]
+  const allPayrolls = [...calculatedExecPayrolls, ...calculatedSecretaryPayrolls, ...calculatedRiderPayrolls]
   const grandTotal = allPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
   const riderTotal = calculatedRiderPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
   const execTotal = calculatedExecPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
+  const secretaryTotal = calculatedSecretaryPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
+
 
   // ─── ACTIONS ─────────────────────────────────────────────────────────────
 
@@ -334,9 +336,40 @@ export function SalaryPage() {
     }
   }
 
-  const handleDeletePayroll = async (id: string) => {
+  const handleDeletePayroll = async (p: PayrollRecord) => {
     try {
-      await deletePayrollRecord(id)
+      await deletePayrollRecord(p.id)
+      
+      const allExpenses = await getExpenses()
+      const relatedExpense = allExpenses.find(e => 
+        e.category === "Payroll" && 
+        e.vendor === p.employeeName &&
+        e.description.includes(p.monthYear)
+      )
+      
+      if (relatedExpense) {
+        if (relatedExpense.paymentMethod === 'Cash') {
+          await addCashTransaction({
+            date: new Date(),
+            description: `Refund for Deleted Salary: ${relatedExpense.description}`,
+            amount: relatedExpense.amount,
+            type: 'cash_in',
+            reference: `REFUND-EXP-${relatedExpense.id.slice(-6).toUpperCase()}`,
+            createdBy: user?.uid ?? 'system'
+          })
+        } else if (relatedExpense.bankAccountId) {
+          await addBankTransaction(relatedExpense.bankAccountId, {
+            date: new Date(),
+            description: `Refund for Deleted Salary: ${relatedExpense.description}`,
+            credit: relatedExpense.amount,
+            debit: 0,
+            reference: `REFUND-EXP-${relatedExpense.id.slice(-6).toUpperCase()}`,
+            createdBy: user?.uid ?? 'system'
+          })
+        }
+        await deleteExpense(relatedExpense.id)
+      }
+      
       toast.success("Payroll record deleted")
       fetchMonthlyData(selectedMonth)
     } catch (e) {
@@ -551,6 +584,7 @@ export function SalaryPage() {
         <TabsList className="w-full flex-wrap justify-start h-auto">
           <TabsTrigger value="riders">Riders Payroll</TabsTrigger>
           <TabsTrigger value="execs">Executives Payroll</TabsTrigger>
+          <TabsTrigger value="secretaries">Secretaries Payroll</TabsTrigger>
           {canEditSettings && <TabsTrigger value="settings">Salary Settings</TabsTrigger>}
         </TabsList>
 
@@ -612,7 +646,7 @@ export function SalaryPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p.id)}>
+                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p)}>
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -688,7 +722,80 @@ export function SalaryPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p.id)}>
+                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="secretaries" className="mt-4">
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Secretary Name</TableHead>
+                  <TableHead>Base Pay</TableHead>
+                  <TableHead>Commission ({config?.secretaryComm}%)</TableHead>
+                  <TableHead>Adjs/Adv</TableHead>
+                  <TableHead>Total Pay</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {calculatedSecretaryPayrolls.map(p => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.employeeName}</TableCell>
+                    <TableCell>{formatNGN(p.basePay)}</TableCell>
+                    <TableCell>{formatNGN(p.commissionEarned)}</TableCell>
+                    <TableCell>
+                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatNGN(p.bonus)}</div> : null}
+                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatNGN(p.deduction)}</div> : null}
+                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatNGN(p.advancePaid)}</div> : null}
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      <div>{formatNGN(p.totalPay)}</div>
+                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatNGN(p.totalPay - p.advancePaid)}</div> : null}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={p.status === "paid" ? "success" : "secondary"}>
+                        {p.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {p.status !== "paid" ? (
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => handleAdjust(p)}>Adjust</Button>
+                          <Button size="sm" onClick={() => handleMarkAsPaid(p)}>
+                            <CheckCircle2 className="h-4 w-4 mr-1" /> Pay
+                          </Button>
+                        </div>
+                      ) : (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 h-8 w-8">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Payroll Record?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this paid payroll record? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p)}>
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
