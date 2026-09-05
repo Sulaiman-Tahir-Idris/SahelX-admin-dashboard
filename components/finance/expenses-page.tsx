@@ -297,7 +297,7 @@ export function ExpensesPage() {
   const topDepartment = deptBreakdown.length > 0 ? deptBreakdown[0].department : 'N/A'
 
   return (
-    <div className="space-y-6 overflow-hidden">
+    <div className="space-y-6 min-w-0">
       <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-bold">Expenses</h1>
@@ -395,7 +395,7 @@ export function ExpensesPage() {
         </div>
 
         <TabsContent value="all" className="space-y-4">
-          <Card className="overflow-hidden">
+          <Card className="overflow-x-auto">
             <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -523,7 +523,7 @@ export function ExpensesPage() {
         </TabsContent>
 
         <TabsContent value="by-category" className="space-y-4">
-          <Card className="overflow-hidden">
+          <Card className="overflow-x-auto">
             <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -680,8 +680,10 @@ export function ExpensesPage() {
               )} />
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button type="submit">{dialogMode === 'add' ? 'Submit Expense' : 'Save Changes'}</Button>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={form.formState.isSubmitting}>Cancel</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? "Submitting..." : (dialogMode === 'add' ? 'Submit Expense' : 'Save Changes')}
+                </Button>
               </DialogFooter>
             </form>
           </Form>

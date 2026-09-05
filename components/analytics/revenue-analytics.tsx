@@ -49,7 +49,7 @@ export function RevenueAnalytics() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${revenueStats.totalRevenue.toLocaleString()}</div>
+            <div className="text-lg font-medium">${revenueStats.totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">+{revenueStats.monthlyGrowth}% from last month</p>
           </CardContent>
         </Card>
@@ -60,7 +60,7 @@ export function RevenueAnalytics() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${revenueStats.avgOrderValue}</div>
+            <div className="text-lg font-medium">${revenueStats.avgOrderValue}</div>
             <p className="text-xs text-muted-foreground">+$2.30 from last month</p>
           </CardContent>
         </Card>
@@ -71,7 +71,7 @@ export function RevenueAnalytics() {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${revenueStats.monthlyTarget.toLocaleString()}</div>
+            <div className="text-lg font-medium">${revenueStats.monthlyTarget.toLocaleString()}</div>
             <Progress value={revenueStats.completedTarget} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">{revenueStats.completedTarget}% completed</p>
           </CardContent>
@@ -83,7 +83,7 @@ export function RevenueAnalytics() {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">+{revenueStats.monthlyGrowth}%</div>
+            <div className="text-lg font-medium text-green-600">+{revenueStats.monthlyGrowth}%</div>
             <p className="text-xs text-muted-foreground">Month over month</p>
           </CardContent>
         </Card>

@@ -161,7 +161,7 @@ export function CashBookPage() {
   if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>
 
   return (
-    <div className="space-y-6 overflow-hidden">
+    <div className="space-y-6 min-w-0">
       <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Cash Book</h1>

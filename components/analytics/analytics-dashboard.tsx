@@ -147,7 +147,7 @@ export function AnalyticsDashboard() {
               <CardTitle>Total Customers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">1,247</div>
+              <div className="text-lg font-medium">1,247</div>
               <p className="text-sm text-muted-foreground">+12% from last month</p>
             </CardContent>
           </Card>
@@ -156,7 +156,7 @@ export function AnalyticsDashboard() {
               <CardTitle>Active Customers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">892</div>
+              <div className="text-lg font-medium">892</div>
               <p className="text-sm text-muted-foreground">71.5% of total</p>
             </CardContent>
           </Card>
@@ -165,7 +165,7 @@ export function AnalyticsDashboard() {
               <CardTitle>Avg. Orders per Customer</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">3.2</div>
+              <div className="text-lg font-medium">3.2</div>
               <p className="text-sm text-muted-foreground">+0.3 from last month</p>
             </CardContent>
           </Card>

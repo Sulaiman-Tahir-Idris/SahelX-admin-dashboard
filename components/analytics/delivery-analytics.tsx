@@ -41,7 +41,7 @@ export function DeliveryAnalytics() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{deliveryStats.total.toLocaleString()}</div>
+            <div className="text-lg font-medium">{deliveryStats.total.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">+12% from last month</p>
           </CardContent>
         </Card>
@@ -52,7 +52,7 @@ export function DeliveryAnalytics() {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{deliveryStats.completed}</div>
+            <div className="text-lg font-medium text-green-600">{deliveryStats.completed}</div>
             <p className="text-xs text-muted-foreground">
               {((deliveryStats.completed / deliveryStats.total) * 100).toFixed(1)}% success rate
             </p>
@@ -65,7 +65,7 @@ export function DeliveryAnalytics() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{deliveryStats.avgDeliveryTime} min</div>
+            <div className="text-lg font-medium">{deliveryStats.avgDeliveryTime} min</div>
             <p className="text-xs text-muted-foreground">-3 min from last week</p>
           </CardContent>
         </Card>
@@ -76,7 +76,7 @@ export function DeliveryAnalytics() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{deliveryStats.onTimeRate}%</div>
+            <div className="text-lg font-medium">{deliveryStats.onTimeRate}%</div>
             <Progress value={deliveryStats.onTimeRate} className="mt-2" />
           </CardContent>
         </Card>
@@ -168,11 +168,11 @@ export function DeliveryAnalytics() {
                   <h4 className="text-sm font-medium mb-2">This Week vs Last Week</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-green-600">+12%</p>
+                      <p className="text-lg font-medium text-green-600">+12%</p>
                       <p className="text-sm text-muted-foreground">Total deliveries</p>
                     </div>
                     <div className="p-4 border rounded-lg">
-                      <p className="text-2xl font-bold text-blue-600">+5%</p>
+                      <p className="text-lg font-medium text-blue-600">+5%</p>
                       <p className="text-sm text-muted-foreground">Success rate</p>
                     </div>
                   </div>

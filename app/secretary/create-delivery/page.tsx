@@ -38,6 +38,7 @@ import {
   Truck,
   Building2,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-utils";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -52,6 +53,7 @@ const packageTypeOptions = ["Documents", "Electronics", "Clothing", "Others"];
 /* ---------------- PAGE ---------------- */
 
 export default function CreateDeliveryPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
   /* ---------- SINGLE ---------- */
@@ -146,6 +148,7 @@ export default function CreateDeliveryPage() {
         trackingId: null,
         customerId: singleCustomer,
         courierId: (singleCourierId && singleCourierId !== "none") ? singleCourierId : null,
+        createdBy: user?.uid || "secretary",
         pickupLocation: {
           address: singlePickupAddress,
           phone: singlePickupPhone,
@@ -272,6 +275,7 @@ export default function CreateDeliveryPage() {
           trackingId: null,
           customerId: bulkCustomer,
           courierId: (bulkCourierId && bulkCourierId !== "none") ? bulkCourierId : null,
+          createdBy: user?.uid || "secretary",
           pickupLocation: {
             address: bulkPickupAddress,
             phone: bulkPickupPhone,
@@ -676,7 +680,7 @@ export default function CreateDeliveryPage() {
                       </div>
                       <div className="flex justify-between items-center pt-2">
                         <span className="text-lg font-bold">Total Cost</span>
-                        <span className="text-2xl font-black text-primary">
+                        <span className="text-xl font-bold text-primary">
                           ₦{(Number(singleFee) || 0).toLocaleString()}
                         </span>
                       </div>
@@ -779,6 +783,43 @@ export default function CreateDeliveryPage() {
                             {bankAccounts.map((b) => (
                               <SelectItem key={b.id} value={b.id ?? ""}>
                                 {b.bankName} - {b.accountName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    {/* Add Package Type and Size here */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed">
+                      <div className="space-y-2">
+                        <Label>Package Type</Label>
+                        <Select
+                          value={bulkPackageType}
+                          onValueChange={setBulkPackageType}
+                        >
+                          <SelectTrigger className="h-11 rounded-xl">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {packageTypeOptions.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Package Size</Label>
+                        <Select value={bulkSize} onValueChange={setBulkSize}>
+                          <SelectTrigger className="h-11 rounded-xl">
+                            <SelectValue placeholder="Select size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sizeOptions.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -911,7 +952,7 @@ export default function CreateDeliveryPage() {
                       <div className="space-y-1">
                         <div className="flex justify-between items-center pt-2">
                           <span className="text-lg font-bold">Grand Total</span>
-                          <span className="text-2xl font-black text-primary">
+                          <span className="text-xl font-bold text-primary">
                             ₦
                             {(
                               bulkFees.reduce((sum, fee) => sum + (Number(fee) || 0), 0)

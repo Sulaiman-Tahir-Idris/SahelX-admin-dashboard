@@ -22,6 +22,10 @@ import { useRole } from "@/lib/hooks/use-role"
 import { auth } from "@/lib/firebase/config"
 import { signOut } from "firebase/auth"
 
+import { useNotifications } from "@/lib/hooks/use-notifications"
+import { doc, onSnapshot, Timestamp } from "firebase/firestore"
+import { db } from "@/lib/firebase/config"
+
 type NavItem = { title: string; url: string; icon: any; section: string }
 
 const allNavItems: NavItem[] = [
@@ -72,6 +76,8 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
   return items
 }
 
+
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const router = useRouter()
@@ -79,6 +85,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const role = useRole() || undefined
   const items = filterNavByRole(allNavItems, role)
+
+  const [lastSeen, setLastSeen] = React.useState<Timestamp | null>(null)
+
+  // Load lastSeenMessageAt from Firestore
+  React.useEffect(() => {
+    if (!user?.userId) return
+    const collection = role?.toLowerCase() === "secretary" ? "Secretary" : "Admin"
+    const unsub = onSnapshot(doc(db, collection, user.userId), (snap) => {
+      setLastSeen(snap.data()?.lastSeenMessageAt ?? null)
+    })
+    return () => unsub()
+  }, [user?.userId, role])
+
+  // Register FCM + show toasts + track unread count
+  const { unreadCount } = useNotifications({
+    userId: user?.userId ?? "",
+    userCollection: role?.toLowerCase() === "secretary" ? "Secretary" : "Admin",
+    lastSeenAt: lastSeen,
+    isChatOpen: pathname.includes("/messages"),
+  })
 
   const groups = [
     { label: "Overview",   items: items.filter(i => i.section === "overview") },
@@ -114,7 +140,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       tooltip={item.title}
                     >
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span className="flex-1">{item.title}</span>
+                      {item.title === "Messages" && unreadCount > 0 && (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </div>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )

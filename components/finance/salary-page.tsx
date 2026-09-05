@@ -245,7 +245,13 @@ export function SalaryPage() {
     if (!config) return []
 
     return secretaries.map(sec => {
-      const commission = (totalDeliveryFees * config.secretaryComm) / 100
+      // Find manual deliveries created by this specific secretary
+      const secDeliveries = deliveries.filter(
+        d => d.type === "manual" && d.createdBy === sec.id
+      )
+      
+      const secDeliveryTotal = secDeliveries.reduce((acc, d) => acc + (Number(d.cost) || 0), 0)
+      const commission = (secDeliveryTotal * config.secretaryComm) / 100
 
       const existing = payrolls.find(p => p.employeeId === sec.id)
       const b = existing?.bonus || 0
@@ -276,7 +282,7 @@ export function SalaryPage() {
         updatedAt: existing?.updatedAt
       }
     })
-  }, [secretaries, totalDeliveryFees, config, payrolls, selectedMonth])
+  }, [secretaries, deliveries, config, payrolls, selectedMonth])
 
   const allPayrolls = [...calculatedExecPayrolls, ...calculatedSecretaryPayrolls, ...calculatedRiderPayrolls]
   const grandTotal = allPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
@@ -555,7 +561,7 @@ export function SalaryPage() {
             <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatNGN(grandTotal)}</div>
+            <div className="text-lg font-medium text-red-600">{formatNGN(grandTotal)}</div>
           </CardContent>
         </Card>
         <Card className="overflow-hidden">
@@ -564,7 +570,7 @@ export function SalaryPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNGN(riderTotal)}</div>
+            <div className="text-lg font-medium">{formatNGN(riderTotal)}</div>
             <p className="text-xs text-muted-foreground mt-1">Based on {totalDeliveryFees > 0 ? formatNGN(totalDeliveryFees) : "0"} delivery fees</p>
           </CardContent>
         </Card>
@@ -574,7 +580,7 @@ export function SalaryPage() {
             <ShieldAlert className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNGN(execTotal)}</div>
+            <div className="text-lg font-medium">{formatNGN(execTotal)}</div>
             <p className="text-xs text-muted-foreground mt-1">Based on {totalRevenue > 0 ? formatNGN(totalRevenue) : "0"} total company revenue</p>
           </CardContent>
         </Card>
@@ -662,7 +668,7 @@ export function SalaryPage() {
         </TabsContent>
 
         <TabsContent value="execs" className="mt-4">
-          <Card className="overflow-hidden">
+          <Card className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -738,7 +744,7 @@ export function SalaryPage() {
         </TabsContent>
 
         <TabsContent value="secretaries" className="mt-4">
-          <Card className="overflow-hidden">
+          <Card className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -813,7 +819,7 @@ export function SalaryPage() {
         {canEditSettings && draftConfig && (
           <TabsContent value="settings" className="mt-4">
             <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-              <Card className="overflow-hidden">
+              <Card className="overflow-x-auto">
                 <CardHeader>
                   <CardTitle>Rider Settings</CardTitle>
                 </CardHeader>
@@ -837,7 +843,7 @@ export function SalaryPage() {
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden">
+              <Card className="overflow-x-auto">
                 <CardHeader>
                   <CardTitle>Secretary Settings</CardTitle>
                 </CardHeader>
@@ -861,7 +867,7 @@ export function SalaryPage() {
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden">
+              <Card className="overflow-x-auto">
                 <CardHeader>
                   <CardTitle>CEO Settings</CardTitle>
                 </CardHeader>
@@ -885,7 +891,7 @@ export function SalaryPage() {
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden">
+              <Card className="overflow-x-auto">
                 <CardHeader>
                   <CardTitle>CFO Settings</CardTitle>
                 </CardHeader>

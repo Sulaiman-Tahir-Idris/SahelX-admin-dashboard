@@ -113,11 +113,27 @@ export function BankAccountsPage() {
     },
   })
 
-  const loadAccounts = () => {
+  const [accountBalances, setAccountBalances] = useState<Record<string, number>>({})
+
+  const loadAccounts = async () => {
     setLoading(true)
-    getBankAccounts()
-      .then(setAccounts)
-      .finally(() => setLoading(false))
+    try {
+      const accs = await getBankAccounts()
+      setAccounts(accs)
+      // Pre-load current balances for all accounts
+      const balanceMap: Record<string, number> = {}
+      await Promise.all(accs.map(async (acc) => {
+        try {
+          const txns = await getBankTransactions(acc.id)
+          balanceMap[acc.id] = calcBankBalance(acc.openingBalance, txns)
+        } catch {
+          balanceMap[acc.id] = Number(acc.openingBalance) || 0
+        }
+      }))
+      setAccountBalances(balanceMap)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -128,7 +144,14 @@ export function BankAccountsPage() {
     setSelectedAccount(account)
     setTxnLoading(true)
     getBankTransactions(account.id)
-      .then(setTransactions)
+      .then(txns => {
+        setTransactions(txns)
+        // Update balance for this account in the map
+        setAccountBalances(prev => ({
+          ...prev,
+          [account.id]: calcBankBalance(account.openingBalance, txns)
+        }))
+      })
       .finally(() => setTxnLoading(false))
   }
 
@@ -245,7 +268,7 @@ export function BankAccountsPage() {
   if (loading) return <div className="space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>
 
   return (
-    <div className="space-y-6 overflow-hidden">
+    <div className="space-y-6 min-w-0">
       <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Bank Accounts</h1>
@@ -304,8 +327,18 @@ export function BankAccountsPage() {
             <CardContent>
               <p className="text-xs text-muted-foreground">Account No.</p>
               <p className="font-mono text-sm">{account.accountNumber}</p>
-              <p className="text-xs text-muted-foreground mt-2">Opening Balance</p>
-              <p className="text-xl font-bold">{formatNGN(account.openingBalance)}</p>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Opening Balance</p>
+                  <p className="text-sm font-medium">{formatNGN(Number(account.openingBalance) || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Current Balance</p>
+                  <p className={`text-sm font-semibold ${(accountBalances[account.id] ?? 0) < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {formatNGN((accountBalances[account.id] ?? Number(account.openingBalance)) || 0)}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}

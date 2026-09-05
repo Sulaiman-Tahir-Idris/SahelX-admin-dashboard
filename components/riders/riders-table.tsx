@@ -149,7 +149,7 @@ export function RidersTable() {
           .filter(
             (d: Delivery) =>
               d.courierId &&
-              !["completed", "cancelled", "received", "recieved"].includes(
+              !["completed", "cancelled", "received", "recieved", "delivered"].includes(
                 d.status?.toLowerCase() || "",
               ),
           )

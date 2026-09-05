@@ -129,7 +129,7 @@ export default function AssetsPage() {
           </Button>
         </div>
 
-        <div className="rounded-md border bg-card">
+        <div className="rounded-md border bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -190,7 +190,7 @@ export default function AssetsPage() {
           <DialogHeader>
             <DialogTitle>{editingAsset ? "Edit Asset" : "Add New Asset"}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
               <Label>Asset Name</Label>
               <Input value={formData.name || ""} onChange={e => setFormData({ ...formData, name: e.target.value })} />
@@ -215,11 +215,11 @@ export default function AssetsPage() {
               <Label>Location</Label>
               <Input value={formData.location || ""} onChange={e => setFormData({ ...formData, location: e.target.value })} />
             </div>
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>Description</Label>
               <Textarea value={formData.description || ""} onChange={e => setFormData({ ...formData, description: e.target.value })} />
             </div>
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>Additional Notes</Label>
               <Textarea value={formData.notes || ""} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
             </div>

@@ -150,7 +150,7 @@ export default function InvestorPortfolioPage() {
                     <Banknote className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
+                    <div className="text-lg font-medium">
                       ₦{(investor?.totalInvested ?? 0).toLocaleString()}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">Capital invested</p>
@@ -165,7 +165,7 @@ export default function InvestorPortfolioPage() {
                     <Bike className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{investor?.numberOfBikes ?? 0}</div>
+                    <div className="text-lg font-medium">{investor?.numberOfBikes ?? 0}</div>
                     <p className="text-xs text-muted-foreground mt-1">Active registered bikes</p>
                   </CardContent>
                 </Card>
@@ -178,7 +178,7 @@ export default function InvestorPortfolioPage() {
                     <ListOrdered className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
+                    <div className="text-lg font-medium">
                       ₦{payouts.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">Total revenue received</p>
@@ -349,7 +349,7 @@ export default function InvestorPortfolioPage() {
           </div>
 
           <Card className="shadow-sm">
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               {isLoading ? (
                 <div className="p-8 text-center text-muted-foreground">Loading payouts...</div>
               ) : payouts.length === 0 ? (

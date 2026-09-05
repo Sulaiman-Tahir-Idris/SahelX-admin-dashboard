@@ -160,7 +160,7 @@ export default function InvestorDashboardPage() {
                       <Icon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">
+                      <div className="text-lg font-medium">
                         {data[key as keyof typeof data].toLocaleString()}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{sublabel}</p>

@@ -85,7 +85,8 @@ export function buildRunningBalance(
 
 // ─── Bank Ledger ──────────────────────────────────────────────────────────────
 export function calcBankBalance(openingBalance: number, txns: BankTransaction[]): number {
-  return txns.reduce((bal, txn) => bal + txn.credit - txn.debit, openingBalance)
+  const opening = Number(openingBalance) || 0
+  return txns.reduce((bal, txn) => bal + (Number(txn.credit) || 0) - (Number(txn.debit) || 0), opening)
 }
 
 export function buildBankRunningBalance(
@@ -93,9 +94,9 @@ export function buildBankRunningBalance(
   txns: BankTransaction[]
 ): BankTransactionWithBalance[] {
   const sorted = [...txns].sort((a, b) => a.date.getTime() - b.date.getTime())
-  let bal = openingBalance
+  let bal = Number(openingBalance) || 0
   return sorted.map((txn) => {
-    bal = bal + txn.credit - txn.debit
+    bal = bal + (Number(txn.credit) || 0) - (Number(txn.debit) || 0)
     return { ...txn, runningBalance: bal }
   })
 }

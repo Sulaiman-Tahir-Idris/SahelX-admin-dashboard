@@ -91,7 +91,7 @@ export function RiderAnalytics() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{riderStats.totalRiders}</div>
+            <div className="text-lg font-medium">{riderStats.totalRiders}</div>
             <p className="text-xs text-muted-foreground">{riderStats.activeRiders} currently active</p>
           </CardContent>
         </Card>
@@ -102,7 +102,7 @@ export function RiderAnalytics() {
             <Star className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{riderStats.avgRating}/5</div>
+            <div className="text-lg font-medium">{riderStats.avgRating}/5</div>
             <p className="text-xs text-muted-foreground">+0.2 from last month</p>
           </CardContent>
         </Card>
@@ -113,7 +113,7 @@ export function RiderAnalytics() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{riderStats.avgDeliveryTime} min</div>
+            <div className="text-lg font-medium">{riderStats.avgDeliveryTime} min</div>
             <p className="text-xs text-muted-foreground">-2 min improvement</p>
           </CardContent>
         </Card>
@@ -229,7 +229,7 @@ export function RiderAnalytics() {
                       <p className="text-sm font-medium">{metric.metric}</p>
                       <Badge variant={metric.change.startsWith("+") ? "default" : "secondary"}>{metric.change}</Badge>
                     </div>
-                    <p className="text-2xl font-bold mt-2">{metric.value}</p>
+                    <p className="text-lg font-medium mt-2">{metric.value}</p>
                   </div>
                 ))}
               </div>

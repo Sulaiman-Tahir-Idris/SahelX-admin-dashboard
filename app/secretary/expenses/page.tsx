@@ -4,7 +4,7 @@ import { ExpensesPage } from "@/components/finance/expenses-page"
 export default function SecretaryExpenses() {
   return (
     <SecretaryDashboardLayout>
-      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <div className="w-full min-w-0">
         <ExpensesPage />
       </div>
     </SecretaryDashboardLayout>

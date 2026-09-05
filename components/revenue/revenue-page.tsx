@@ -404,7 +404,7 @@ export function RevenuePage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <div className="text-lg font-medium">{formatCurrency(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1">All-time (filtered)</p>
           </CardContent>
         </Card>
@@ -414,7 +414,7 @@ export function RevenuePage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(currentMonthRevenue)}</div>
+            <div className="text-lg font-medium">{formatCurrency(currentMonthRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center">
               Current month
             </p>
@@ -426,7 +426,7 @@ export function RevenuePage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(thisWeekTotal)}</div>
+            <div className="text-lg font-medium">{formatCurrency(thisWeekTotal)}</div>
             <p className={`text-xs mt-1 ${weeklyGrowth >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
               {weeklyGrowth > 0 ? "+" : ""}{weeklyGrowth.toFixed(1)}% from last week
             </p>
@@ -438,7 +438,7 @@ export function RevenuePage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgOrderValue)}</div>
+            <div className="text-lg font-medium">{formatCurrency(avgOrderValue)}</div>
             <p className="text-xs text-muted-foreground mt-1">Per delivery</p>
           </CardContent>
         </Card>
@@ -596,7 +596,7 @@ export function RevenuePage() {
               <CardDescription>A list of recent settled payments.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -667,7 +667,7 @@ export function RevenuePage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNGN(manualTotalAmount)}</div>
+                <div className="text-lg font-medium">{formatNGN(manualTotalAmount)}</div>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
@@ -676,7 +676,7 @@ export function RevenuePage() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNGN(manualThisMonth)}</div>
+                <div className="text-lg font-medium">{formatNGN(manualThisMonth)}</div>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
@@ -685,7 +685,7 @@ export function RevenuePage() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{manualTotalCount}</div>
+                <div className="text-lg font-medium">{manualTotalCount}</div>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
@@ -694,7 +694,7 @@ export function RevenuePage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNGN(manualAvgPerDelivery)}</div>
+                <div className="text-lg font-medium">{formatNGN(manualAvgPerDelivery)}</div>
               </CardContent>
             </Card>
           </div>
@@ -725,7 +725,7 @@ export function RevenuePage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

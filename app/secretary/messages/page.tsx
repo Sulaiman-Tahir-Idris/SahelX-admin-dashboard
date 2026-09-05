@@ -9,6 +9,7 @@ import { useTypingIndicator } from "@/lib/chat/use-typing-indicator";
 import { toggleMessageReaction } from "@/lib/chat/toggle-message-reaction";
 import { db } from "@/lib/firebase/config";
 import { collection, getDocs } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -29,7 +30,8 @@ interface ChatUser {
 export default function SecretaryMessagesPage() {
   const { user } = useSecretaryAuth();
   const router = useRouter();
-  
+  const { toast } = useToast();
+
   const [activeChatId, setActiveChatId] = useState<string>("secretaries_group");
   const [activeChatName, setActiveChatName] = useState<string>("Secretaries Group");
   const [activeChatIsGroup, setActiveChatIsGroup] = useState<boolean>(true);
@@ -69,7 +71,14 @@ export default function SecretaryMessagesPage() {
           }
         });
 
-        setUsers(fetchedUsers);
+        // Deduplicate by id in case a user exists in both collections
+        const seen = new Set<string>()
+        const uniqueUsers = fetchedUsers.filter(u => {
+          if (seen.has(u.id)) return false
+          seen.add(u.id)
+          return true
+        })
+        setUsers(uniqueUsers);
       } catch (err) {
         console.error("Failed to fetch users", err);
       }
@@ -82,8 +91,8 @@ export default function SecretaryMessagesPage() {
   // Mark messages as seen when entering a chat
   useEffect(() => {
     if (!user?.userId) return;
-    markMessagesAsSeen(user.userId);
-  }, [user?.userId, activeChatId]);
+    markMessagesAsSeen(user.userId, user.role);
+  }, [user?.userId, user?.role, activeChatId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -206,6 +215,25 @@ export default function SecretaryMessagesPage() {
             <p className="text-xs text-muted-foreground">
               {activeChatIsGroup ? "Internal communication" : "Direct Message"}
             </p>
+          </div>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs hidden md:flex items-center gap-2"
+              onClick={async () => {
+                const { registerFcmToken } = await import('@/lib/firebase/fcm');
+                const token = await registerFcmToken(user!.userId, 'Secretary');
+                if (token) {
+                  toast({ title: "Notifications enabled!", description: "You'll receive OS notifications when you're away." });
+                } else {
+                  toast({ title: "Permission denied", description: "Allow notifications in your browser settings.", variant: "destructive" });
+                }
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+              Enable Background Notifications
+            </Button>
           </div>
         </div>
 

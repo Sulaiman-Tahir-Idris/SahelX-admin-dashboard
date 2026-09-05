@@ -67,7 +67,7 @@ export function StatsCard({
               {title}
             </p>
             <div className="flex items-baseline gap-2">
-              <h2 className="text-3xl font-bold tracking-tight">{value}</h2>
+              <h2 className="text-xl font-medium tracking-tight">{value}</h2>
               {trend && (
                 <span
                   className={cn(

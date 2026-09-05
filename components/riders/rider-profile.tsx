@@ -213,7 +213,7 @@ export function RiderProfile({ riderId }: RiderProfileProps) {
             <div className="grid grid-cols-3 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold">
+                  <div className="text-xl font-medium">
                     {rider.stats?.totalDeliveries || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -223,7 +223,7 @@ export function RiderProfile({ riderId }: RiderProfileProps) {
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold">
+                  <div className="text-xl font-medium">
                     {rider.stats?.completionRate || 0}%
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -233,7 +233,7 @@ export function RiderProfile({ riderId }: RiderProfileProps) {
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold">
+                  <div className="text-xl font-medium">
                     {typeof (rider.stats?.avgRating || 0) === "number"
                       ? (rider.stats?.avgRating || 0).toFixed(1)
                       : rider.stats?.avgRating || 0}

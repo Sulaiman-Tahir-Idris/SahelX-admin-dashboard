@@ -6,17 +6,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { getAllPayments } from '@/lib/firebase/payments'
-import { getRevenueEntries, getExpenses, getCashTransactions } from '@/lib/firebase/finance'
+import { getRevenueEntries, getExpenses, getCashTransactions, getBankAccounts, getBankTransactions } from '@/lib/firebase/finance'
 import type { Payment } from '@/lib/firebase/payments'
-import type { RevenueEntry, Expense, CashTransaction, Department } from '@/lib/finance/types'
-import { groupByMonth, formatNGN, calcGrowthPct, calcNetProfit, calcProfitMargin } from '@/lib/finance/calculations'
+import type { RevenueEntry, Expense, CashTransaction, Department, BankAccount, BankTransaction } from '@/lib/finance/types'
+import { groupByMonth, formatNGN, calcGrowthPct, calcNetProfit, calcProfitMargin, calcBankBalance } from '@/lib/finance/calculations'
 import { DEPARTMENT_COLORS } from '@/lib/finance/types'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export function FinanceAnalyticsPage() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [revenueEntries, setRevenueEntries] = useState<RevenueEntry[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [cashTxns, setCashTxns] = useState<CashTransaction[]>([])
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
+  const [selectedBankId, setSelectedBankId] = useState<string>('all')
+  const [bankTxns, setBankTxns] = useState<BankTransaction[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -25,13 +29,23 @@ export function FinanceAnalyticsPage() {
       getRevenueEntries(),
       getExpenses(),
       getCashTransactions(),
-    ]).then(([p, r, e, c]) => {
+      getBankAccounts()
+    ]).then(([p, r, e, c, b]) => {
       setPayments(p)
       setRevenueEntries(r)
       setExpenses(e)
       setCashTxns(c)
+      setBankAccounts(b)
     }).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (selectedBankId && selectedBankId !== 'all') {
+      getBankTransactions(selectedBankId).then(setBankTxns)
+    } else {
+      setBankTxns([])
+    }
+  }, [selectedBankId])
 
   const allRevenue = useMemo(() => {
     return [
@@ -45,6 +59,27 @@ export function FinanceAnalyticsPage() {
   }, [payments, revenueEntries])
 
   const approvedExpenses = useMemo(() => expenses.filter(e => e.status !== 'rejected'), [expenses])
+
+  const bankChartData = useMemo(() => {
+    if (!selectedBankId || selectedBankId === 'all') return []
+    const selectedBank = bankAccounts.find(b => b.id === selectedBankId)
+    if (!selectedBank) return []
+    
+    const txns = [...bankTxns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    const monthly: Record<string, { month: string, balance: number, in: number, out: number }> = {}
+    
+    let bal = Number(selectedBank.openingBalance) || 0
+    txns.forEach(txn => {
+      bal = bal + (Number(txn.credit) || 0) - (Number(txn.debit) || 0)
+      const d = new Date(txn.date)
+      const m = d.toLocaleString("en-NG", { month: "short", year: "2-digit" })
+      if (!monthly[m]) monthly[m] = { month: m, balance: bal, in: 0, out: 0 }
+      monthly[m].balance = bal
+      monthly[m].in += (Number(txn.credit) || 0)
+      monthly[m].out += (Number(txn.debit) || 0)
+    })
+    return Object.values(monthly).slice(-12)
+  }, [bankTxns, selectedBankId, bankAccounts])
 
   if (loading) {
     return (
@@ -117,6 +152,12 @@ export function FinanceAnalyticsPage() {
   }, {} as Record<string, {month: string, cashIn: number, cashOut: number}>)
   const cashFlowData = Object.values(cashFlowMonthly).slice(-6)
 
+  const chartConfigBank = {
+    balance: { label: 'Balance', color: 'hsl(var(--primary))' },
+    in: { label: 'In', color: 'hsl(160 84% 39%)' },
+    out: { label: 'Out', color: 'hsl(0 65% 52%)' }
+  } satisfies ChartConfig
+
   return (
     <div className="space-y-6">
       <div>
@@ -128,28 +169,28 @@ export function FinanceAnalyticsPage() {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Revenue Growth</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{revGrowth > 0 ? '+' : ''}{revGrowth}%</div>
+            <div className="text-lg font-medium">{revGrowth > 0 ? '+' : ''}{revGrowth}%</div>
             <p className="text-xs text-muted-foreground mt-1">vs prior month</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Expense Growth</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{expGrowth > 0 ? '+' : ''}{expGrowth}%</div>
+            <div className="text-lg font-medium">{expGrowth > 0 ? '+' : ''}{expGrowth}%</div>
             <p className="text-xs text-muted-foreground mt-1">vs prior month</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Profit Margin</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{profitMargin}%</div>
+            <div className="text-lg font-medium">{profitMargin}%</div>
             <p className="text-xs text-muted-foreground mt-1">current month</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Avg Rev / Delivery</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNGN(avgRevPerDelivery)}</div>
+            <div className="text-lg font-medium">{formatNGN(avgRevPerDelivery)}</div>
             <p className="text-xs text-muted-foreground mt-1">all-time</p>
           </CardContent>
         </Card>
@@ -161,8 +202,58 @@ export function FinanceAnalyticsPage() {
           <TabsTrigger value="revenue">Revenue</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="cashflow">Cash Flow</TabsTrigger>
+          <TabsTrigger value="banks">Bank Accounts</TabsTrigger>
         </TabsList>
         
+        <TabsContent value="banks" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle>Bank Account Trends</CardTitle>
+                <CardDescription>Select an account to view its balance history</CardDescription>
+              </div>
+              <Select value={selectedBankId} onValueChange={setSelectedBankId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select a bank" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">-- Select a Bank --</SelectItem>
+                  {bankAccounts.map(b => (
+                    <SelectItem key={b.id} value={b.id}>{b.bankName} - {b.accountName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              {selectedBankId === 'all' ? (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground border rounded-lg bg-muted/20">
+                  Please select a bank account to view its analytics.
+                </div>
+              ) : bankChartData.length === 0 ? (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground border rounded-lg bg-muted/20">
+                  No transaction history found for this account.
+                </div>
+              ) : (
+                <ChartContainer config={chartConfigBank} className="h-[350px] w-full">
+                  <AreaChart data={bankChartData}>
+                    <defs>
+                      <linearGradient id="fillBalance" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-balance)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="var(--color-balance)" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={v => `₦${v/1000}k`} />
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                    <Area type="monotone" dataKey="balance" stroke="var(--color-balance)" fill="url(#fillBalance)" strokeWidth={2} />
+                  </AreaChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             <Card>
