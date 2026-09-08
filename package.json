@@ -69,6 +69,7 @@
     "xlsx-js-style": "^1.2.0",
     "zod": "latest"
   },
+  "pnpm": { "onlyBuiltDependencies": ["@firebase/util", "core-js", "protobufjs", "sharp"] }, 
   "devDependencies": {
     "@types/file-saver": "^2.0.7",
     "@types/node": "^22",

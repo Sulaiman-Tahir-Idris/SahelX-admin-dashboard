@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries";
+import { normalizeStatus, getStatusDisplay } from "@/lib/tracking-utils";
+import { MessageCircle } from "lucide-react";
 import { getRiders, type Rider } from "@/lib/firebase/riders";
 import { db } from "@/lib/firebase/config";
 import {
@@ -56,16 +58,7 @@ const DeliveriesByTag = () => {
   const [assignLoading, setAssignLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
 
-  const DELIVERY_STATUSES = [
-    "pending",
-    "assigned",
-    "picked_up",
-    "at_station",
-    "out_for_delivery",
-    "delivered",
-    "received",
-    "cancelled",
-  ];
+  const DELIVERY_STATUSES = ["pending", "picked_up", "in_transit", "delivered"];
 
   const PAYMENT_STATUSES = ["pending", "paid", "unpaid", "partially_paid"];
 

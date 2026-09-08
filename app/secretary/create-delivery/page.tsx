@@ -39,6 +39,8 @@ import {
   Building2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-utils";
+import { generateTrackingId } from "@/lib/tracking-utils";
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 
 /* ---------------- CONSTANTS ---------------- */
 
@@ -58,13 +60,15 @@ export default function CreateDeliveryPage() {
 
   /* ---------- SINGLE ---------- */
   const [singleCustomer, setSingleCustomer] = useState("");
-  const [singlePickupAddress, setSinglePickupAddress] = useState(
-    OFFICE_PICKUP.address,
-  );
-  const [singlePickupPhone, setSinglePickupPhone] = useState(
-    OFFICE_PICKUP.phone,
-  );
+  const [singlePickupAddress, setSinglePickupAddress] = useState(OFFICE_PICKUP.address);
+  const [singlePickupLat, setSinglePickupLat] = useState<number | null>(null);
+  const [singlePickupLng, setSinglePickupLng] = useState<number | null>(null);
+  
+  const [singlePickupPhone, setSinglePickupPhone] = useState(OFFICE_PICKUP.phone);
+  
   const [singleDropoffAddress, setSingleDropoffAddress] = useState("");
+  const [singleDropoffLat, setSingleDropoffLat] = useState<number | null>(null);
+  const [singleDropoffLng, setSingleDropoffLng] = useState<number | null>(null);
   const [singleReceiverPhone, setSingleReceiverPhone] = useState("");
   const [singlePackageType, setSinglePackageType] = useState("");
   const [singleSize, setSingleSize] = useState("");
@@ -74,11 +78,13 @@ export default function CreateDeliveryPage() {
 
   /* ---------- BULK ---------- */
   const [bulkCustomer, setBulkCustomer] = useState("");
-  const [bulkPickupAddress, setBulkPickupAddress] = useState(
-    OFFICE_PICKUP.address,
-  );
+  const [bulkPickupAddress, setBulkPickupAddress] = useState(OFFICE_PICKUP.address);
+  const [bulkPickupLat, setBulkPickupLat] = useState<number | null>(null);
+  const [bulkPickupLng, setBulkPickupLng] = useState<number | null>(null);
+  
   const [bulkPickupPhone, setBulkPickupPhone] = useState(OFFICE_PICKUP.phone);
-  const [bulkDropoffs, setBulkDropoffs] = useState<string[]>([""]);
+  
+  const [bulkDropoffs, setBulkDropoffs] = useState<{address: string; lat: number | null; lng: number | null}[]>([{address: "", lat: null, lng: null}]);
   const [bulkReceiverPhones, setBulkReceiverPhones] = useState<string[]>([""]);
   const [bulkPackageType, setBulkPackageType] = useState("");
   const [bulkSize, setBulkSize] = useState("");
@@ -110,7 +116,7 @@ export default function CreateDeliveryPage() {
   /* ---------------- HELPERS ---------------- */
 
   const addBulkDropoff = () => {
-    setBulkDropoffs([...bulkDropoffs, ""]);
+    setBulkDropoffs([...bulkDropoffs, {address: "", lat: null, lng: null}]);
     setBulkReceiverPhones([...bulkReceiverPhones, ""]);
     setBulkFees([...bulkFees, ""]);
   };
@@ -145,21 +151,21 @@ export default function CreateDeliveryPage() {
 
     try {
       const delivery = {
-        trackingId: null,
+        trackingId: generateTrackingId(),
         customerId: singleCustomer,
         courierId: (singleCourierId && singleCourierId !== "none") ? singleCourierId : null,
         createdBy: user?.uid || "secretary",
         pickupLocation: {
           address: singlePickupAddress,
           phone: singlePickupPhone,
-          lat: null,
-          lng: null,
+          lat: singlePickupLat,
+          lng: singlePickupLng,
         },
         pickupPhoneNumber: singlePickupPhone,
         dropoffLocation: {
           address: singleDropoffAddress,
-          lat: null,
-          lng: null,
+          lat: singleDropoffLat,
+          lng: singleDropoffLng,
         },
         receiverPhoneNumber: singleReceiverPhone,
         goodsType: singlePackageType,
@@ -270,20 +276,21 @@ export default function CreateDeliveryPage() {
     try {
       const tag = `BULK_sul_${Date.now()}`;
 
+      const batchTrackingId = generateTrackingId();
       for (let i = 0; i < bulkDropoffs.length; i++) {
         const delivery = {
-          trackingId: null,
+          trackingId: batchTrackingId,
           customerId: bulkCustomer,
           courierId: (bulkCourierId && bulkCourierId !== "none") ? bulkCourierId : null,
           createdBy: user?.uid || "secretary",
           pickupLocation: {
             address: bulkPickupAddress,
             phone: bulkPickupPhone,
-            lat: null,
-            lng: null,
+            lat: bulkPickupLat,
+            lng: bulkPickupLng,
           },
           pickupPhoneNumber: bulkPickupPhone,
-          dropoffLocation: { address: bulkDropoffs[i], lat: null, lng: null },
+          dropoffLocation: { address: bulkDropoffs[i].address, lat: bulkDropoffs[i].lat, lng: bulkDropoffs[i].lng },
           receiverPhoneNumber: bulkReceiverPhones[i],
           goodsType: bulkPackageType,
           goodsSize: bulkSize,
@@ -455,13 +462,14 @@ export default function CreateDeliveryPage() {
                         <Label htmlFor="single-pickup-address">
                           Pickup Address
                         </Label>
-                        <Input
-                          id="single-pickup-address"
-                          placeholder="e.g., 123 Business Way"
+                        <AddressAutocomplete
                           value={singlePickupAddress}
-                          onChange={(e) =>
-                            setSinglePickupAddress(e.target.value)
-                          }
+                          onChange={(data) => {
+                            setSinglePickupAddress(data.address);
+                            setSinglePickupLat(data.lat);
+                            setSinglePickupLng(data.lng);
+                          }}
+                          placeholder="e.g., 123 Business Way"
                           className="h-11 rounded-xl"
                         />
                       </div>
@@ -502,13 +510,14 @@ export default function CreateDeliveryPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="single-dropoff">Drop-off Address</Label>
-                        <Input
-                          id="single-dropoff"
-                          placeholder="Recipient's location"
+                        <AddressAutocomplete
                           value={singleDropoffAddress}
-                          onChange={(e) =>
-                            setSingleDropoffAddress(e.target.value)
-                          }
+                          onChange={(data) => {
+                            setSingleDropoffAddress(data.address);
+                            setSingleDropoffLat(data.lat);
+                            setSingleDropoffLng(data.lng);
+                          }}
+                          placeholder="Recipient's location"
                           className="h-11 rounded-xl"
                         />
                       </div>
@@ -730,10 +739,14 @@ export default function CreateDeliveryPage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Pickup Address</Label>
-                        <Input
-                          placeholder="Pickup location"
+                        <AddressAutocomplete
                           value={bulkPickupAddress}
-                          onChange={(e) => setBulkPickupAddress(e.target.value)}
+                          onChange={(data) => {
+                            setBulkPickupAddress(data.address);
+                            setBulkPickupLat(data.lat);
+                            setBulkPickupLng(data.lng);
+                          }}
+                          placeholder="Pickup location"
                           className="h-11 rounded-xl"
                         />
                       </div>
@@ -857,14 +870,13 @@ export default function CreateDeliveryPage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div className="space-y-2">
                                 <Label>Drop-off #{i + 1} Address</Label>
-                                <Input
-                                  value={bulkDropoffs[i]}
-                                  onChange={(e) => {
+                                <AddressAutocomplete
+                                  value={bulkDropoffs[i].address}
+                                  onChange={(data) => {
                                     const copy = [...bulkDropoffs];
-                                    copy[i] = e.target.value;
+                                    copy[i] = data;
                                     setBulkDropoffs(copy);
                                   }}
-                                  className="h-11 rounded-xl border-border"
                                   placeholder="Recipient's destination"
                                 />
                               </div>

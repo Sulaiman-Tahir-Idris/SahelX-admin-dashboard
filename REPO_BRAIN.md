@@ -141,3 +141,4 @@ SahelX-admin-dashboard/
 | 2026-09-04 | Antigravity | Updated Dashboard: Fixed rider delivery status bug, auto-approve & delete expenses with auto-refunds, cross-deleted salaries with linked expenses, added bank account edit/delete, split Secretaries payroll tab, added Investor Portfolio ROI line chart, and built Investor Settings Contacts module. |
 | 2026-09-04 | Antigravity | Added new Assets module (`app/admin/assets`) to track and manage company property. |
 | 2026-09-05 | Antigravity | Reduced stat card text size globally, fixed secretary commission & bank balance NaN issues, created Cloud Functions setup, added FCM web push notifications for chat with service worker and useFcmToken hook. Disabled Next.js 16 deprecated eslint config during build. |
+| 2026-09-08 | Antigravity | Unified tracking: SHX ID generation, 4 canonical statuses, Google Places Autocomplete geocoding for manual deliveries, WhatsApp share buttons. |

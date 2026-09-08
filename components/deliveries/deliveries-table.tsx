@@ -54,6 +54,8 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { StatsCard } from "../dashboard/stats-card";
+import { normalizeStatus, getStatusDisplay } from "@/lib/tracking-utils";
+import { MessageCircle } from "lucide-react";
 
 type User = {
   id: string;
@@ -89,16 +91,7 @@ const DeliveriesTable = () => {
   const [selectedCourierId, setSelectedCourierId] = useState<string>("");
   const [updateLoading, setUpdateLoading] = useState(false);
 
-  const DELIVERY_STATUSES = [
-    "pending",
-    "assigned",
-    "picked_up",
-    "at_station",
-    "out_for_delivery",
-    "delivered",
-    "received",
-    "cancelled",
-  ];
+  const DELIVERY_STATUSES = ["pending", "picked_up", "in_transit", "delivered"];
 
   const PAYMENT_STATUSES = ["pending", "paid", "unpaid", "partially_paid"];
 
@@ -278,7 +271,7 @@ const DeliveriesTable = () => {
     } else if (filter === "traditional") {
       result = result.filter((d: Delivery) => d.type === "traditional");
     } else if (filter === "pending") {
-      result = result.filter((d: Delivery) => d.status === "pending");
+      result = result.filter((d: Delivery) => normalizeStatus(d.status) === "pending");
     } else if (filter === "active") {
       const activeStatuses = [
         "assigned",
@@ -313,15 +306,13 @@ const DeliveriesTable = () => {
     (d: Delivery) => !d.courierId,
   ).length;
   const pendingCount = deliveries.filter(
-    (d: Delivery) => d.status === "pending",
+    (d: Delivery) => normalizeStatus(d.status) === "pending",
   ).length;
   const activeCount = deliveries.filter((d: Delivery) =>
-    ["assigned", "picked_up", "at_station", "out_for_delivery"].includes(
-      d.status || "",
-    ),
+    normalizeStatus(d.status) === "in_transit",
   ).length;
   const completedCount = deliveries.filter((d: Delivery) =>
-    ["delivered", "received"].includes(d.status || ""),
+    normalizeStatus(d.status) === "delivered",
   ).length;
 
   if (loading) return <p className="p-4">Loading deliveries...</p>;
@@ -505,18 +496,14 @@ const DeliveriesTable = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={cn(
-                        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize",
-                        d.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : d.status === "pending"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-blue-100 text-blue-800",
-                      )}
-                    >
-                      {d.status.replace(/_/g, " ")}
-                    </span>
+                    {(() => {
+                      const display = getStatusDisplay(normalizeStatus(d.status));
+                      return (
+                        <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize", display.color)}>
+                          {display.emoji} {display.label}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="font-semibold">
                     ₦{(d.cost || 0).toLocaleString()}
@@ -577,6 +564,25 @@ const DeliveriesTable = () => {
                         }}
                       >
                         Details
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-50 rounded-lg"
+                        onClick={() => {
+                          if (!d.trackingId) {
+                            toast({ title: "No tracking ID", variant: "destructive" });
+                            return;
+                          }
+                          const statusData = getStatusDisplay(normalizeStatus(d.status));
+                          const msg = `\uD83D\uDE9A *SahelX Logistics & Deliveries*\n\uD83D\uDCE6 Delivery Update\n\n*Tracking ID:* ${d.trackingId}\n*Status:* ${statusData.label} ${statusData.emoji}\n\n\uD83D\uDCCD *Pickup:* ${d.pickupLocation?.address || 'N/A'}\n\uD83C\uDFC1 *Drop-off:* ${d.dropoffLocation?.address || 'N/A'}\n\n\uD83D\uDCB0 *Delivery Fee:* NGN ${d.cost || 0} \u2014 ${d.paymentStatus === 'paid' ? 'Paid \u2705' : 'Payment Pending \u23F3'}\n\n\uD83D\uDD17 *Track your package:*\nhttps://sahelx.com.ng/tracking?id=${d.trackingId}\n\n\uD83D\uDCDE Support: info@sahelx.com.ng | +234 907 777 7880`;
+                          
+                          const waUrl = `https://wa.me/2349077777880?text=${encodeURIComponent(msg)}`;
+                          window.open(waUrl, '_blank');
+                        }}
+                        title="Share on WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
