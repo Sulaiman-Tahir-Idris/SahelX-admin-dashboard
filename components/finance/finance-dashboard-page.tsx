@@ -8,15 +8,19 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { StatsCard } from '@/components/dashboard/stats-card'
 import { getAllPayments } from '@/lib/firebase/payments'
 import { getRevenueEntries, getExpenses, getCashTransactions, getBankAccounts, getFinanceSettings } from '@/lib/firebase/finance'
-import { formatNGN, formatNGNCompact, groupByDay, groupByMonth, calcCashBalance, sumExpenses, startOfDay, startOfWeek, startOfMonth, sumInRange, calcGrowthPct, calcNetProfit, calcDepartmentBreakdown, calcBankBalance } from '@/lib/finance/calculations'
+import { groupByDay, groupByMonth, calcCashBalance, sumExpenses, startOfDay, startOfWeek, startOfMonth, sumInRange, calcGrowthPct, calcNetProfit, calcDepartmentBreakdown, calcBankBalance } from '@/lib/finance/calculations'
 import type { RevenueEntry, Expense, CashTransaction, BankAccount, FinanceSettings, Department } from '@/lib/finance/types'
 import { DEPARTMENT_COLORS } from '@/lib/finance/types'
 import type { Payment } from '@/lib/firebase/payments'
+
+import { useCurrency } from "@/components/providers/currency-provider"
+import { CurrencySwitcher } from "@/components/finance/currency-switcher"
 
 const sectionVariants = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' as const } } }
 const staggerContainer = { hidden: {}, show: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } } }
 
 export function FinanceDashboardPage() {
+  const { formatAmount, formatAmountCompact } = useCurrency()
   const [payments, setPayments] = useState<Payment[]>([])
   const [entries, setEntries] = useState<RevenueEntry[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -126,26 +130,29 @@ export function FinanceDashboardPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">Financial overview and key metrics</p>
         </div>
-        <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card shadow-card-sm text-sm font-medium text-muted-foreground shrink-0">
-          <Calendar className="h-4 w-4 text-primary" />
-          {todayLabel}
+        <div className="flex items-center gap-3">
+          <CurrencySwitcher />
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card shadow-card-sm text-sm font-medium text-muted-foreground shrink-0">
+            <Calendar className="h-4 w-4 text-primary" />
+            {todayLabel}
+          </div>
         </div>
       </motion.div>
 
       <motion.section variants={sectionVariants}>
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <StatsCard title="Today's Revenue" value={formatNGN(todayRevenue)} icon={TrendingUp} description="Since midnight" color="green" />
-          <StatsCard title="Weekly Revenue" value={formatNGN(weeklyRevenue)} icon={TrendingUp} description="This week" color="blue" />
-          <StatsCard title="Monthly Revenue" value={formatNGN(monthlyRevenue)} icon={Receipt} description="This month" color="purple" />
-          <StatsCard title="Monthly Expenses" value={formatNGN(monthlyExpensesAmount)} icon={TrendingDown} description="This month" color="amber" />
+          <StatsCard title="Today's Revenue" value={formatAmount(todayRevenue)} icon={TrendingUp} description="Since midnight" color="green" />
+          <StatsCard title="Weekly Revenue" value={formatAmount(weeklyRevenue)} icon={TrendingUp} description="This week" color="blue" />
+          <StatsCard title="Monthly Revenue" value={formatAmount(monthlyRevenue)} icon={Receipt} description="This month" color="purple" />
+          <StatsCard title="Monthly Expenses" value={formatAmount(monthlyExpensesAmount)} icon={TrendingDown} description="This month" color="amber" />
         </div>
       </motion.section>
 
       <motion.section variants={sectionVariants}>
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <StatsCard title="Net Profit" value={formatNGN(netProfit)} icon={Activity} description="This month" color={netProfit >= 0 ? "green" : "red"} />
-          <StatsCard title="Cash Balance" value={formatNGN(cashBalance)} icon={Wallet} description="In hand" color="green" />
-          <StatsCard title="Bank Balance" value={formatNGN(bankBalance)} icon={Building2} description="Approx opening balances" color="blue" />
+          <StatsCard title="Net Profit" value={formatAmount(netProfit)} icon={Activity} description="This month" color={netProfit >= 0 ? "green" : "red"} />
+          <StatsCard title="Cash Balance" value={formatAmount(cashBalance)} icon={Wallet} description="In hand" color="green" />
+          <StatsCard title="Bank Balance" value={formatAmount(bankBalance)} icon={Building2} description="Approx opening balances" color="blue" />
           <StatsCard title="Total Deliveries" value={totalDeliveries} icon={Package} description="All-time completed" color="gray" />
         </div>
       </motion.section>
@@ -242,7 +249,7 @@ export function FinanceDashboardPage() {
                     <p className="font-medium">{item.customer || item.reference || 'Gateway'}</p>
                     <p className="text-xs text-muted-foreground">{item.date.toLocaleDateString()}</p>
                   </div>
-                  <span className="text-emerald-600 font-semibold">{formatNGN(item.amount)}</span>
+                  <span className="text-emerald-600 font-semibold">{formatAmount(item.amount)}</span>
                 </div>
               ))}
             </CardContent>
@@ -256,7 +263,7 @@ export function FinanceDashboardPage() {
                     <p className="font-medium">{item.vendor || item.category}</p>
                     <p className="text-xs text-muted-foreground">{new Date(item.date).toLocaleDateString()}</p>
                   </div>
-                  <span className="text-amber-600 font-semibold">{formatNGN(item.amount)}</span>
+                  <span className="text-amber-600 font-semibold">{formatAmount(item.amount)}</span>
                 </div>
               ))}
             </CardContent>
@@ -271,7 +278,7 @@ export function FinanceDashboardPage() {
                     <p className="text-xs text-muted-foreground">{new Date(item.date).toLocaleDateString()}</p>
                   </div>
                   <span className={item.type === 'cash_in' || item.type === 'opening_balance_adjustment' ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>
-                    {item.type === 'cash_in' || item.type === 'opening_balance_adjustment' ? '+' : '-'}{formatNGN(item.amount)}
+                    {item.type === 'cash_in' || item.type === 'opening_balance_adjustment' ? '+' : '-'}{formatAmount(item.amount)}
                   </span>
                 </div>
               ))}

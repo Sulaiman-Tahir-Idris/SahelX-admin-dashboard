@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   getDocs,
@@ -80,17 +81,19 @@ export const createCourierWithoutLogout = async (
       verified: courierData.verified,
       profilePhoto: courierData.profilePhoto || "",
       isActive: courierData.isActive,
+      isAvailable: false,
+      status: "offline",
       address: courierData.address,
       vehicleInfo: courierData.vehicleInfo,
       createdAt: serverTimestamp(),
     };
 
-    const docRef = await addDoc(collection(db, "User"), newCourier);
+    await setDoc(doc(db, "User", newUser.uid), newCourier);
 
     // Sign out the newly created courier user from the secondary instance
     await signOut(secondaryAuth);
 
-    return docRef.id;
+    return newUser.uid;
   } catch (error: any) {
     throw new Error(error.message || "Failed to create courier");
   }

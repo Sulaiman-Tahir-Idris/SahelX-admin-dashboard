@@ -21,7 +21,7 @@ import {
   getFinanceSettings, updateFinanceSettings,
   getExpenseCategories, addExpenseCategory, deleteExpenseCategory,
 } from "@/lib/firebase/finance"
-import { formatNGN } from "@/lib/finance/calculations"
+import { useCurrency } from "@/components/providers/currency-provider"
 import type { FinanceSettings, ExpenseCategory, Department } from "@/lib/finance/types"
 import { DEPARTMENTS } from "@/lib/finance/types"
 import { useAuth } from "@/lib/auth-utils"
@@ -42,6 +42,7 @@ type CategoryForm = z.infer<typeof categorySchema>
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function FinanceSettingsPage() {
+  const { formatAmount } = useCurrency()
   const { user } = useAuth()
   const role = useRole()
   const canEdit = role === "ceo" || role === "cfo"
@@ -190,7 +191,7 @@ export function FinanceSettingsPage() {
                 />
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Current: <span className="font-semibold text-foreground">{formatNGN(settings?.openingCashBalance ?? 0)}</span>
+                    Current: <span className="font-semibold text-foreground">{formatAmount(settings?.openingCashBalance ?? 0)}</span>
                   </p>
                   <Button type="submit" disabled={!canEdit || savingBalance} size="sm">
                     {savingBalance ? "Saving…" : "Save Balance"}

@@ -133,24 +133,35 @@ export function sumExpenses(expenses: Expense[]): number {
     .reduce((s, e) => s + e.amount, 0)
 }
 
+import {
+  getNigerianStartOfDay,
+  getNigerianStartOfWeek,
+  getNigerianStartOfMonth,
+  getNigerianStartOfPrevMonth,
+  getNigerianEndOfPrevMonth,
+  getNigerianStartOfYear,
+  formatNigerianMonthYear,
+  formatNigerianWeekday
+} from "@/lib/utils/timezone";
+
 // ─── Date Helpers ─────────────────────────────────────────────────────────────
 export function startOfDay(d: Date = new Date()): Date {
-  const r = new Date(d); r.setHours(0, 0, 0, 0); return r
+  return getNigerianStartOfDay(d);
 }
 export function startOfWeek(d: Date = new Date()): Date {
-  const r = new Date(d); r.setDate(r.getDate() - r.getDay()); r.setHours(0, 0, 0, 0); return r
+  return getNigerianStartOfWeek(d);
 }
 export function startOfMonth(d: Date = new Date()): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1)
+  return getNigerianStartOfMonth(d);
 }
 export function startOfPrevMonth(d: Date = new Date()): Date {
-  return new Date(d.getFullYear(), d.getMonth() - 1, 1)
+  return getNigerianStartOfPrevMonth(d);
 }
 export function endOfPrevMonth(d: Date = new Date()): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 0, 23, 59, 59)
+  return getNigerianEndOfPrevMonth(d);
 }
 export function startOfYear(d: Date = new Date()): Date {
-  return new Date(d.getFullYear(), 0, 1)
+  return getNigerianStartOfYear(d);
 }
 
 // ─── Revenue / Amount from date-keyed items ───────────────────────────────────
@@ -171,13 +182,18 @@ export function groupByMonth(
   expenses: Array<{ date: Date; amount: number }>,
   monthsBack = 6
 ): MonthlyDataPoint[] {
-  const now = new Date()
   const points: MonthlyDataPoint[] = []
 
+  // Create the last N months based on Nigerian time
+  // Anchor to the 15th of the current Nigerian month to safely subtract months without edge cases
+  const currentMonthStart = getNigerianStartOfMonth();
+  const safeAnchor = new Date(currentMonthStart.getTime() + (15 * 24 * 60 * 60 * 1000));
+  
   for (let i = monthsBack - 1; i >= 0; i--) {
-    const ref = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const ref = new Date(safeAnchor.getTime());
+    ref.setUTCMonth(ref.getUTCMonth() - i);
     points.push({
-      month: ref.toLocaleDateString("en-NG", { month: "short", year: "2-digit" }),
+      month: formatNigerianMonthYear(ref),
       revenue: 0,
       expenses: 0,
     })
@@ -189,13 +205,9 @@ export function groupByMonth(
   ) => {
     items.forEach((item) => {
       const d = item.date instanceof Date ? item.date : new Date(item.date)
-      for (let i = monthsBack - 1; i >= 0; i--) {
-        const ref = new Date(now.getFullYear(), now.getMonth() - i, 1)
-        if (d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth()) {
-          points[monthsBack - 1 - i][field] += item.amount
-          break
-        }
-      }
+      const dStr = formatNigerianMonthYear(d)
+      const pt = points.find(p => p.month === dStr)
+      if (pt) pt[field] += item.amount
     })
   }
 
@@ -208,20 +220,23 @@ export function groupByDay(
   items: Array<{ date: Date; amount: number }>,
   days = 7
 ): DailyDataPoint[] {
-  const now = new Date()
-  const slots = Array.from({ length: days }, (_, i) => {
-    const d = new Date(now)
-    d.setDate(now.getDate() - (days - 1 - i))
-    d.setHours(0, 0, 0, 0)
-    return { day: d.toLocaleDateString("en-NG", { weekday: "short" }), date: d, value: 0 }
-  })
+  const slots: Array<{ day: string; dateMs: number; value: number }> = []
+  
+  const todayStart = getNigerianStartOfDay().getTime()
+  for (let i = days - 1; i >= 0; i--) {
+    const dMs = todayStart - (i * 24 * 60 * 60 * 1000)
+    slots.push({
+      day: formatNigerianWeekday(new Date(dMs)),
+      dateMs: dMs,
+      value: 0
+    })
+  }
 
   items.forEach((item) => {
     const d = item.date instanceof Date ? item.date : new Date(item.date)
-    const dayKey = new Date(d); dayKey.setHours(0, 0, 0, 0)
-    slots.forEach((s) => {
-      if (s.date.getTime() === dayKey.getTime()) s.value += item.amount
-    })
+    const itemStartMs = getNigerianStartOfDay(d).getTime()
+    const slot = slots.find(s => s.dateMs === itemStartMs)
+    if (slot) slot.value += item.amount
   })
 
   return slots.map(({ day, value }) => ({ day, value }))

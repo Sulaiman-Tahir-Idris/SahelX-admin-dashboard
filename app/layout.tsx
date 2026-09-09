@@ -48,6 +48,7 @@ export const metadata = {
 }
 
 import { ThemeProvider } from "@/components/theme-provider"
+import { CurrencyProvider } from "@/components/providers/currency-provider"
 
 export default function RootLayout({
   children,
@@ -67,8 +68,10 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-          <Toaster />
+          <CurrencyProvider>
+            {children}
+            <Toaster />
+          </CurrencyProvider>
         </ThemeProvider>
       </body>
     </html>

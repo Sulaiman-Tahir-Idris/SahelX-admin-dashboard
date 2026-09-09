@@ -12,7 +12,9 @@ import { getAllPayments } from '@/lib/firebase/payments'
 import { getRevenueEntries, getExpenses, getCashTransactions } from '@/lib/firebase/finance'
 import type { Payment } from '@/lib/firebase/payments'
 import type { RevenueEntry, Expense, CashTransaction } from '@/lib/finance/types'
-import { formatNGN } from '@/lib/finance/calculations'
+
+import { useCurrency } from "@/components/providers/currency-provider"
+import { CurrencySwitcher } from "@/components/finance/currency-switcher"
 
 const reports = [
   { id: 'monthly-revenue',     name: 'Monthly Revenue',      description: 'All revenue for the selected month' },
@@ -28,6 +30,7 @@ const reports = [
 ]
 
 export function ReportsPage() {
+  const { formatAmount } = useCurrency()
   const [payments, setPayments] = useState<Payment[]>([])
   const [revenueEntries, setRevenueEntries] = useState<RevenueEntry[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -89,21 +92,21 @@ export function ReportsPage() {
         head = ['Date', 'Type', 'Source/Method', 'Amount']
         title = `Monthly Revenue - ${months[month].label} ${year}`
         rows = allRevenue.filter(r => filterByMonth(r.date)).map(r => [
-          r.date.toLocaleDateString(), r.type, r.source, formatNGN(r.amount)
+          r.date.toLocaleDateString(), r.type, r.source, formatAmount(r.amount)
         ])
         break
       case 'monthly-expense':
         head = ['Date', 'Department', 'Category', 'Vendor', 'Amount']
         title = `Monthly Expenses - ${months[month].label} ${year}`
         rows = expenses.filter(e => filterByMonth(new Date(e.date)) && e.status !== 'rejected').map(e => [
-          new Date(e.date).toLocaleDateString(), e.department, e.category, e.vendor, formatNGN(e.amount)
+          new Date(e.date).toLocaleDateString(), e.department, e.category, e.vendor, formatAmount(e.amount)
         ])
         break
       case 'cash-flow':
         head = ['Date', 'Type', 'Description', 'Amount']
         title = `Cash Flow - ${months[month].label} ${year}`
         rows = cashTxns.filter(c => filterByMonth(new Date(c.date))).map(c => [
-          new Date(c.date).toLocaleDateString(), c.type, c.description, formatNGN(c.amount)
+          new Date(c.date).toLocaleDateString(), c.type, c.description, formatAmount(c.amount)
         ])
         break
       case 'profit-loss':
@@ -112,9 +115,9 @@ export function ReportsPage() {
         const revTotal = allRevenue.filter(r => filterByMonth(r.date)).reduce((s, r) => s + r.amount, 0)
         const expTotal = expenses.filter(e => filterByMonth(new Date(e.date)) && e.status !== 'rejected').reduce((s, e) => s + e.amount, 0)
         rows = [
-          ['Total Revenue', formatNGN(revTotal)],
-          ['Total Expenses', formatNGN(expTotal)],
-          ['Net Profit', formatNGN(revTotal - expTotal)]
+          ['Total Revenue', formatAmount(revTotal)],
+          ['Total Expenses', formatAmount(expTotal)],
+          ['Net Profit', formatAmount(revTotal - expTotal)]
         ]
         break
       case 'dept-spending':
@@ -125,7 +128,7 @@ export function ReportsPage() {
         expenses.filter(e => filterByMonth(new Date(e.date)) && e.status !== 'rejected').forEach(e => {
           deptMap[e.department] = (deptMap[e.department] || 0) + e.amount
         })
-        rows = Object.entries(deptMap).map(([d, a]) => [d, formatNGN(a)])
+        rows = Object.entries(deptMap).map(([d, a]) => [d, formatAmount(a)])
         break
       case 'category-spending':
       case 'expense-by-category':
@@ -135,7 +138,7 @@ export function ReportsPage() {
         expenses.filter(e => filterByMonth(new Date(e.date)) && e.status !== 'rejected').forEach(e => {
           catMap[e.category] = (catMap[e.category] || 0) + e.amount
         })
-        rows = Object.entries(catMap).map(([c, a]) => [c, formatNGN(a)])
+        rows = Object.entries(catMap).map(([c, a]) => [c, formatAmount(a)])
         break
       case 'revenue-by-rider':
         head = ['Rider', 'Total Revenue']
@@ -144,7 +147,7 @@ export function ReportsPage() {
         allRevenue.filter(r => filterByMonth(r.date)).forEach(r => {
           riderMap[r.rider] = (riderMap[r.rider] || 0) + r.amount
         })
-        rows = Object.entries(riderMap).map(([r, a]) => [r, formatNGN(a)])
+        rows = Object.entries(riderMap).map(([r, a]) => [r, formatAmount(a)])
         break
       case 'revenue-by-method':
         head = ['Payment Method', 'Total Revenue']
@@ -153,7 +156,7 @@ export function ReportsPage() {
         allRevenue.filter(r => filterByMonth(r.date)).forEach(r => {
           methodMap[r.source] = (methodMap[r.source] || 0) + r.amount
         })
-        rows = Object.entries(methodMap).map(([m, a]) => [m, formatNGN(a)])
+        rows = Object.entries(methodMap).map(([m, a]) => [m, formatAmount(a)])
         break
     }
     return { head, rows, title }

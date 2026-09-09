@@ -12,7 +12,8 @@ import { TrendingUp, Calendar, Download, Filter, DollarSign, CreditCard, Activit
 import { getAllPayments, type Payment } from "@/lib/firebase/payments"
 import { getRevenueEntries, addRevenueEntry, updateRevenueEntry, deleteRevenueEntry } from '@/lib/firebase/finance'
 import type { RevenueEntry } from '@/lib/finance/types'
-import { formatNGN, filterByDateRange, filterBySearch, startOfMonth } from '@/lib/finance/calculations'
+import { useCurrency } from "@/components/providers/currency-provider"
+import { filterByDateRange, filterBySearch, startOfMonth } from '@/lib/finance/calculations'
 import { DateRangeFilter } from '@/components/finance/shared/date-range-filter'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -70,6 +71,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function RevenuePage() {
+  const { formatAmount } = useCurrency()
   const [isClient, setIsClient] = useState(false)
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
@@ -667,7 +669,7 @@ export function RevenuePage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-medium">{formatNGN(manualTotalAmount)}</div>
+                <div className="text-lg font-medium">{formatAmount(manualTotalAmount)}</div>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
@@ -676,7 +678,7 @@ export function RevenuePage() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-medium">{formatNGN(manualThisMonth)}</div>
+                <div className="text-lg font-medium">{formatAmount(manualThisMonth)}</div>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
@@ -694,7 +696,7 @@ export function RevenuePage() {
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-medium">{formatNGN(manualAvgPerDelivery)}</div>
+                <div className="text-lg font-medium">{formatAmount(manualAvgPerDelivery)}</div>
               </CardContent>
             </Card>
           </div>
@@ -749,7 +751,7 @@ export function RevenuePage() {
                           <TableCell>{entry.customer}</TableCell>
                           <TableCell>{entry.rider}</TableCell>
                           <TableCell>{entry.deliveryCount}</TableCell>
-                          <TableCell className="font-medium">{formatNGN(entry.amount)}</TableCell>
+                          <TableCell className="font-medium">{formatAmount(entry.amount)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={
                               entry.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :

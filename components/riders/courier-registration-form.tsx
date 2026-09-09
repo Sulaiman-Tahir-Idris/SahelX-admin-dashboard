@@ -29,7 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Copy, CheckCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-// import { createCourierWithoutLogout } from "@/lib/firebase/users";
+import { createCourierWithoutLogout } from "@/lib/firebase/users";
 
 const formSchema = z.object({
   displayName: z
@@ -88,39 +88,27 @@ export function CourierRegistrationForm() {
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/admin/create-courier", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          displayName: values.displayName,
-          email: values.email,
-          password: values.password,
-          phone: values.phone,
-          isVerified: values.isVerified,
-          isActive: values.isActive,
-          address: {
-            street: values.street,
-            city: values.city,
-            state: values.state,
-            country: "Nigeria",
-          },
-          vehicleInfo: {
-            type: values.vehicleType,
-            plateNumber: values.plateNumber,
-            model: values.vehicleModel,
-            color: values.vehicleColor,
-            verified: values.isVerified,
-          },
-        }),
+      const courierId = await createCourierWithoutLogout({
+        email: values.email,
+        password: values.password,
+        displayName: values.displayName,
+        phone: values.phone,
+        verified: values.isVerified,
+        isActive: values.isActive,
+        address: {
+          street: values.street,
+          city: values.city,
+          state: values.state,
+          country: "Nigeria",
+        },
+        vehicleInfo: {
+          type: values.vehicleType,
+          plateNumber: values.plateNumber,
+          model: values.vehicleModel,
+          color: values.vehicleColor,
+          verified: values.isVerified,
+        },
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || err.message || "Failed to create courier");
-      }
-
-      const data = await res.json();
-      const courierId = data.id ?? data.courierId;
 
       if (!courierId) {
         throw new Error("No courier id returned from server");

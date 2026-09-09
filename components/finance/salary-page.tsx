@@ -22,11 +22,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Banknote, Users, Download, Save, ShieldAlert, CheckCircle2, Trash2 } from "lucide-react"
-import { formatNGN } from "@/lib/finance/calculations"
+
+import { useCurrency } from "@/components/providers/currency-provider"
 import type { BankAccount } from "@/lib/finance/types"
 import { saveAs } from "file-saver"
 
 export function SalaryPage() {
+  const { formatAmount } = useCurrency()
   const { user } = useAuth()
   const role = useRole()
   const canEditSettings = role === 'ceo' || role === 'cfo' || role === 'admin'
@@ -465,14 +467,14 @@ export function SalaryPage() {
       let adjustmentsText = ""
       if ((payingPayroll.bonus || 0) > 0 || (payingPayroll.deduction || 0) > 0) {
         const parts = []
-        if (payingPayroll.bonus) parts.push(`+${formatNGN(payingPayroll.bonus)} bonus`)
-        if (payingPayroll.deduction) parts.push(`-${formatNGN(payingPayroll.deduction)} deduction`)
+        if (payingPayroll.bonus) parts.push(`+${formatAmount(payingPayroll.bonus)} bonus`)
+        if (payingPayroll.deduction) parts.push(`-${formatAmount(payingPayroll.deduction)} deduction`)
         adjustmentsText = ` (incl. ${parts.join(" and ")})`
       }
 
       const notificationMessage = isPartial
-        ? `A partial salary advance of ${formatNGN(amountToPay)} was disbursed to ${payingPayroll.employeeName} (${payingPayroll.role}) for ${payingPayroll.monthYear} via ${paymentMethod}.${adjustmentsText}`
-        : `A final salary settlement of ${formatNGN(amountToPay)} was disbursed to ${payingPayroll.employeeName} (${payingPayroll.role}) for ${payingPayroll.monthYear} via ${paymentMethod}.${adjustmentsText}`
+        ? `A partial salary advance of ${formatAmount(amountToPay)} was disbursed to ${payingPayroll.employeeName} (${payingPayroll.role}) for ${payingPayroll.monthYear} via ${paymentMethod}.${adjustmentsText}`
+        : `A final salary settlement of ${formatAmount(amountToPay)} was disbursed to ${payingPayroll.employeeName} (${payingPayroll.role}) for ${payingPayroll.monthYear} via ${paymentMethod}.${adjustmentsText}`
       
       await addDoc(collection(db, "adminChats", "global", "messages"), {
         senderId: user?.uid ?? "system",
@@ -481,7 +483,7 @@ export function SalaryPage() {
         createdAt: serverTimestamp(),
       })
 
-      toast.success(`${payingPayroll.employeeName} paid ${formatNGN(amountToPay)} & funds deducted!`)
+      toast.success(`${payingPayroll.employeeName} paid ${formatAmount(amountToPay)} & funds deducted!`)
       fetchMonthlyData(selectedMonth) // refresh
     } catch (e) {
       console.error(e)
@@ -561,7 +563,7 @@ export function SalaryPage() {
             <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-medium text-red-600">{formatNGN(grandTotal)}</div>
+            <div className="text-lg font-medium text-red-600">{formatAmount(grandTotal)}</div>
           </CardContent>
         </Card>
         <Card className="overflow-hidden">
@@ -570,8 +572,8 @@ export function SalaryPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-medium">{formatNGN(riderTotal)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Based on {totalDeliveryFees > 0 ? formatNGN(totalDeliveryFees) : "0"} delivery fees</p>
+            <div className="text-lg font-medium">{formatAmount(riderTotal)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Based on {totalDeliveryFees > 0 ? formatAmount(totalDeliveryFees) : "0"} delivery fees</p>
           </CardContent>
         </Card>
         <Card className="overflow-hidden">
@@ -580,8 +582,8 @@ export function SalaryPage() {
             <ShieldAlert className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-medium">{formatNGN(execTotal)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Based on {totalRevenue > 0 ? formatNGN(totalRevenue) : "0"} total company revenue</p>
+            <div className="text-lg font-medium">{formatAmount(execTotal)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Based on {totalRevenue > 0 ? formatAmount(totalRevenue) : "0"} total company revenue</p>
           </CardContent>
         </Card>
       </div>
@@ -612,16 +614,16 @@ export function SalaryPage() {
                 {calculatedRiderPayrolls.map(p => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.employeeName}</TableCell>
-                    <TableCell>{formatNGN(p.basePay)}</TableCell>
-                    <TableCell>{formatNGN(p.commissionEarned)}</TableCell>
+                    <TableCell>{formatAmount(p.basePay)}</TableCell>
+                    <TableCell>{formatAmount(p.commissionEarned)}</TableCell>
                     <TableCell>
-                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatNGN(p.bonus)}</div> : null}
-                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatNGN(p.deduction)}</div> : null}
-                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatNGN(p.advancePaid)}</div> : null}
+                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatAmount(p.bonus)}</div> : null}
+                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatAmount(p.deduction)}</div> : null}
+                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatAmount(p.advancePaid)}</div> : null}
                     </TableCell>
                     <TableCell className="font-bold">
-                      <div>{formatNGN(p.totalPay)}</div>
-                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatNGN(p.totalPay - p.advancePaid)}</div> : null}
+                      <div>{formatAmount(p.totalPay)}</div>
+                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatAmount(p.totalPay - p.advancePaid)}</div> : null}
                     </TableCell>
                     <TableCell>
                       <Badge variant={p.status === "paid" ? "success" : "secondary"}>
@@ -688,16 +690,16 @@ export function SalaryPage() {
                       <div className="font-medium">{p.employeeName}</div>
                       <div className="text-xs text-muted-foreground">{p.role}</div>
                     </TableCell>
-                    <TableCell>{formatNGN(p.basePay)}</TableCell>
-                    <TableCell>{formatNGN(p.commissionEarned)}</TableCell>
+                    <TableCell>{formatAmount(p.basePay)}</TableCell>
+                    <TableCell>{formatAmount(p.commissionEarned)}</TableCell>
                     <TableCell>
-                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatNGN(p.bonus)}</div> : null}
-                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatNGN(p.deduction)}</div> : null}
-                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatNGN(p.advancePaid)}</div> : null}
+                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatAmount(p.bonus)}</div> : null}
+                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatAmount(p.deduction)}</div> : null}
+                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatAmount(p.advancePaid)}</div> : null}
                     </TableCell>
                     <TableCell className="font-bold">
-                      <div>{formatNGN(p.totalPay)}</div>
-                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatNGN(p.totalPay - p.advancePaid)}</div> : null}
+                      <div>{formatAmount(p.totalPay)}</div>
+                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatAmount(p.totalPay - p.advancePaid)}</div> : null}
                     </TableCell>
                     <TableCell>
                       <Badge variant={p.status === "paid" ? "success" : "secondary"}>
@@ -761,16 +763,16 @@ export function SalaryPage() {
                 {calculatedSecretaryPayrolls.map(p => (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.employeeName}</TableCell>
-                    <TableCell>{formatNGN(p.basePay)}</TableCell>
-                    <TableCell>{formatNGN(p.commissionEarned)}</TableCell>
+                    <TableCell>{formatAmount(p.basePay)}</TableCell>
+                    <TableCell>{formatAmount(p.commissionEarned)}</TableCell>
                     <TableCell>
-                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatNGN(p.bonus)}</div> : null}
-                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatNGN(p.deduction)}</div> : null}
-                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatNGN(p.advancePaid)}</div> : null}
+                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatAmount(p.bonus)}</div> : null}
+                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatAmount(p.deduction)}</div> : null}
+                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatAmount(p.advancePaid)}</div> : null}
                     </TableCell>
                     <TableCell className="font-bold">
-                      <div>{formatNGN(p.totalPay)}</div>
-                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatNGN(p.totalPay - p.advancePaid)}</div> : null}
+                      <div>{formatAmount(p.totalPay)}</div>
+                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatAmount(p.totalPay - p.advancePaid)}</div> : null}
                     </TableCell>
                     <TableCell>
                       <Badge variant={p.status === "paid" ? "success" : "secondary"}>
@@ -966,7 +968,7 @@ export function SalaryPage() {
                 onChange={(e) => setAmountToPay(Number(e.target.value))}
                 max={(payingPayroll?.totalPay || 0) - (payingPayroll?.advancePaid || 0)}
               />
-              <p className="text-xs text-muted-foreground">Total remaining balance: {formatNGN((payingPayroll?.totalPay || 0) - (payingPayroll?.advancePaid || 0))}</p>
+              <p className="text-xs text-muted-foreground">Total remaining balance: {formatAmount((payingPayroll?.totalPay || 0) - (payingPayroll?.advancePaid || 0))}</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Payment Method</label>

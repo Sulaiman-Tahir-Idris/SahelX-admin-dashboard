@@ -10,6 +10,7 @@ import { getRiders } from "@/lib/firebase/riders"
 import { getCustomers, getCouriers } from "@/lib/firebase/users"
 import { getDeliveries } from "@/lib/firebase/deliveries"
 import { getCompanyContacts, type CompanyContacts } from "@/lib/firebase/companyContacts"
+import { getNigerianStartOfDay } from "@/lib/utils/timezone"
 import { Phone, Mail } from "lucide-react"
 import dynamic from "next/dynamic"
 
@@ -81,7 +82,7 @@ export default function InvestorDashboardPage() {
         if (investor) setInvestorName(investor.displayName?.split(" ")[0] || "Investor")
         if (companyContactsData) setContacts(companyContactsData)
 
-        const today = new Date(); today.setHours(0, 0, 0, 0)
+        const today = getNigerianStartOfDay();
         const todayCount = deliveries.filter(d => {
           const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(0)
           return date >= today

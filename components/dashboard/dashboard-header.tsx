@@ -79,11 +79,11 @@ export function DashboardHeader({ user }: { user?: AdminUser }) {
       <div className="flex items-center gap-3">
         <MobileNav />
         <Image
-          src="/images/black1.png"
+          src={dark ? "/images/white1.png" : "/images/black1.png"}
           alt="SahelX"
           width={110}
           height={36}
-          className="h-6 w-auto md:h-7 dark:invert"
+          className="h-6 w-auto md:h-7"
           priority
         />
         <div className="hidden sm:block h-4 w-px bg-border" />

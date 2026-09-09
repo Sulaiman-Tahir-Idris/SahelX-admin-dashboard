@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     });
 
     // 2. Save courier profile
-    await adminDb.collection("User").add({
+    await adminDb.collection("User").doc(user.uid).set({
       userId: user.uid,
       email: data.email,
       phone: data.phone,
@@ -21,6 +21,8 @@ export async function POST(req: Request) {
       role: "courier",
       verified: data.isVerified,
       isActive: data.isActive,
+      isAvailable: false,
+      status: "offline",
       address: data.address,
       vehicleInfo: data.vehicleInfo,
       createdAt: new Date(),

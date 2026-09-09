@@ -45,7 +45,7 @@ const OFFICE_LOCATION = {
   address: "SahelX Office, Kano",
 };
 
-const libraries: Libraries = ["places"];
+const libraries: Libraries = ["places", "marker"];
 
 export function DeliveryMap() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
@@ -151,15 +151,15 @@ export function DeliveryMap() {
     deliveries.forEach((delivery) => {
       if (
         delivery.pickupLocation &&
-        "lat" in delivery.pickupLocation &&
-        "lng" in delivery.pickupLocation
+        typeof delivery.pickupLocation.lat === "number" &&
+        typeof delivery.pickupLocation.lng === "number"
       ) {
         markers.push({
           id: `pickup_${delivery.id}`,
           type: "pickup",
           name: `Pickup for ${delivery.id?.substring(0, 8)}...`,
-          lat: (delivery.pickupLocation as LocationCoords).lat,
-          lng: (delivery.pickupLocation as LocationCoords).lng,
+          lat: delivery.pickupLocation.lat,
+          lng: delivery.pickupLocation.lng,
           deliveryId: delivery.id || "",
           status: delivery.status,
         });
@@ -167,15 +167,15 @@ export function DeliveryMap() {
 
       if (
         delivery.dropoffLocation &&
-        "lat" in delivery.dropoffLocation &&
-        "lng" in delivery.dropoffLocation
+        typeof delivery.dropoffLocation.lat === "number" &&
+        typeof delivery.dropoffLocation.lng === "number"
       ) {
         markers.push({
           id: `dropoff_${delivery.id}`,
           type: "dropoff",
           name: `Dropoff for ${delivery.id?.substring(0, 8)}...`,
-          lat: (delivery.dropoffLocation as LocationCoords).lat,
-          lng: (delivery.dropoffLocation as LocationCoords).lng,
+          lat: delivery.dropoffLocation.lat,
+          lng: delivery.dropoffLocation.lng,
           deliveryId: delivery.id || "",
           status: delivery.status,
         });

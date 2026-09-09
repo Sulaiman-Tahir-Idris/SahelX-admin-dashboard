@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog";
 import { Button } from "./button";
-import { GoogleMap, MarkerF } from "@react-google-maps/api";
+import { GoogleMap } from "@react-google-maps/api";
+import { Input } from "./input";
+import { Search } from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -14,9 +16,7 @@ interface Props {
 }
 
 const mapContainerStyle = { width: "100%", height: "400px" };
-
-import { Input } from "./input";
-import { Search } from "lucide-react";
+const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "9009e1003c69980469a79a63";
 
 export function MapPickerModal({ isOpen, onClose, onConfirm, initialLat, initialLng }: Props) {
   const [position, setPosition] = useState({ lat: initialLat, lng: initialLng });
@@ -25,6 +25,8 @@ export function MapPickerModal({ isOpen, onClose, onConfirm, initialLat, initial
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
   const fetchAddress = useCallback((latLng: google.maps.LatLngLiteral) => {
     if (!geocoderRef.current) geocoderRef.current = new google.maps.Geocoder();
@@ -50,12 +52,49 @@ export function MapPickerModal({ isOpen, onClose, onConfirm, initialLat, initial
         const pos = { lat: loc.lat(), lng: loc.lng() };
         setPosition(pos);
         setAddress(results[0].formatted_address);
+        // Pan the map to the new position
+        if (mapRef.current) mapRef.current.panTo(pos);
       } else {
         alert("Location not found. Try a different search term.");
       }
       setSearching(false);
     });
   }, [searchQuery]);
+
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+
+    // Create draggable AdvancedMarkerElement
+    const { AdvancedMarkerElement } = window.google.maps.marker;
+    const marker = new AdvancedMarkerElement({
+      position,
+      map,
+      gmpDraggable: true,
+    });
+    markerRef.current = marker;
+
+    marker.addListener("dragend", () => {
+      let pos: google.maps.LatLngLiteral;
+      // Handle AdvancedMarkerElement position which can be LatLng, LatLngLiteral, or LatLngAltitude
+      const p = marker.position as any;
+      if (p && typeof p.lat === "function") {
+        pos = { lat: p.lat(), lng: p.lng() };
+      } else if (p && typeof p.lat === "number") {
+        pos = { lat: p.lat, lng: p.lng };
+      } else {
+        return; // Fallback
+      }
+      setPosition(pos);
+      fetchAddress(pos);
+    });
+  }, [position, fetchAddress]);
+
+  // Keep marker in sync when position changes from search or click
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.position = position;
+    }
+  }, [position]);
 
   const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (e.latLng) {
@@ -64,16 +103,8 @@ export function MapPickerModal({ isOpen, onClose, onConfirm, initialLat, initial
       fetchAddress(pos);
     }
   }, [fetchAddress]);
-
-  const onMarkerDragEnd = useCallback((e: google.maps.MapMouseEvent) => {
-    if (e.latLng) {
-      const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-      setPosition(pos);
-      fetchAddress(pos);
-    }
-  }, [fetchAddress]);
   
-  // Try to fetch address for initial location if none set yet
+  // Fetch address for initial location when modal opens
   React.useEffect(() => {
     if (isOpen && !address && window.google) {
       fetchAddress(position);
@@ -105,19 +136,19 @@ export function MapPickerModal({ isOpen, onClose, onConfirm, initialLat, initial
             <p className="text-base font-semibold">{loading ? "Loading address..." : address || "Click on the map to select"}</p>
           </div>
           <div className="rounded-xl overflow-hidden border">
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={position}
-              zoom={14}
-              onClick={onMapClick}
-              options={{ disableDefaultUI: true, zoomControl: true }}
-            >
-              <MarkerF
-                position={position}
-                draggable
-                onDragEnd={onMarkerDragEnd}
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={position}
+                zoom={14}
+                onClick={onMapClick}
+                onLoad={onMapLoad}
+                options={{ 
+                  disableDefaultUI: true, 
+                  zoomControl: true,
+                  mapId: MAP_ID,
+                  clickableIcons: false,
+                }}
               />
-            </GoogleMap>
           </div>
         </div>
         <DialogFooter>
@@ -130,4 +161,5 @@ export function MapPickerModal({ isOpen, onClose, onConfirm, initialLat, initial
     </Dialog>
   );
 }
+
 

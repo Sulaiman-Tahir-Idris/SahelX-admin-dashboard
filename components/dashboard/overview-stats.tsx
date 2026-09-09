@@ -7,6 +7,7 @@ import { Bike, Calendar, Package, Users } from "lucide-react"
 import { getRiders } from "@/lib/firebase/riders"
 import { getCustomers } from "@/lib/firebase/users"
 import { getDeliveries } from "@/lib/firebase/deliveries"
+import { getNigerianStartOfDay } from "@/lib/utils/timezone"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 const stats = [
@@ -71,7 +72,7 @@ export function OverviewStats() {
   const loadStats = async () => {
     try {
       const [riders, customers, deliveries] = await Promise.all([getRiders(), getCustomers(), getDeliveries()])
-      const today = new Date(); today.setHours(0, 0, 0, 0)
+      const today = getNigerianStartOfDay();
       const todayCount = deliveries.filter(d => {
         const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(0)
         return date >= today

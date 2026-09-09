@@ -120,7 +120,8 @@ export function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-[280px] p-0 bg-sidebar border-sidebar-border">
         <SheetHeader className="px-4 pt-5 pb-4 border-b border-sidebar-border">
-          <Image src="/images/black1.png" alt="SahelX" width={110} height={36} className="h-6 w-auto dark:invert mb-1" />
+          <Image src="/images/black1.png" alt="SahelX" width={110} height={36} className="h-6 w-auto mb-1 dark:hidden" />
+          <Image src="/images/white1.png" alt="SahelX" width={110} height={36} className="h-6 w-auto mb-1 hidden dark:block" />
           <SheetTitle className="text-sm font-semibold text-sidebar-foreground">Navigation</SheetTitle>
           <SheetDescription className="text-xs text-muted-foreground">Admin portal sections</SheetDescription>
         </SheetHeader>
