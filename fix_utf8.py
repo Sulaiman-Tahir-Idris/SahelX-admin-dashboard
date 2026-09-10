@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -110,14 +110,6 @@ export function CustomerProfile({ customerId }: CustomerProfileProps) {
     (deliveries.filter((d) => d.rating > 0).length || 1);
   const lastOrder = deliveries[0]?.createdAt || customer.lastOrder || null;
 
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-  const now = Date.now();
-  let isCustomerActive = false;
-  if (lastOrder) {
-    const lastOrderTime = lastOrder?.seconds ? lastOrder.seconds * 1000 : new Date(lastOrder).getTime();
-    isCustomerActive = (now - lastOrderTime) <= THIRTY_DAYS_MS;
-  }
-
   const avatar = customer.profilePhoto || "/placeholder.svg";
   const nameToDisplay = customer.displayName || customer.fullName || customer.email;
 
@@ -144,8 +136,8 @@ export function CustomerProfile({ customerId }: CustomerProfileProps) {
                       <BadgeCheck className="ml-2 h-6 w-6 text-red-500" />
                     )}
                   </h2>
-                  <Badge variant={isCustomerActive ? "default" : "secondary"}>
-                    {isCustomerActive ? "Active" : "Inactive"}
+                  <Badge variant={customer.isActive ? "default" : "secondary"}>
+                    {customer.isActive ? "Active" : "Inactive"}
                   </Badge>
                   <Badge variant="outline" className="uppercase bg-slate-100 dark:bg-slate-800">
                     {customer.role || "Customer"}

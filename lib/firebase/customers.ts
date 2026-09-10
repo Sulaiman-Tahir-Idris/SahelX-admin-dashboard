@@ -2,7 +2,7 @@ import {
   collection,
   doc,
   getDocs,
-  getDoc,
+  getDoc, updateDoc,
   query,
   where,
 } from "firebase/firestore";
@@ -17,10 +17,13 @@ export interface Customer {
   displayName: string;
   role: "customer";
   isActive: boolean;
-  profileImage?: string;
+  isVerified?: boolean;
+  profilePhoto?: string;
   totalOrders: number;
   createdAt: any;
   lastOrder?: any;
+  walletBalance?: number;
+  savedAddresses?: any[];
   address?: {
     street?: string;
     city?: string;
@@ -74,11 +77,21 @@ export const getCustomers = async (): Promise<Customer[]> => {
             }
           });
 
+          // Calculate 30-day recency for active status
+          const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+          const now = Date.now();
+          let isActive = false;
+          
+          if (lastOrder) {
+            const lastOrderTime = lastOrder?.seconds ? lastOrder.seconds * 1000 : new Date(lastOrder).getTime();
+            isActive = (now - lastOrderTime) <= THIRTY_DAYS_MS;
+          }
+
           return {
             ...customer,
             totalOrders,
             lastOrder,
-            isActive: (totalOrders || 0) >= 2,
+            isActive,
           } as Customer;
         } catch (err) {
           return {
@@ -130,5 +143,15 @@ export const getCustomer = async (
     return null;
   } catch (error: any) {
     throw new Error("Failed to get customer");
+  }
+};
+
+
+export const updateCustomerVerification = async (customerId: string, isVerified: boolean): Promise<void> => {
+  try {
+    const docRef = doc(db, 'User', customerId);
+    await updateDoc(docRef, { isVerified });
+  } catch (error: any) {
+    throw new Error('Failed to update verification status');
   }
 };

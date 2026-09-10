@@ -575,7 +575,7 @@ const DeliveriesTable = () => {
                             return;
                           }
                           const statusData = getStatusDisplay(normalizeStatus(d.status));
-                          const msg = `\uD83D\uDE9A *SahelX Logistics & Deliveries*\n\uD83D\uDCE6 Delivery Update\n\n*Tracking ID:* ${d.trackingId}\n*Status:* ${statusData.label} ${statusData.emoji}\n\n\uD83D\uDCCD *Pickup:* ${d.pickupLocation?.address || 'N/A'}\n\uD83C\uDFC1 *Drop-off:* ${d.dropoffLocation?.address || 'N/A'}\n\n\uD83D\uDCB0 *Delivery Fee:* NGN ${d.cost || 0} \u2014 ${d.paymentStatus === 'paid' ? 'Paid \u2705' : 'Payment Pending \u23F3'}\n\n\uD83D\uDD17 *Track your package:*\nhttps://sahelx.com.ng/tracking?id=${d.trackingId}\n\n\uD83D\uDCDE Support: info@sahelx.com.ng | +234 907 777 7880`;
+                          const msg = `*SahelX Logistics & Deliveries*\nDelivery Update\n\n*Tracking ID:* ${d.trackingId}\n*Status:* ${statusData.label}\n\n*Pickup:* ${d.pickupLocation?.address || 'N/A'}\n*Drop-off:* ${d.dropoffLocation?.address || 'N/A'}\n\n*Delivery Fee:* NGN ${d.cost || 0} — ${d.paymentStatus === 'paid' ? 'Paid' : 'Payment Pending'}\n\n*Track your package:*\nhttps://sahelx.com.ng/tracking?id=${d.trackingId}\n\nSupport: info@sahelx.com.ng | +234 907 777 7880`;
                           
                           const waUrl = `https://wa.me/2349077777880?text=${encodeURIComponent(msg)}`;
                           window.open(waUrl, '_blank');

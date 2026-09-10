@@ -385,7 +385,7 @@ export function CustomersTable() {
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage
-                          src={customer.profileImage || "/placeholder.svg"}
+                          src={customer.profilePhoto || "/placeholder.svg"}
                           alt={customer.displayName}
                         />
                         <AvatarFallback>
