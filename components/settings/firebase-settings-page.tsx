@@ -16,6 +16,15 @@ import {
   type Pricing,
   type GeoBoundary,
 } from "@/lib/firebase/settings"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { httpsCallable } from "firebase/functions"
+import { functions } from "@/lib/firebase/config"
 
 export function FirebaseSettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
@@ -28,6 +37,30 @@ export function FirebaseSettingsPage() {
   const [serviceAreas, setServiceAreas] = useState<GeoBoundary[]>([
     { lat: 6.5244, lng: 3.3792, radius: 10 }, // Lagos default
   ])
+
+  const [notiTitle, setNotiTitle] = useState("")
+  const [notiBody, setNotiBody] = useState("")
+  const [notiTarget, setNotiTarget] = useState("all")
+  const [isSending, setIsSending] = useState(false)
+
+  const handleSendNotification = async () => {
+    if (!notiTitle || !notiBody) {
+      return toast({ title: "Error", description: "Title and body are required.", variant: "destructive" })
+    }
+    setIsSending(true)
+    try {
+      const sendAdminNotification = httpsCallable(functions, "sendAdminNotification")
+      const result = await sendAdminNotification({ title: notiTitle, body: notiBody, target: notiTarget })
+      const data = result.data as any
+      toast({ title: "Sent!", description: `Successfully sent to ${data.count} devices.` })
+      setNotiTitle("")
+      setNotiBody("")
+    } catch (error: any) {
+      toast({ title: "Failed", description: error.message, variant: "destructive" })
+    } finally {
+      setIsSending(false)
+    }
+  }
 
   useEffect(() => {
     loadSettings()
@@ -259,14 +292,36 @@ export function FirebaseSettingsPage() {
       </TabsContent>
 
       <TabsContent value="notifications" className="space-y-6">
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Notification Templates</CardTitle>
+            <CardTitle>Send Push Notification</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Notification template management will be implemented in the next phase.
-            </p>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Target Audience</Label>
+              <Select value={notiTarget} onValueChange={setNotiTarget}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users & Riders</SelectItem>
+                  <SelectItem value="customers">Customers Only</SelectItem>
+                  <SelectItem value="riders">Riders Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Notification Title</Label>
+              <Input placeholder="E.g. Holiday Promo!" value={notiTitle} onChange={(e) => setNotiTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Message Body</Label>
+              <Input placeholder="Type your message here..." value={notiBody} onChange={(e) => setNotiBody(e.target.value)} />
+            </div>
+            <Button onClick={handleSendNotification} disabled={isSending}>
+              {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Send Notification
+            </Button>
           </CardContent>
         </Card>
       </TabsContent>

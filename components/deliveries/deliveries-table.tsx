@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries";
 import { getRiders, type Rider } from "@/lib/firebase/riders";
-import { db } from "@/lib/firebase/config";
+import { db, functions } from "@/lib/firebase/config";
+import { httpsCallable } from "firebase/functions";
 import {
   doc,
   updateDoc,
@@ -55,7 +56,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { StatsCard } from "../dashboard/stats-card";
 import { normalizeStatus, getStatusDisplay } from "@/lib/tracking-utils";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Wallet } from "lucide-react";
 
 type User = {
   id: string;
@@ -75,8 +76,9 @@ const DeliveriesTable = () => {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(
-    null,
-  );
+      null,
+    );
+    const [refunding, setRefunding] = useState<string | null>(null);
   const [customerNames, setCustomerNames] = useState<Record<string, string>>(
     {},
   );
@@ -94,6 +96,23 @@ const DeliveriesTable = () => {
   const DELIVERY_STATUSES = ["pending", "picked_up", "in_transit", "delivered"];
 
   const PAYMENT_STATUSES = ["pending", "paid", "unpaid", "partially_paid"];
+
+  const handleRefund = async (deliveryId: string) => {
+    setRefunding(deliveryId);
+    try {
+      const refundToWallet = httpsCallable(functions, 'refundToWallet');
+      await refundToWallet({ deliveryId });
+      
+      // Update local state to make the button inaccessible instantly
+      setDeliveries((prev) => prev.map(d => d.id === deliveryId ? { ...d, refundStatus: 'refunded' } : d));
+      
+      toast({ title: "Refund successful!", description: "The customer's wallet has been credited." });
+    } catch (error: any) {
+      toast({ title: "Refund failed", description: error.message, variant: "destructive" });
+    } finally {
+      setRefunding(null);
+    }
+  };
 
   const handleUpdateStatus = async (status: string) => {
     if (!selectedDelivery?.id) return;
@@ -553,10 +572,26 @@ const DeliveriesTable = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 rounded-lg font-medium"
+                      {d.status === 'cancelled' && d.refundStatus !== 'refunded' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-lg font-medium text-blue-600 border-blue-200 hover:bg-blue-50"
+                            onClick={() => handleRefund(d.id)}
+                            disabled={refunding === d.id}
+                            title="Refund to SahelX Wallet"
+                          >
+                            {refunding === d.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4 mr-1" />}
+                            Refund
+                          </Button>
+                        )}
+                        {d.status === 'cancelled' && d.refundStatus === 'refunded' && (
+                          <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">Refunded</span>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-lg font-medium"
                         onClick={() => {
                           setSelectedDelivery(d);
                           setSelectedCourierId("");
