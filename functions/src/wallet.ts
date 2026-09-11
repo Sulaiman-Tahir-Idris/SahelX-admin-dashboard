@@ -8,7 +8,7 @@ export const requestDeliveryWallet = onCall(async (request) => {
     throw new HttpsError('unauthenticated', 'Must be logged in.');
   }
   const uid = request.auth.uid;
-  const { pickup, dropoff, dropoffs, goodsType, goodsSize, distanceKm, cost, type = 'single' } = request.data;
+  const { pickup, dropoff, dropoffs, goodsType, goodsSize, distanceKm, cost, type = 'single', receiverPhone } = request.data;
 
   if (!cost || cost <= 0) {
     throw new HttpsError('invalid-argument', 'Invalid cost.');
@@ -68,6 +68,7 @@ export const requestDeliveryWallet = onCall(async (request) => {
       isBulk: type === 'bulk',
       createdAt: FieldValue.serverTimestamp(),
       history: [{ status: 'pending', timestamp: new Date().toISOString() }],
+      receiverPhone: receiverPhone || null,
     };
 
     if (type === 'single') {
