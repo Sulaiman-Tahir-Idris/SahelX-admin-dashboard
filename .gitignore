@@ -29,3 +29,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Firebase cache and logs
+.firebase/
+firebase-debug.log
+serviceAccountKey.json
+ui-debug.log
+firestore-debug.log
+
