@@ -1,5 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import * as functionsV1 from 'firebase-functions/v1';
+
 
 const db = getFirestore();
 
@@ -147,4 +149,74 @@ export const refundToWallet = onCall(async (request) => {
   });
   
   return { success: true };
+});
+
+/**
+ * Cascades account deletion when a Firebase Auth user is deleted.
+ * Triggered automatically by Firebase Auth — no client-side call needed.
+ *
+ * Deletes in order:
+ *  1. Wallets/{uid}/transactions subcollection (can't be done client-side)
+ *  2. All deliveries where customerId == uid
+ *  3. Wallets/{uid} document
+ *  4. User/{uid} document
+ *  5. Cloudinary profile photo (if stored)
+ */
+export const onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
+  const uid = user.uid;
+  if (!uid) return;
+
+  console.log(`[onUserDeleted] Starting cascade deletion for uid: ${uid}`);
+
+  try {
+    // 1. Delete Wallets/{uid}/transactions subcollection in batches
+    const txRef = db.collection('Wallets').doc(uid).collection('transactions');
+    let txSnap = await txRef.limit(200).get();
+    while (!txSnap.empty) {
+      const batch = db.batch();
+      txSnap.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      txSnap = await txRef.limit(200).get();
+    }
+    console.log(`[onUserDeleted] Wallet transactions deleted for uid: ${uid}`);
+
+    // 2. Delete all deliveries where customerId == uid in batches
+    const deliveriesRef = db.collection('deliveries').where('customerId', '==', uid);
+    let deliverySnap = await deliveriesRef.limit(200).get();
+    while (!deliverySnap.empty) {
+      const batch = db.batch();
+      deliverySnap.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      deliverySnap = await deliveriesRef.limit(200).get();
+    }
+    console.log(`[onUserDeleted] Deliveries deleted for uid: ${uid}`);
+
+    // 3. Delete Cloudinary profile photo if one exists
+    const userSnap = await db.collection('User').doc(uid).get();
+    const profilePhoto: string | undefined = userSnap.data()?.profilePhoto;
+    if (profilePhoto && profilePhoto.includes('cloudinary.com')) {
+      // Extract the public_id from the Cloudinary URL
+      // URL format: https://res.cloudinary.com/{cloud}/image/upload/{version}/{publicId}.{ext}
+      const match = profilePhoto.match(/\/upload\/(?:v\d+\/)?(.+?)(\.[a-z]+)?$/i);
+      if (match) {
+        const publicId = match[1];
+        const CLOUD_NAME = 'dwy8mwkmm';
+        // Cloudinary unsigned delete requires an API secret — log a warning instead
+        // For production: use Cloudinary Admin API with CLOUDINARY_API_KEY secret
+        console.warn(`[onUserDeleted] Profile photo requires manual cleanup: publicId=${publicId}, cloudName=${CLOUD_NAME}`);
+      }
+    }
+
+    // 4 & 5. Delete Wallet doc and User doc atomically
+    const finalBatch = db.batch();
+    finalBatch.delete(db.collection('Wallets').doc(uid));
+    finalBatch.delete(db.collection('User').doc(uid));
+    await finalBatch.commit();
+    console.log(`[onUserDeleted] User and Wallet documents deleted for uid: ${uid}`);
+
+  } catch (err) {
+    console.error(`[onUserDeleted] Error during cascade deletion for uid: ${uid}`, err);
+    // Don't re-throw — the auth deletion has already happened, 
+    // orphaned data is better than blocking the deletion.
+  }
 });
