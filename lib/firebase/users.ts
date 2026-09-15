@@ -63,37 +63,30 @@ export const createCourierWithoutLogout = async (
   },
 ): Promise<string> => {
   try {
-    // Create Firebase Auth user for courier using secondary auth to avoid overriding session
-    const userCredential = await createUserWithEmailAndPassword(
-      secondaryAuth,
-      courierData.email,
-      courierData.password,
-    );
-    const newUser = userCredential.user;
+    const response = await fetch('/api/admin/create-courier', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: courierData.email,
+        password: courierData.password,
+        displayName: courierData.displayName,
+        phone: courierData.phone,
+        isVerified: courierData.verified,
+        isActive: courierData.isActive,
+        address: courierData.address,
+        vehicleInfo: courierData.vehicleInfo,
+      }),
+    });
 
-    // Create courier document in Firestore
-    const newCourier = {
-      userId: newUser.uid,
-      email: courierData.email,
-      phone: courierData.phone,
-      displayName: courierData.displayName,
-      role: "courier" as const,
-      verified: courierData.verified,
-      profilePhoto: courierData.profilePhoto || "",
-      isActive: courierData.isActive,
-      isAvailable: false,
-      status: "offline",
-      address: courierData.address,
-      vehicleInfo: courierData.vehicleInfo,
-      createdAt: serverTimestamp(),
-    };
+    const data = await response.json();
 
-    await setDoc(doc(db, "User", newUser.uid), newCourier);
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to create courier");
+    }
 
-    // Sign out the newly created courier user from the secondary instance
-    await signOut(secondaryAuth);
-
-    return newUser.uid;
+    return data.courierId;
   } catch (error: any) {
     throw new Error(error.message || "Failed to create courier");
   }

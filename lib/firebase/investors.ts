@@ -19,32 +19,29 @@ export const createInvestor = async (
   investorData: any
 ): Promise<string> => {
   try {
-    const userCredential = await createUserWithEmailAndPassword(
-      secondaryAuth,
-      investorData.email,
-      investorData.password
-    );
+    const response = await fetch('/api/admin/create-investor', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: investorData.email,
+        password: investorData.password,
+        displayName: investorData.displayName,
+        phone: investorData.phone,
+        numberOfBikes: investorData.numberOfBikes,
+        totalInvested: investorData.totalInvested,
+        notes: investorData.notes,
+      }),
+    });
 
-    const user = userCredential.user;
+    const data = await response.json();
 
-    const newInvestor = {
-      userId: user.uid,
-      email: investorData.email,
-      phone: investorData.phone || "",
-      displayName: investorData.displayName,
-      role: "investor",
-      numberOfBikes: investorData.numberOfBikes || 0,
-      totalInvested: investorData.totalInvested || 0,
-      notes: investorData.notes || "",
-      createdAt: serverTimestamp(),
-    };
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to create investor");
+    }
 
-    await setDoc(doc(db, "Investors", user.uid), newInvestor);
-
-    // Sign out the secondary auth instance immediately to clear it
-    await signOut(secondaryAuth);
-
-    return user.uid;
+    return data.investorId;
   } catch (error: any) {
     throw new Error(error.message || "Failed to create investor");
   }
