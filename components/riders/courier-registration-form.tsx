@@ -128,6 +128,8 @@ export function CourierRegistrationForm() {
         description: `${values.displayName} has been registered. Please share the login credentials with them.`,
       });
     } catch (error: any) {
+      console.error("Submission error:", error);
+      alert("Failed to register courier: " + (error.message || "Unknown error"));
       toast({
         title: "Failed to register courier",
         description: error.message || "An unexpected error occurred.",
@@ -303,7 +305,15 @@ export function CourierRegistrationForm() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+              console.error("Form validation errors:", errors);
+              alert("Validation failed! Please check missing or invalid fields. Check console for details.");
+              toast({
+                title: "Validation Error",
+                description: "Please check all fields and ensure they are valid.",
+                variant: "destructive",
+              });
+            })} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <FormField
                   control={form.control}

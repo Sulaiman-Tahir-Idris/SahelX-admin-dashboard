@@ -96,6 +96,7 @@ export default function AdminInvestorsPage() {
       !newInvestor.password ||
       !newInvestor.displayName
     ) {
+      alert("Missing fields: Please fill in Name, Email, and Password.");
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields.",
@@ -120,13 +121,14 @@ export default function AdminInvestorsPage() {
         displayName: "",
         phone: "",
         numberOfBikes: 0,
-        weeklyPayout: 0,
-        paymentStatus: "pending",
+        totalInvested: 0,
         notes: "",
       });
       setShowCreateDialog(false);
       await loadInvestors();
     } catch (error: any) {
+      console.error("Investor creation error:", error);
+      alert("Failed to create investor: " + (error.message || "Unknown error"));
       toast({
         title: "Error",
         description: error.message,
