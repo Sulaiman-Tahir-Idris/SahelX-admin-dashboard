@@ -34,15 +34,18 @@ export default function InvestorDashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [inv, companyContactsData] = await Promise.all([
-          getCurrentInvestor(),
-          getCompanyContacts()
-        ])
+        const inv = await getCurrentInvestor()
         if (inv) {
           setInvestor(inv)
           setInvestorName(inv.displayName?.split(" ")[0] || "Investor")
         }
-        if (companyContactsData) setContacts(companyContactsData)
+        
+        try {
+          const companyContactsData = await getCompanyContacts()
+          if (companyContactsData) setContacts(companyContactsData)
+        } catch (contactErr) {
+          console.error("Failed to load company contacts:", contactErr)
+        }
       } catch (e) {
         console.error(e)
       } finally {
