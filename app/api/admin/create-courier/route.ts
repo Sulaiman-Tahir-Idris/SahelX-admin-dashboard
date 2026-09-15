@@ -21,13 +21,16 @@ async function createAuthUser(email: string, password: string, displayName: stri
 
 export async function POST(req: Request) {
   try {
+    console.log("create-courier API hit");
     const data = await req.json();
+    console.log("payload received", data.email);
 
     // 1. Create Auth user & get their ID token
+    console.log("calling createAuthUser...");
     const { uid, idToken } = await createAuthUser(data.email, data.password, data.displayName);
+    console.log("createAuthUser success, uid:", uid);
 
     // 2. Write courier profile to Firestore using REST API
-    // Must include key= param so Firestore knows which project
     const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/User/${uid}?key=${FIREBASE_API_KEY}`;
 
     const fields: Record<string, any> = {
@@ -58,6 +61,7 @@ export async function POST(req: Request) {
             plateNumber: { stringValue: data.vehicleInfo?.plateNumber || "" },
             model: { stringValue: data.vehicleInfo?.model || "" },
             color: { stringValue: data.vehicleInfo?.color || "" },
+
             verified: { booleanValue: data.isVerified || false },
           },
         },
@@ -65,6 +69,7 @@ export async function POST(req: Request) {
       createdAt: { timestampValue: new Date().toISOString() },
     };
 
+    console.log("calling firestore PATCH...");
     const fsRes = await fetch(firestoreUrl, {
       method: "PATCH",
       headers: {
@@ -74,12 +79,16 @@ export async function POST(req: Request) {
       body: JSON.stringify({ fields }),
     });
 
+    console.log("firestore PATCH returned status:", fsRes.status);
     const fsData = await fsRes.json();
+    console.log("firestore PATCH parsed json");
 
     if (!fsRes.ok) {
+      console.error("firestore PATCH error:", fsData);
       throw new Error(fsData.error?.message || "Failed to write courier to Firestore");
     }
 
+    console.log("create-courier SUCCESS");
     return NextResponse.json({ courierId: uid });
   } catch (error: any) {
     console.error("create-courier error:", error.message);
