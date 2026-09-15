@@ -56,49 +56,84 @@ export interface CustomerUser {
   lastOrder?: any;
 }
 
+const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAbvJX4T18HBcxr1BpD-WFhYDUyMthaFR0";
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "sahelx-backend";
+
 // Create a new courier without logging out the current admin
-export const createCourierWithoutLogout = async (
-  courierData: {
-    email: string;
-    password: string;
-    displayName: string;
-    phone: string;
-    verified: boolean;
-    isActive: boolean;
-    profilePhoto?: string;
-    address: { street: string; city: string; state: string; country: string };
-    vehicleInfo: { type: string; plateNumber: string; model: string; color: string; verified: boolean };
-  },
-): Promise<string> => {
-  try {
-    const response = await fetch('/api/admin/create-courier', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+export const createCourierWithoutLogout = async (courierData: {
+  email: string;
+  password: string;
+  displayName: string;
+  phone: string;
+  verified: boolean;
+  isActive: boolean;
+  profilePhoto?: string;
+  address: { street: string; city: string; state: string; country: string };
+  vehicleInfo: { type: string; plateNumber: string; model: string; color: string; verified: boolean };
+}): Promise<string> => {
+  // Step 1: Create Firebase Auth user via REST (gets back an idToken without affecting current session)
+  const authRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: courierData.email,
         password: courierData.password,
         displayName: courierData.displayName,
-        phone: courierData.phone,
-        isVerified: courierData.verified,
-        isActive: courierData.isActive,
-        address: courierData.address,
-        vehicleInfo: courierData.vehicleInfo,
+        returnSecureToken: true,
       }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to create courier");
     }
-
-    return data.courierId;
-  } catch (error: any) {
-    throw new Error(error.message || "Failed to create courier");
+  );
+  const authData = await authRes.json();
+  if (!authRes.ok || authData.error) {
+    throw new Error(authData.error?.message || "Failed to create Auth user");
   }
+  const uid: string = authData.localId;
+  const idToken: string = authData.idToken;
+
+  // Step 2: Write the courier profile to Firestore using the new user's token (satisfies isOwner rule)
+  const fsUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/User/${uid}?key=${FIREBASE_API_KEY}`;
+  const fsRes = await fetch(fsUrl, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+    body: JSON.stringify({
+      fields: {
+        userId: { stringValue: uid },
+        email: { stringValue: courierData.email },
+        phone: { stringValue: courierData.phone || "" },
+        displayName: { stringValue: courierData.displayName },
+        role: { stringValue: "courier" },
+        verified: { booleanValue: courierData.verified || false },
+        isActive: { booleanValue: courierData.isActive !== false },
+        isAvailable: { booleanValue: false },
+        status: { stringValue: "offline" },
+        profilePhoto: { stringValue: "" },
+        address: { mapValue: { fields: {
+          street: { stringValue: courierData.address?.street || "" },
+          city: { stringValue: courierData.address?.city || "" },
+          state: { stringValue: courierData.address?.state || "" },
+          country: { stringValue: courierData.address?.country || "Nigeria" },
+        }}},
+        vehicleInfo: { mapValue: { fields: {
+          type: { stringValue: courierData.vehicleInfo?.type || "" },
+          plateNumber: { stringValue: courierData.vehicleInfo?.plateNumber || "" },
+          model: { stringValue: courierData.vehicleInfo?.model || "" },
+          color: { stringValue: courierData.vehicleInfo?.color || "" },
+          verified: { booleanValue: courierData.verified || false },
+        }}},
+        createdAt: { timestampValue: new Date().toISOString() },
+      },
+    }),
+  });
+  const fsData = await fsRes.json();
+  if (!fsRes.ok) {
+    throw new Error(fsData.error?.message || "Failed to save courier profile");
+  }
+
+  return uid;
 };
+
 
 // Legacy function - keep for backward compatibility
 export const createCourier = async (

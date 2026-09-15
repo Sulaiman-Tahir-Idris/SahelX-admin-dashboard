@@ -5,46 +5,68 @@ import {
   getDoc,
   updateDoc,
   deleteDoc,
-  setDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth, db, secondaryAuth } from "./config";
+import { db } from "./config";
 import type { InvestorUser } from "./investorAuth";
+
+const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAbvJX4T18HBcxr1BpD-WFhYDUyMthaFR0";
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "sahelx-backend";
 
 /**
  * Create a new investor
  */
-export const createInvestor = async (
-  investorData: any
-): Promise<string> => {
-  try {
-    const response = await fetch('/api/admin/create-investor', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+export const createInvestor = async (investorData: any): Promise<string> => {
+  // Step 1: Create Firebase Auth user via REST (without affecting admin session)
+  const authRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: investorData.email,
         password: investorData.password,
         displayName: investorData.displayName,
-        phone: investorData.phone,
-        numberOfBikes: investorData.numberOfBikes,
-        totalInvested: investorData.totalInvested,
-        notes: investorData.notes,
+        returnSecureToken: true,
       }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to create investor");
     }
-
-    return data.investorId;
-  } catch (error: any) {
-    throw new Error(error.message || "Failed to create investor");
+  );
+  const authData = await authRes.json();
+  if (!authRes.ok || authData.error) {
+    throw new Error(authData.error?.message || "Failed to create Auth user");
   }
+  const uid: string = authData.localId;
+  const idToken: string = authData.idToken;
+
+  // Step 2: Write investor profile to Firestore using the new user's token (satisfies isOwner rule)
+  const fsUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/Investors/${uid}?key=${FIREBASE_API_KEY}`;
+  const fsRes = await fetch(fsUrl, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+    body: JSON.stringify({
+      fields: {
+        userId: { stringValue: uid },
+        email: { stringValue: investorData.email },
+        phone: { stringValue: investorData.phone || "" },
+        displayName: { stringValue: investorData.displayName },
+        role: { stringValue: "investor" },
+        numberOfBikes: { integerValue: investorData.numberOfBikes || 0 },
+        totalInvested: { integerValue: investorData.totalInvested || 0 },
+        notes: { stringValue: investorData.notes || "" },
+        bikePurchase: { booleanValue: false },
+        documentsReady: { booleanValue: false },
+        riderReadiness: { booleanValue: false },
+        bikeReadiness: { booleanValue: false },
+        createdAt: { timestampValue: new Date().toISOString() },
+      },
+    }),
+  });
+  const fsData = await fsRes.json();
+  if (!fsRes.ok) {
+    throw new Error(fsData.error?.message || "Failed to save investor profile");
+  }
+
+  return uid;
 };
 
 
