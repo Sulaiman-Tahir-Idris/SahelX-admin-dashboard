@@ -63,12 +63,7 @@ export default function AdminInvestorDetailPage() {
     bikeReadiness: false,
   });
 
-  // Read-only system metrics
-  const [metrics, setMetrics] = useState({
-    customers: 0,
-    deliveries: 0,
-    activeRiders: 0,
-  });
+
 
   // Payouts state
   const [payouts, setPayouts] = useState<InvestorPayout[]>([]);
@@ -108,21 +103,11 @@ export default function AdminInvestorDetailPage() {
         bikeReadiness: inv.bikeReadiness || false,
       });
 
-      const [customers, couriers, deliveries, fetchedBankAccounts, fetchedPayouts] = await Promise.all([
-        getCustomers(),
-        getCouriers(),
-        getDeliveries(),
+      const [fetchedBankAccounts, fetchedPayouts] = await Promise.all([
         getBankAccounts(),
         getInvestorPayouts(investorId),
       ]);
 
-      const activeRiders = couriers.filter(c => c.isActive).length;
-
-      setMetrics({
-        customers: customers.length,
-        deliveries: deliveries.length,
-        activeRiders: activeRiders,
-      });
       setBankAccounts(fetchedBankAccounts);
       setPayouts(fetchedPayouts);
 
@@ -412,27 +397,7 @@ export default function AdminInvestorDetailPage() {
               </CardContent>
             </Card>
 
-            {/* System Metrics Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle>System Metrics Overview</CardTitle>
-                <CardDescription>Live data shown to investors</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4"/> Customers</p>
-                  <p className="text-2xl font-bold">{metrics.customers}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Box className="h-4 w-4"/> Deliveries</p>
-                  <p className="text-2xl font-bold">{metrics.deliveries}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Truck className="h-4 w-4"/> Active Fleet</p>
-                  <p className="text-2xl font-bold">{metrics.activeRiders}</p>
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
         </div>
       </motion.div>
