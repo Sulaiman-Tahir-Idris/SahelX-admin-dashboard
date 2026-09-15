@@ -2,26 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Calendar, Package, Bike, Users } from "lucide-react"
+import { Calendar, CheckCircle2, Circle, Phone, Mail } from "lucide-react"
 import { InvestorDashboardLayout } from "@/components/dashboard/investor-dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { getCurrentInvestor, type InvestorUser } from "@/lib/firebase/investorAuth"
-import { getRiders } from "@/lib/firebase/riders"
-import { getCustomers, getCouriers } from "@/lib/firebase/users"
-import { getDeliveries } from "@/lib/firebase/deliveries"
 import { getCompanyContacts, type CompanyContacts } from "@/lib/firebase/companyContacts"
-import { getNigerianStartOfDay } from "@/lib/utils/timezone"
-import { Phone, Mail } from "lucide-react"
-import dynamic from "next/dynamic"
-
-const ChartAreaInteractive = dynamic(
-  () => import("@/components/chart-area-interactive").then(m => m.ChartAreaInteractive),
-  { ssr: false }
-)
-const RiderStatusChart = dynamic(
-  () => import("@/components/dashboard/rider-status-chart").then(m => m.RiderStatusChart),
-  { ssr: false }
-)
+import { Progress } from "@/components/ui/progress"
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -31,35 +17,11 @@ const staggerContainer = {
   hidden: {},
   show: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
 }
-const cardVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.97 },
-  show:   { opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: "easeOut" as const } },
-}
-
-function StatCardSkeleton() {
-  return (
-    <Card className="p-5 space-y-3 shadow-none">
-      <div className="flex items-center justify-between">
-        <div className="w-28 h-3.5 rounded-md skeleton" />
-        <div className="w-4 h-4 rounded-full skeleton" />
-      </div>
-      <div className="w-20 h-8 rounded-lg skeleton" />
-      <div className="w-24 h-3 rounded-md skeleton" />
-    </Card>
-  )
-}
-
-const statCards = [
-  { key: "totalDeliveries", label: "Total Deliveries",   sublabel: "All-time orders",   Icon: Package },
-  { key: "totalRiders",     label: "Active Riders",      sublabel: "Fleet members",      Icon: Bike    },
-  { key: "totalCustomers",  label: "Customers",          sublabel: "Registered users",   Icon: Users   },
-  { key: "todayDeliveries", label: "Today's Deliveries", sublabel: "Since midnight",     Icon: Calendar },
-]
 
 export default function InvestorDashboardPage() {
+  const [investor, setInvestor] = useState<InvestorUser | null>(null)
   const [investorName, setInvestorName] = useState("")
   const [todayLabel, setTodayLabel] = useState("")
-  const [data, setData] = useState({ totalDeliveries: 0, totalRiders: 0, totalCustomers: 0, todayDeliveries: 0 })
   const [contacts, setContacts] = useState<CompanyContacts | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -72,30 +34,15 @@ export default function InvestorDashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [investor, riders, customers, deliveries, companyContactsData] = await Promise.all([
+        const [inv, companyContactsData] = await Promise.all([
           getCurrentInvestor(),
-          getCouriers(),
-          getCustomers(),
-          getDeliveries(),
           getCompanyContacts()
         ])
-        if (investor) setInvestorName(investor.displayName?.split(" ")[0] || "Investor")
+        if (inv) {
+          setInvestor(inv)
+          setInvestorName(inv.displayName?.split(" ")[0] || "Investor")
+        }
         if (companyContactsData) setContacts(companyContactsData)
-
-        const today = getNigerianStartOfDay();
-        const todayCount = deliveries.filter(d => {
-          const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(0)
-          return date >= today
-        }).length
-
-        const activeRiders = riders.filter(r => r.isActive).length
-
-        setData({
-          totalDeliveries: deliveries.length,
-          totalRiders: activeRiders,
-          totalCustomers: customers.length,
-          todayDeliveries: todayCount,
-        })
       } catch (e) {
         console.error(e)
       } finally {
@@ -111,6 +58,17 @@ export default function InvestorDashboardPage() {
     if (h < 17) return "Good afternoon"
     return "Good evening"
   }
+
+  // Calculate onboarding progress
+  const checklist = [
+    { key: "bikePurchase", label: "Bike Purchase" },
+    { key: "documentsReady", label: "Documents Ready" },
+    { key: "riderReadiness", label: "Rider Readiness" },
+    { key: "bikeReadiness", label: "Bike Readiness" },
+  ];
+
+  const completedCount = checklist.filter(item => investor?.[item.key as keyof InvestorUser]).length;
+  const progressPercentage = (completedCount / checklist.length) * 100;
 
   return (
     <InvestorDashboardLayout>
@@ -131,7 +89,7 @@ export default function InvestorDashboardPage() {
               <span className="text-emerald-600">{investorName || "Investor"}</span>
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Here's the live operational overview of SahelX today.
+              Track your onboarding progress and company contacts.
             </p>
           </div>
           <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card shadow-card-sm text-sm font-medium text-muted-foreground shrink-0">
@@ -140,58 +98,53 @@ export default function InvestorDashboardPage() {
           </div>
         </motion.div>
 
-        {/* ── Stat Cards ── */}
+        {/* ── Onboarding Progress ── */}
         <motion.section variants={sectionVariants}>
           {isLoading ? (
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-              {[1,2,3,4].map(i => <StatCardSkeleton key={i} />)}
-            </div>
+            <Card className="p-8"><div className="w-full h-8 skeleton rounded" /></Card>
           ) : (
-            <motion.div
-              className="grid gap-4 grid-cols-2 lg:grid-cols-4"
-              variants={staggerContainer}
-              initial="hidden"
-              animate="show"
-            >
-              {statCards.map(({ key, label, sublabel, Icon }) => (
-                <motion.div key={key} variants={cardVariants}>
-                  <Card className="h-full shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">{label}</CardTitle>
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-lg font-medium">
-                        {data[key as keyof typeof data].toLocaleString()}
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Onboarding Progress</CardTitle>
+                <CardDescription>Track the setup status of your investment</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm font-medium">
+                    <span>Setup Completion</span>
+                    <span>{progressPercentage}%</span>
+                  </div>
+                  <Progress value={progressPercentage} className="h-3" />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {checklist.map((item) => {
+                    const isCompleted = investor?.[item.key as keyof InvestorUser];
+                    return (
+                      <div key={item.key} className={`flex items-center gap-3 p-4 rounded-lg border ${isCompleted ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30' : 'bg-muted/30 border-transparent'}`}>
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                        ) : (
+                          <Circle className="h-6 w-6 text-muted-foreground opacity-30" />
+                        )}
+                        <span className={`font-medium ${isCompleted ? 'text-emerald-900 dark:text-emerald-300' : 'text-muted-foreground'}`}>
+                          {item.label}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{sublabel}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </motion.div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </motion.section>
 
-        {/* ── Delivery Volume Chart ── */}
-        <motion.section variants={sectionVariants} className="w-full">
-          <ChartAreaInteractive />
-        </motion.section>
-
-        {/* ── Fleet Status & Contacts ── */}
+        {/* ── Company Contacts ── */}
         <motion.section
           variants={sectionVariants}
-          className="grid grid-cols-1 gap-6 lg:grid-cols-5"
+          className="grid grid-cols-1 gap-6"
         >
-          <div className="lg:col-span-2 flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
-              <h2 className="font-heading text-base font-semibold text-foreground">Fleet Status</h2>
-            </div>
-            <RiderStatusChart />
-          </div>
-
-          <div className="lg:col-span-3 flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
               <h2 className="font-heading text-base font-semibold text-foreground">Company Contacts</h2>
@@ -209,11 +162,11 @@ export default function InvestorDashboardPage() {
                     </div>
                     {contacts?.ceoPhone || "+234 800 000 0000"}
                   </a>
-                  <a href={`mailto:${contacts?.ceoEmail || "[email protected]"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <a href={`mailto:${contacts?.ceoEmail || "tahir@sahelx.com"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
                       <Mail className="h-4 w-4 text-emerald-600" />
                     </div>
-                    {contacts?.ceoEmail || "[email protected]"}
+                    {contacts?.ceoEmail || "tahir@sahelx.com"}
                   </a>
                 </CardContent>
               </Card>
@@ -229,11 +182,11 @@ export default function InvestorDashboardPage() {
                     </div>
                     {contacts?.cfoPhone || "+234 800 000 0000"}
                   </a>
-                  <a href={`mailto:${contacts?.cfoEmail || "[email protected]"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <a href={`mailto:${contacts?.cfoEmail || "finance@sahelx.com"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
                       <Mail className="h-4 w-4 text-emerald-600" />
                     </div>
-                    {contacts?.cfoEmail || "[email protected]"}
+                    {contacts?.cfoEmail || "finance@sahelx.com"}
                   </a>
                 </CardContent>
               </Card>

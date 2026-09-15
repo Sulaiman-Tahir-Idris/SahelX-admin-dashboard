@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Users, Box, Truck, Plus, History } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { getInvestor, updateInvestor } from "@/lib/firebase/investors";
@@ -56,6 +57,10 @@ export default function AdminInvestorDetailPage() {
     numberOfBikes: 0,
     totalInvested: 0,
     notes: "",
+    bikePurchase: false,
+    documentsReady: false,
+    riderReadiness: false,
+    bikeReadiness: false,
   });
 
   // Read-only system metrics
@@ -97,6 +102,10 @@ export default function AdminInvestorDetailPage() {
         numberOfBikes: inv.numberOfBikes || 0,
         totalInvested: inv.totalInvested || 0,
         notes: inv.notes || "",
+        bikePurchase: inv.bikePurchase || false,
+        documentsReady: inv.documentsReady || false,
+        riderReadiness: inv.riderReadiness || false,
+        bikeReadiness: inv.bikeReadiness || false,
       });
 
       const [customers, couriers, deliveries, fetchedBankAccounts, fetchedPayouts] = await Promise.all([
@@ -305,6 +314,44 @@ export default function AdminInvestorDetailPage() {
                   value={formData.totalInvested}
                   onChange={(e) => setFormData({ ...formData, totalInvested: parseInt(e.target.value) || 0 })}
                 />
+              </div>
+
+              <div className="pt-4 pb-2">
+                <h4 className="text-sm font-medium leading-none mb-4">Onboarding Checklist</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="bikePurchase"
+                      checked={formData.bikePurchase}
+                      onCheckedChange={(checked) => setFormData({ ...formData, bikePurchase: checked as boolean })}
+                    />
+                    <Label htmlFor="bikePurchase" className="font-normal">Bike Purchase</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="documentsReady"
+                      checked={formData.documentsReady}
+                      onCheckedChange={(checked) => setFormData({ ...formData, documentsReady: checked as boolean })}
+                    />
+                    <Label htmlFor="documentsReady" className="font-normal">Documents Ready</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="riderReadiness"
+                      checked={formData.riderReadiness}
+                      onCheckedChange={(checked) => setFormData({ ...formData, riderReadiness: checked as boolean })}
+                    />
+                    <Label htmlFor="riderReadiness" className="font-normal">Rider Readiness</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="bikeReadiness"
+                      checked={formData.bikeReadiness}
+                      onCheckedChange={(checked) => setFormData({ ...formData, bikeReadiness: checked as boolean })}
+                    />
+                    <Label htmlFor="bikeReadiness" className="font-normal">Bike Readiness</Label>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">

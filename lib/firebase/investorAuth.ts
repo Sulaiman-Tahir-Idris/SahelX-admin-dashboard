@@ -17,6 +17,10 @@ export interface InvestorUser {
   numberOfBikes: number;
   totalInvested: number;
   notes?: string;
+  bikePurchase?: boolean;
+  documentsReady?: boolean;
+  riderReadiness?: boolean;
+  bikeReadiness?: boolean;
   createdAt: any;
   updatedAt?: any;
 }
