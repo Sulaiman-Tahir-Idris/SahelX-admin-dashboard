@@ -77,8 +77,12 @@ export default function InvestorPortfolioPage() {
           const freshData = await getInvestor(user.id)
           setInvestor(freshData || user)
 
-          const fetchedPayouts = await getInvestorPayouts(user.id)
-          setPayouts(fetchedPayouts)
+          try {
+            const fetchedPayouts = await getInvestorPayouts(user.id)
+            setPayouts(fetchedPayouts)
+          } catch (payoutErr) {
+            console.error("Failed to fetch payouts:", payoutErr)
+          }
         }
       } catch (e) {
         console.error("Error fetching portfolio", e)
