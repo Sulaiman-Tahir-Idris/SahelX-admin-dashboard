@@ -6,3 +6,4 @@ export { requestDeliveryWallet, refundToWallet, onUserDeleted } from './wallet';
 
 export { verifyPaystackTransaction, paystackWebhook } from './paystack';
 export { sendAdminNotification, onDeliveryStatusChanged } from './notifications';
+export { lookupTrackingId } from './tracking';
