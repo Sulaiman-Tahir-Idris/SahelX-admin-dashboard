@@ -19,23 +19,6 @@ async function createAuthUser(email: string, password: string, displayName: stri
   return { uid: data.localId, idToken: data.idToken };
 }
 
-async function writeFirestoreDoc(collection: string, docId: string, idToken: string, fields: Record<string, any>) {
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${collection}/${docId}`;
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ fields }),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error?.message || "Failed to write to Firestore");
-  }
-  return res.json();
-}
-
 export async function POST(req: Request) {
   try {
     const data = await req.json();
@@ -43,8 +26,11 @@ export async function POST(req: Request) {
     // 1. Create Auth user & get their ID token
     const { uid, idToken } = await createAuthUser(data.email, data.password, data.displayName);
 
-    // 2. Write courier profile to Firestore using the new user's token (satisfies isOwner rule)
-    await writeFirestoreDoc("User", uid, idToken, {
+    // 2. Write courier profile to Firestore using REST API
+    // Must include key= param so Firestore knows which project
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/User/${uid}?key=${FIREBASE_API_KEY}`;
+
+    const fields: Record<string, any> = {
       userId: { stringValue: uid },
       email: { stringValue: data.email },
       phone: { stringValue: data.phone || "" },
@@ -62,8 +48,8 @@ export async function POST(req: Request) {
             city: { stringValue: data.address?.city || "" },
             state: { stringValue: data.address?.state || "" },
             country: { stringValue: data.address?.country || "Nigeria" },
-          }
-        }
+          },
+        },
       },
       vehicleInfo: {
         mapValue: {
@@ -73,15 +59,30 @@ export async function POST(req: Request) {
             model: { stringValue: data.vehicleInfo?.model || "" },
             color: { stringValue: data.vehicleInfo?.color || "" },
             verified: { booleanValue: data.isVerified || false },
-          }
-        }
+          },
+        },
       },
       createdAt: { timestampValue: new Date().toISOString() },
+    };
+
+    const fsRes = await fetch(firestoreUrl, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ fields }),
     });
+
+    const fsData = await fsRes.json();
+
+    if (!fsRes.ok) {
+      throw new Error(fsData.error?.message || "Failed to write courier to Firestore");
+    }
 
     return NextResponse.json({ courierId: uid });
   } catch (error: any) {
-    console.error("create-courier error:", error);
+    console.error("create-courier error:", error.message);
     return NextResponse.json(
       { message: error.message || "Failed to create courier" },
       { status: 400 }
