@@ -58,8 +58,16 @@ export interface CustomerUser {
 
 // Create a new courier without logging out the current admin
 export const createCourierWithoutLogout = async (
-  courierData: Omit<CourierUser, "id" | "userId" | "createdAt"> & {
+  courierData: {
+    email: string;
     password: string;
+    displayName: string;
+    phone: string;
+    verified: boolean;
+    isActive: boolean;
+    profilePhoto?: string;
+    address: { street: string; city: string; state: string; country: string };
+    vehicleInfo: { type: string; plateNumber: string; model: string; color: string; verified: boolean };
   },
 ): Promise<string> => {
   try {
