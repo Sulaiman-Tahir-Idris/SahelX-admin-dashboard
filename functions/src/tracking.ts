@@ -12,26 +12,13 @@ export const lookupTrackingId = onCall(async (request) => {
   // Search in deliveries collection
   const deliveriesSnapshot = await db.collection('deliveries')
     .where('trackingId', '==', trackingId)
-    .limit(1)
     .get();
 
   if (!deliveriesSnapshot.empty) {
+    const docIds = deliveriesSnapshot.docs.map(doc => doc.id);
     return {
       collection: 'deliveries',
-      docId: deliveriesSnapshot.docs[0].id
-    };
-  }
-
-  // If you later add a bulkDeliveries collection, we can search it here too:
-  const bulkDeliveriesSnapshot = await db.collection('bulkDeliveries')
-    .where('trackingId', '==', trackingId)
-    .limit(1)
-    .get();
-
-  if (!bulkDeliveriesSnapshot.empty) {
-    return {
-      collection: 'bulkDeliveries',
-      docId: bulkDeliveriesSnapshot.docs[0].id
+      docIds
     };
   }
 
