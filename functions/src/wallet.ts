@@ -53,35 +53,51 @@ export const requestDeliveryWallet = onCall(async (request) => {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    const deliveryRef = db.collection('deliveries').doc();
-    const trackingId = 'SHX-' + Math.floor(100000 + Math.random() * 900000);
-
     const deliveryData: Record<string, unknown> = {
       customerId: uid,
       status: 'pending',
       paymentMethod: 'wallet',
       paymentStatus: 'paid',
-      cost,
       distanceKm,
       goodsType,
       goodsSize,
-      trackingId,
-      isBulk: type === 'bulk',
       createdAt: FieldValue.serverTimestamp(),
       history: [{ status: 'pending', timestamp: new Date().toISOString() }],
-      receiverPhone: receiverPhone || null,
     };
 
-    if (type === 'single') {
-      deliveryData.pickupLocation = pickup;
-      deliveryData.dropoffLocation = dropoff;
+    if (type === 'bulk' && dropoffs && Array.isArray(dropoffs) && dropoffs.length > 0) {
+      const tag = 'BULK_' + Math.floor(10000000 + Math.random() * 90000000).toString();
+      const costPerDropoff = cost / dropoffs.length;
+      
+      dropoffs.forEach((d: any) => {
+        const dRef = db.collection('deliveries').doc();
+        const dTrackingId = 'SHX-' + Math.floor(100000 + Math.random() * 900000);
+        transaction.set(dRef, {
+          ...deliveryData,
+          isBulk: true,
+          tag,
+          cost: costPerDropoff,
+          trackingId: dTrackingId,
+          pickupLocation: pickup,
+          dropoffLocation: d,
+          receiverPhone: d.receiverPhone || receiverPhone || null,
+        });
+      });
+      return { success: true, trackingId: tag, deliveryId: tag, tag };
     } else {
-      deliveryData.pickupLocation = pickup;
-      deliveryData.dropoffs = dropoffs;
+      const deliveryRef = db.collection('deliveries').doc();
+      const trackingId = 'SHX-' + Math.floor(100000 + Math.random() * 900000);
+      transaction.set(deliveryRef, {
+        ...deliveryData,
+        isBulk: false,
+        cost,
+        trackingId,
+        pickupLocation: pickup,
+        dropoffLocation: dropoff,
+        receiverPhone: receiverPhone || null,
+      });
+      return { success: true, trackingId, deliveryId: deliveryRef.id };
     }
-
-    transaction.set(deliveryRef, deliveryData);
-    return { success: true, trackingId, deliveryId: deliveryRef.id };
   });
 });
 

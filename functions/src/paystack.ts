@@ -121,20 +121,45 @@ export const paystackWebhook = onRequest(
         deliveryData.paymentStatus = 'paid';
         deliveryData.status = 'pending';
         deliveryData.createdAt = FieldValue.serverTimestamp();
-        deliveryData.trackingId = 'SHX-' + Math.floor(100000 + Math.random() * 900000);
-      deliveryData.history = [{ status: 'pending', timestamp: new Date().toISOString() }];
-      
-      const batch = db.batch();
-      const deliveryRef = db.collection('deliveries').doc();
-      batch.set(deliveryRef, deliveryData);
-      
-      const paymentRef = db.collection('payments').doc();
-      batch.set(paymentRef, {
-        id: paymentRef.id,
-        amount: event.data.amount / 100,
-        type: 'revenue',
-        category: 'Mobile Delivery',
-        description: `Direct Paystack Payment for Delivery ${deliveryData.trackingId}`,
+        deliveryData.history = [{ status: 'pending', timestamp: new Date().toISOString() }];
+        
+        const batch = db.batch();
+        let trackingDesc = '';
+
+        if (deliveryData.isBulk && Array.isArray(deliveryData.dropoffs) && deliveryData.dropoffs.length > 0) {
+          const tag = 'BULK_' + Math.floor(10000000 + Math.random() * 90000000).toString();
+          trackingDesc = tag;
+          const costPerDropoff = (deliveryData.cost as number) / deliveryData.dropoffs.length;
+          
+          deliveryData.dropoffs.forEach((d: any) => {
+            const dRef = db.collection('deliveries').doc();
+            const dTrackingId = 'SHX-' + Math.floor(100000 + Math.random() * 900000);
+            
+            const singleDelivery = { ...deliveryData };
+            delete singleDelivery.dropoffs;
+            
+            singleDelivery.tag = tag;
+            singleDelivery.cost = costPerDropoff;
+            singleDelivery.trackingId = dTrackingId;
+            singleDelivery.dropoffLocation = d;
+            singleDelivery.receiverPhone = d.receiverPhone || singleDelivery.receiverPhone || null;
+            
+            batch.set(dRef, singleDelivery);
+          });
+        } else {
+          deliveryData.trackingId = 'SHX-' + Math.floor(100000 + Math.random() * 900000);
+          trackingDesc = deliveryData.trackingId as string;
+          const deliveryRef = db.collection('deliveries').doc();
+          batch.set(deliveryRef, deliveryData);
+        }
+        
+        const paymentRef = db.collection('payments').doc();
+        batch.set(paymentRef, {
+          id: paymentRef.id,
+          amount: event.data.amount / 100,
+          type: 'revenue',
+          category: 'Mobile Delivery',
+          description: `Direct Paystack Payment for Delivery ${trackingDesc}`,
         date: FieldValue.serverTimestamp(),
         bankAccountId: 'paystack',
         createdAt: FieldValue.serverTimestamp(),
