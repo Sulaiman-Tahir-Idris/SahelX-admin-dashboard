@@ -236,7 +236,7 @@ const DeliveriesByTag = () => {
             className="cursor-pointer hover:shadow-lg transition-shadow border border-border"
           >
             <CardHeader>
-              <CardTitle className="capitalize">{tag}</CardTitle>
+              <CardTitle className="capitalize truncate" title={tag}>{tag}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">

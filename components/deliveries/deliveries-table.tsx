@@ -192,7 +192,7 @@ const DeliveriesTable = () => {
   const fetchAllDeliveries = async () => {
     try {
       const data = await getDeliveries();
-      const untagged = data.filter((d) => !d.tag);
+      const untagged = data.filter((d) => !d.tag && !d.isBulk);
       setDeliveries(untagged);
     } catch (err) {
       setDeliveries([]);
