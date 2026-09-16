@@ -9,7 +9,7 @@ export const lookupTrackingId = onCall(async (request) => {
 
   const db = getFirestore();
 
-  // Search in deliveries collection
+    // Search in deliveries collection by trackingId
   const deliveriesSnapshot = await db.collection('deliveries')
     .where('trackingId', '==', trackingId)
     .get();
@@ -19,6 +19,20 @@ export const lookupTrackingId = onCall(async (request) => {
     return {
       collection: 'deliveries',
       docIds
+    };
+  }
+  
+  // Search by tag for bulk groups
+  const tagSnapshot = await db.collection('deliveries')
+    .where('tag', '==', trackingId)
+    .get();
+
+  if (!tagSnapshot.empty) {
+    const docIds = tagSnapshot.docs.map(doc => doc.id);
+    return {
+      collection: 'deliveries',
+      docIds,
+      isTag: true
     };
   }
 
