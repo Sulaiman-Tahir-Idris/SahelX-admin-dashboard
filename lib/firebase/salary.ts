@@ -30,7 +30,7 @@ const DEFAULT_CONFIG: SalaryConfig = {
 // ─── CONFIGURATION ─────────────────────────────────────────────────────────────
 
 export async function getSalaryConfig(): Promise<SalaryConfig> {
-  const docRef = doc(db, 'settings', 'salary_config')
+  const docRef = doc(db, 'Setting', 'salary_config')
   const snap = await getDoc(docRef)
   
   if (snap.exists()) {
@@ -43,7 +43,7 @@ export async function getSalaryConfig(): Promise<SalaryConfig> {
 }
 
 export async function updateSalaryConfig(newConfig: Partial<SalaryConfig>): Promise<void> {
-  const docRef = doc(db, 'settings', 'salary_config')
+  const docRef = doc(db, 'Setting', 'salary_config')
   const snap = await getDoc(docRef)
   if (!snap.exists()) {
     await setDoc(docRef, { ...DEFAULT_CONFIG, ...newConfig })

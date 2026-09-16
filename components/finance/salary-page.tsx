@@ -94,6 +94,7 @@ export function SalaryPage() {
       setBankAccounts(banks)
     } catch (e) {
       toast.error("Failed to load salary configuration")
+      setLoading(false)
     }
   }
 
