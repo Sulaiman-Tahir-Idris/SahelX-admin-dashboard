@@ -1,12 +1,12 @@
-﻿import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
-const db = getFirestore();
-const messaging = getMessaging();
 
 export const sendAdminNotification = onCall(async (request) => {
+  const db = getFirestore();
+  const messaging = getMessaging();
   const { title, body, target } = request.data;
   if (!title || !body || !target) {
     throw new HttpsError('invalid-argument', 'Title, body, and target are required.');
@@ -53,8 +53,10 @@ export const sendAdminNotification = onCall(async (request) => {
 });
 
 export const onDeliveryStatusChanged = onDocumentUpdated(
-  'Deliveries/{deliveryId}',
+  'deliveries/{deliveryId}',
   async (event) => {
+    const db = getFirestore();
+    const messaging = getMessaging();
     if (!event.data) return null;
     const beforeData = event.data.before.data();
     const afterData = event.data.after.data();
@@ -75,7 +77,7 @@ export const onDeliveryStatusChanged = onDocumentUpdated(
       title = 'Package Picked Up';
       body = 'Your package has been picked up and is on its way!';
     } else if (afterData.status === 'delivered') {
-      title = 'Package Delivered 🎉';
+      title = 'Package Delivered ??';
       body = 'Your package has been successfully delivered!';
     } else if (afterData.status === 'cancelled') {
       title = 'Delivery Cancelled';

@@ -3,9 +3,8 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import * as functionsV1 from 'firebase-functions/v1';
 
 
-const db = getFirestore();
-
 export const requestDeliveryWallet = onCall(async (request) => {
+  const db = getFirestore();
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Must be logged in.');
   }
@@ -87,6 +86,7 @@ export const requestDeliveryWallet = onCall(async (request) => {
 });
 
 export const refundToWallet = onCall(async (request) => {
+  const db = getFirestore();
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Must be logged in.');
   }
@@ -163,6 +163,7 @@ export const refundToWallet = onCall(async (request) => {
  *  5. Cloudinary profile photo (if stored)
  */
 export const onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
+  const db = getFirestore();
   const uid = user.uid;
   if (!uid) return;
 

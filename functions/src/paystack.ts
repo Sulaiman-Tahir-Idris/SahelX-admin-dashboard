@@ -2,7 +2,6 @@ import { onCall, HttpsError, onRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const db = getFirestore();
 export const PAYSTACK_SECRET = defineSecret('PAYSTACK_SECRET_KEY');
 
 export const initializePaystackTransaction = onCall(
@@ -57,6 +56,7 @@ export const verifyPaystackTransaction = onCall(
 export const paystackWebhook = onRequest(
   { secrets: [PAYSTACK_SECRET] },
   async (req, res) => {
+    const db = getFirestore();
     const event = req.body as {
       event: string;
       data: { amount: number; metadata: Record<string, unknown> };

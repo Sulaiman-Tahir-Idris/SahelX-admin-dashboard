@@ -2,13 +2,13 @@ import * as functionsV1 from 'firebase-functions/v1';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
-const db = getFirestore();
-const messaging = getMessaging();
 
 // Kept as v1 — already deployed, cannot upgrade in-place without deleting first
 export const onNewChatMessage = functionsV1.firestore
   .document('adminChats/{chatId}/messages/{messageId}')
   .onCreate(async (snap, context) => {
+  const db = getFirestore();
+  const messaging = getMessaging();
     const { chatId } = context.params;
     const msgData = snap.data();
     if (!msgData) return null;
