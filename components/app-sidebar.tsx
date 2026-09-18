@@ -1,8 +1,7 @@
-"use client"
+﻿"use client"
 
 import * as React from "react"
-import {
-  Home, Truck, Users, Box, Layers, DollarSign, Map, MessageSquare, Shield, Settings, LogOut,
+import { PlusCircle, Home, Truck, Users, Box, Layers, DollarSign, Map, MessageSquare, Shield, Settings, LogOut,
   LayoutDashboard, Receipt, BookOpen, Building2, FileBarChart2, PieChart, SlidersHorizontal, Banknote, TrendingUp, Package
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
@@ -33,10 +32,11 @@ const allNavItems: NavItem[] = [
   { title: "Riders",              url: "/admin/riders",                    icon: Truck,             section: "operations" },
   { title: "Customers",           url: "/admin/customers",                 icon: Users,             section: "operations" },
   { title: "Deliveries",          url: "/admin/deliveries",                icon: Box,               section: "operations" },
+  { title: "Create Delivery",     url: "/admin/create-delivery",         icon: PlusCircle, section: "operations" },
   { title: "Multiple Deliveries", url: "/admin/multiple-deliveries",       icon: Layers,            section: "operations" },
   { title: "Live Map",            url: "/admin/live-map",                  icon: Map,               section: "operations" },
   { title: "Assets",              url: "/admin/assets",                    icon: Package,           section: "operations" },
-  // ── Finance ────────────────────────────────────────────────────────────────
+  // â”€â”€ Finance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { title: "Finance Dashboard",   url: "/admin/finance/dashboard",         icon: LayoutDashboard,   section: "finance" },
   { title: "Revenue",             url: "/admin/revenue",                   icon: DollarSign,        section: "finance" },
   { title: "Expenses",            url: "/admin/finance/expenses",          icon: Receipt,           section: "finance" },
@@ -47,7 +47,7 @@ const allNavItems: NavItem[] = [
   { title: "Analytics",           url: "/admin/finance/analytics",         icon: PieChart,          section: "finance" },
   { title: "Investors",           url: "/admin/finance/investors",         icon: TrendingUp,        section: "finance" },
   { title: "Finance Settings",    url: "/admin/finance/settings",          icon: SlidersHorizontal, section: "finance" },
-  // ── System ─────────────────────────────────────────────────────────────────
+  // â”€â”€ System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   { title: "Messages",            url: "/admin/messages",                  icon: MessageSquare,     section: "system" },
   { title: "Admin Users",         url: "/admin/admin-users",               icon: Shield,            section: "system" },
   { title: "Secretaries",         url: "/admin/create-secretary",          icon: Users,             section: "system" },
@@ -70,7 +70,7 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
     return items.filter(i => allowed.has(i.url))
   }
   if (r === "coo") {
-    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"])
+    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/create-delivery", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"])
     return items.filter(i => allowed.has(i.url))
   }
   return items

@@ -1,10 +1,9 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  Home, Users, Truck, Box, Layers, Map,
+import { PlusCircle, Home, Users, Truck, Box, Layers, Map,
   LayoutDashboard, DollarSign, Receipt, BookOpen, Building2,
   FileBarChart2, PieChart, SlidersHorizontal, MessageSquare, Shield, Settings,
   Menu, ChevronRight, LogOut, Banknote
@@ -13,13 +12,13 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-utils"
 import { useRole } from "@/lib/hooks/use-role"
 import { Button } from "@/components/ui/button"
-import {
+import { 
   Sheet, SheetContent, SheetHeader, SheetTitle,
   SheetDescription, SheetTrigger,
 } from "@/components/ui/sheet"
 import Image from "next/image"
 
-// ─── Nav Definition ────────────────────────────────────
+// â”€â”€â”€ Nav Definition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type NavItem  = { title: string; href: string; icon: any; section?: string }
 type NavGroup = { label: string; items: NavItem[] }
 
@@ -28,6 +27,7 @@ const allNavItems: NavItem[] = [
   { title: "Riders",              href: "/admin/riders",                   icon: Truck,             section: "operations" },
   { title: "Customers",           href: "/admin/customers",                icon: Users,             section: "operations" },
   { title: "Deliveries",          href: "/admin/deliveries",               icon: Box,               section: "operations" },
+  { title: "Create Delivery",     href: "/admin/create-delivery",        icon: PlusCircle, section: "operations" },
   { title: "Multiple Deliveries", href: "/admin/multiple-deliveries",      icon: Layers,            section: "operations" },
   { title: "Live Map",            href: "/admin/live-map",                 icon: Map,               section: "operations" },
   { title: "Finance Dashboard",   href: "/admin/finance/dashboard",        icon: LayoutDashboard,   section: "finance" },
@@ -62,13 +62,13 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
     return items.filter(i => allowed.has(i.href))
   }
   if (r === "coo") {
-    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap])
+    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/create-delivery", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap])
     return items.filter(i => allowed.has(i.href))
   }
   return items
 }
 
-// ─── Shared Nav Item ───────────────────────────────────
+// â”€â”€â”€ Shared Nav Item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NavItem({ item, pathname, onClick }: { item: NavItem; pathname: string; onClick: (href: string) => void }) {
   const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
   return (
@@ -98,7 +98,7 @@ function NavItem({ item, pathname, onClick }: { item: NavItem; pathname: string;
   )
 }
 
-// ─── Mobile Sheet ──────────────────────────────────────
+// â”€â”€â”€ Mobile Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function MobileNav() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
@@ -133,7 +133,7 @@ export function MobileNav() {
   )
 }
 
-// ─── Desktop Sidebar ───────────────────────────────────
+// â”€â”€â”€ Desktop Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function DashboardNav() {
   const pathname = usePathname()
   const router   = useRouter()
@@ -186,7 +186,7 @@ export function DashboardNav() {
       {/* Footer */}
       <div className="px-4 py-3 border-t border-sidebar-border">
         <p className="text-[10px] text-muted-foreground/50 text-center">
-          SahelX · v1.0
+          SahelX Â· v1.0
         </p>
       </div>
     </motion.aside>
