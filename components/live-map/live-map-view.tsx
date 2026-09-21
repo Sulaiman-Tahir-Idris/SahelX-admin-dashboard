@@ -3,16 +3,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Truck, Package, Activity, MapPin, Navigation, Route, Map as MapIcon, Award } from "lucide-react";
+import { Truck, Package, Activity, MapPin, Navigation, Route, Map as MapIcon, Award, X } from "lucide-react";
 import {
   GoogleMap,
   MarkerF,
   useLoadScript,
-  InfoWindowF,
 } from "@react-google-maps/api";
 import { getRiders, type Rider } from "@/lib/firebase/riders";
 import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries";
+import { db } from "@/lib/firebase/config";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useTheme } from "next-themes";
 import { getNigerianStartOfDay, getNigerianStartOfMonth } from "@/lib/utils/timezone";
 
@@ -32,16 +32,15 @@ const OFFICE_LOCATION = { lat: 11.990528, lng: 8.481111, address: "SahelX Office
 const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "9009e1003c69980469a79a63";
 
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Radius of the earth in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  const d = R * c;
-  return d * 1.3; // Road routing estimation factor
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c * 1.3;
 }
 
 export function LiveMapView() {
@@ -49,9 +48,10 @@ export function LiveMapView() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const { theme } = useTheme();
-  
+
   const [deliveriesRange, setDeliveriesRange] = useState<"total" | "active" | "today" | "month">("total");
   const [mileageRange, setMileageRange] = useState<"today" | "month" | "total">("today");
   const [destRange, setDestRange] = useState<"today" | "month" | "total">("today");
@@ -68,10 +68,24 @@ export function LiveMapView() {
       try {
         const [fetchedRiders, fetchedDeliveries] = await Promise.all([
           getRiders(),
-          getDeliveries()
+          getDeliveries(),
         ]);
         setRiders(fetchedRiders);
         setDeliveries(fetchedDeliveries);
+
+        // Fetch customer display names (non-critical)
+        try {
+          const q = query(collection(db, "User"), where("role", "==", "customer"));
+          const snap = await getDocs(q);
+          const names: Record<string, string> = {};
+          snap.forEach((d) => {
+            const data = d.data() as { displayName?: string };
+            names[d.id] = data.displayName ?? d.id;
+          });
+          setCustomerNames(names);
+        } catch {
+          // silently ignore
+        }
       } catch (err) {
         console.error("Failed to load map data", err);
       } finally {
@@ -79,7 +93,7 @@ export function LiveMapView() {
       }
     };
     fetchData();
-    const interval = setInterval(fetchData, 15000); // Auto refresh every 15s
+    const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -98,11 +112,11 @@ export function LiveMapView() {
       const locationCounts: Record<string, number> = {};
       const riderCounts: Record<string, number> = {};
 
-      filteredDeliveries.forEach(d => {
+      filteredDeliveries.forEach((d) => {
         if (d.distance) {
-          if (typeof d.distance === 'string') {
-            totalKm += parseFloat(d.distance.replace(/[^0-9.]/g, '')) || 0;
-          } else if (typeof d.distance === 'number') {
+          if (typeof d.distance === "string") {
+            totalKm += parseFloat(d.distance.replace(/[^0-9.]/g, "")) || 0;
+          } else if (typeof d.distance === "number") {
             totalKm += d.distance > 1000 ? d.distance / 1000 : d.distance;
           }
         } else if (d.pickupLocation?.lat && d.pickupLocation?.lng && d.dropoffLocation?.lat && d.dropoffLocation?.lng) {
@@ -115,7 +129,7 @@ export function LiveMapView() {
         }
 
         if (d.courierId && d.courierId !== "none") {
-          const rName = riders.find(r => r.id === d.courierId || r.userId === d.courierId)?.displayName || d.courierName || d.courierId;
+          const rName = riders.find((r) => r.id === d.courierId || r.userId === d.courierId)?.displayName || d.courierName || d.courierId;
           riderCounts[rName] = (riderCounts[rName] || 0) + 1;
         }
       });
@@ -124,7 +138,7 @@ export function LiveMapView() {
       Object.entries(locationCounts).forEach(([addr, count]) => {
         if (count > topLoc.count) topLoc = { address: addr, count };
       });
-      
+
       let shortAddr = topLoc.address;
       if (shortAddr !== "None") {
         const parts = shortAddr.split(",");
@@ -137,22 +151,22 @@ export function LiveMapView() {
         if (count > topRiderData.count) topRiderData = { name, count };
       });
       if (topRiderData.name.length > 15) {
-         topRiderData.name = topRiderData.name.substring(0, 15) + "...";
+        topRiderData.name = topRiderData.name.substring(0, 15) + "...";
       }
 
       return {
         mileage: totalKm.toFixed(1),
         topLocation: { address: shortAddr, count: topLoc.count },
         topRider: topRiderData,
-        count: filteredDeliveries.length
+        count: filteredDeliveries.length,
       };
     };
 
     return {
-      today: getMetrics(deliveries.filter(d => filterByDate(d, startOfToday))),
-      month: getMetrics(deliveries.filter(d => filterByDate(d, startOfMonth))),
+      today: getMetrics(deliveries.filter((d) => filterByDate(d, startOfToday))),
+      month: getMetrics(deliveries.filter((d) => filterByDate(d, startOfMonth))),
       total: getMetrics(deliveries),
-      activeCount: deliveries.filter(d => !["received", "recieved", "completed", "cancelled"].includes(d.status?.toLowerCase() || "")).length
+      activeCount: deliveries.filter((d) => !["received", "recieved", "completed", "cancelled"].includes(d.status?.toLowerCase() || "")).length,
     };
   }, [deliveries, riders]);
 
@@ -166,7 +180,7 @@ export function LiveMapView() {
       lat: OFFICE_LOCATION.lat,
       lng: OFFICE_LOCATION.lng,
       status: "Operational",
-      Address: OFFICE_LOCATION.address
+      Address: OFFICE_LOCATION.address,
     });
 
     riders.forEach((rider) => {
@@ -183,11 +197,13 @@ export function LiveMapView() {
     });
 
     deliveries.forEach((delivery) => {
+      const customerName = customerNames[delivery.customerId] ?? delivery.customerId?.substring(0, 8) ?? "Unknown";
+
       if (delivery.pickupLocation && typeof delivery.pickupLocation.lat === "number" && typeof delivery.pickupLocation.lng === "number") {
         markers.push({
           id: `pickup_${delivery.id}`,
           type: "pickup",
-          name: `Pickup: ${delivery.id?.substring(0, 8)}`,
+          name: `Pickup: ${customerName}`,
           lat: delivery.pickupLocation.lat,
           lng: delivery.pickupLocation.lng,
           status: delivery.status,
@@ -195,12 +211,12 @@ export function LiveMapView() {
           Address: delivery.pickupLocation.address || "Not available",
         });
       }
-      
+
       if (delivery.dropoffLocation && typeof delivery.dropoffLocation.lat === "number" && typeof delivery.dropoffLocation.lng === "number") {
         markers.push({
           id: `dropoff_${delivery.id}`,
           type: "dropoff",
-          name: `Dropoff: ${delivery.id?.substring(0, 8)}`,
+          name: `Dropoff: ${customerName}`,
           lat: delivery.dropoffLocation.lat,
           lng: delivery.dropoffLocation.lng,
           status: delivery.status,
@@ -211,7 +227,7 @@ export function LiveMapView() {
     });
 
     return markers;
-  }, [riders, deliveries]);
+  }, [riders, deliveries, customerNames]);
 
   const filteredMarkers = useMemo(() => {
     if (mapView === "all") return allMarkers;
@@ -225,7 +241,7 @@ export function LiveMapView() {
     return { url: "/icons/rider.png", scaledSize: { width: 40, height: 40 } as any };
   };
 
-  const activeRiders = riders.filter(r => r.status === "available" || r.status === "in_transit" || r.isAvailable).length;
+  const activeRiders = riders.filter((r) => r.status === "available" || r.status === "in_transit" || r.isAvailable).length;
 
   const cycleDeliveries = () => {
     const cycle = { total: "active", active: "today", today: "month", month: "total" };
@@ -257,7 +273,7 @@ export function LiveMapView() {
             <h3 className="text-2xl font-bold text-blue-500">{activeRiders}</h3>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-background/60 backdrop-blur-md border-primary/20 shadow-sm cursor-pointer hover:bg-muted/30 transition-colors" onClick={cycleDeliveries}>
           <CardContent className="p-4 flex flex-col justify-center">
             <div className="flex items-center justify-between mb-1">
@@ -294,7 +310,7 @@ export function LiveMapView() {
             </div>
             <div className="flex items-baseline gap-2">
               <h3 className="text-xl font-bold text-foreground truncate max-w-[120px]">{stats[destRange].topLocation.address}</h3>
-              {stats[destRange].topLocation.count > 0 && <span className="text-xs text-muted-foreground font-medium">{stats[destRange].topLocation.count} </span>}
+              {stats[destRange].topLocation.count > 0 && <span className="text-xs text-muted-foreground font-medium">{stats[destRange].topLocation.count}</span>}
             </div>
           </CardContent>
         </Card>
@@ -309,11 +325,11 @@ export function LiveMapView() {
             </div>
             <div className="flex items-baseline gap-2">
               <h3 className="text-xl font-bold text-foreground truncate max-w-[120px]">{stats[riderRange].topRider.name}</h3>
-              {stats[riderRange].topRider.count > 0 && <span className="text-xs text-muted-foreground font-medium">{stats[riderRange].topRider.count} </span>}
+              {stats[riderRange].topRider.count > 0 && <span className="text-xs text-muted-foreground font-medium">{stats[riderRange].topRider.count}</span>}
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-background/60 backdrop-blur-md border-primary/20 shadow-sm">
           <CardContent className="p-4 flex flex-col justify-center">
             <div className="flex items-center justify-between mb-1">
@@ -345,51 +361,125 @@ export function LiveMapView() {
       <div className="flex-1 flex gap-4 min-h-0">
         <Card className="flex-1 overflow-hidden relative shadow-lg border-primary/20 rounded-2xl">
           {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={kanoCenter}
-              zoom={13}
-              options={{
-                mapId: MAP_ID,
-                disableDefaultUI: true,
-                zoomControl: false,
-                colorScheme: theme === "dark" ? "DARK" : "LIGHT"
-              }}
-            >
-              {filteredMarkers.map((marker) => (
-                <MarkerF
-                  key={marker.id}
-                  position={{ lat: marker.lat, lng: marker.lng }}
-                  onClick={() => setSelectedMarker(marker)}
-                  icon={markerIcon(marker.type)}
-                />
-              ))}
+            <>
+              <GoogleMap
+                mapContainerStyle={{ width: "100%", height: "100%" }}
+                center={kanoCenter}
+                zoom={13}
+                options={{
+                  mapId: MAP_ID,
+                  disableDefaultUI: true,
+                  zoomControl: false,
+                  colorScheme: theme === "dark" ? "DARK" : "LIGHT",
+                }}
+              >
+                {filteredMarkers.map((marker) => (
+                  <MarkerF
+                    key={marker.id}
+                    position={{ lat: marker.lat, lng: marker.lng }}
+                    onClick={() => setSelectedMarker(marker)}
+                    icon={markerIcon(marker.type)}
+                  />
+                ))}
+              </GoogleMap>
 
+              {/* Custom info overlay panel — fully themed, works in dark & light mode */}
               {selectedMarker && (
-                <InfoWindowF
-                  position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
-                  onCloseClick={() => setSelectedMarker(null)}
+                <div
+                  className="absolute top-3 left-3 z-10 w-[260px] rounded-xl border border-border bg-card text-card-foreground shadow-xl overflow-hidden"
+                  style={{
+                    borderLeft:
+                      selectedMarker.type === "pickup"
+                        ? "4px solid #2563EB"
+                        : selectedMarker.type === "dropoff"
+                        ? "4px solid #F97316"
+                        : selectedMarker.type === "rider"
+                        ? "4px solid #22c55e"
+                        : "4px solid #6b7280",
+                  }}
                 >
-                  <div className="p-3 max-w-[220px]">
-                    <h3 className="font-bold text-sm text-foreground mb-1 flex items-center gap-1.5">
-                      {selectedMarker.type === 'rider' ? <Truck className="h-3.5 w-3.5 text-blue-500"/> : selectedMarker.type === 'office' ? <MapPin className="h-3.5 w-3.5 text-green-500"/> : <Package className="h-3.5 w-3.5 text-purple-500"/>}
-                      {selectedMarker.name}
-                    </h3>
-                    {selectedMarker.status && (
-                      <Badge variant="secondary" className="mb-2 text-[10px] font-bold uppercase">
-                        {selectedMarker.status.replace(/_/g, " ")}
-                      </Badge>
-                    )}
-                    <p className="text-xs text-muted-foreground mb-1.5 leading-tight font-medium">
-                      {selectedMarker.Address || "Location tracking active"}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground font-mono bg-muted/50 p-1 rounded">
-                      {selectedMarker.lat.toFixed(5)}, {selectedMarker.lng.toFixed(5)}
-                    </p>
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2 px-4 pt-3 pb-2 border-b border-border">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {selectedMarker.type === "rider" ? (
+                        <Truck className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                      ) : selectedMarker.type === "office" ? (
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+                      ) : (
+                        <Package className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {selectedMarker.type === "office"
+                            ? "Office / Depot"
+                            : selectedMarker.type === "rider"
+                            ? "Rider"
+                            : `${selectedMarker.type} point`}
+                        </p>
+                        <h3 className="font-bold text-sm text-card-foreground leading-tight mt-0.5 truncate">
+                          {selectedMarker.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedMarker(null)}
+                      className="mt-0.5 shrink-0 rounded-md p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </InfoWindowF>
+
+                  {/* Body */}
+                  <div className="px-4 py-3 space-y-2 text-sm max-h-[300px] overflow-y-auto">
+                    {/* Status badge */}
+                    {selectedMarker.status && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Status</span>
+                        <span className={[
+                          "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize",
+                          /available|active|completed|delivered|received|operational/i.test(selectedMarker.status)
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                            : /in.transit|assigned|picked.up/i.test(selectedMarker.status)
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+                            : /pending|requested/i.test(selectedMarker.status)
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                            : /cancel|offline/i.test(selectedMarker.status)
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                            : "bg-muted text-muted-foreground"
+                        ].join(" ")}>
+                          {selectedMarker.status.replace(/_/g, " ")}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Address */}
+                    {selectedMarker.Address && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Address</p>
+                        <p className="text-xs text-card-foreground leading-snug">{selectedMarker.Address}</p>
+                      </div>
+                    )}
+
+                    {/* Delivery ID */}
+                    {selectedMarker.deliveryId && (
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs text-muted-foreground shrink-0">Delivery ID</span>
+                        <code className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-card-foreground break-all">
+                          {selectedMarker.deliveryId}
+                        </code>
+                      </div>
+                    )}
+
+                    {/* Coordinates */}
+                    <div className="pt-1.5 border-t border-border">
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {selectedMarker.lat.toFixed(5)}, {selectedMarker.lng.toFixed(5)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
-            </GoogleMap>
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted/10">
               <div className="flex flex-col items-center gap-3">
@@ -410,28 +500,30 @@ export function LiveMapView() {
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0 scrollbar-none">
             <div className="divide-y divide-border/30">
-              {filteredMarkers.filter(m => m.type !== 'office').slice(0, 50).map((marker) => (
+              {filteredMarkers.filter((m) => m.type !== "office").slice(0, 50).map((marker) => (
                 <div
                   key={marker.id}
                   className="p-3 hover:bg-muted/50 transition-all duration-300 cursor-pointer group border-l-2 border-transparent hover:border-primary"
                   onClick={() => setSelectedMarker(marker)}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2">
-                      <div className={`mt-1 h-2 w-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)] ${marker.type === 'rider' ? 'bg-blue-500 shadow-blue-500/50' : marker.type === 'pickup' ? 'bg-orange-500 shadow-orange-500/50' : 'bg-purple-500 shadow-purple-500/50'}`} />
-                      <div>
-                        <p className="text-sm font-bold leading-none group-hover:text-primary transition-colors">
-                          {marker.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1.5 truncate max-w-[170px] font-medium">
-                          {marker.Address || (marker.type === 'rider' ? 'In transit' : 'Pending route')}
-                        </p>
-                      </div>
+                  <div className="flex items-start gap-2">
+                    <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${marker.type === "rider" ? "bg-blue-500" : marker.type === "pickup" ? "bg-orange-500" : "bg-purple-500"}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold leading-none group-hover:text-primary transition-colors truncate">
+                        {marker.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1.5 truncate max-w-[170px] font-medium">
+                        {marker.Address || (marker.type === "rider" ? "In transit" : "Pending route")}
+                      </p>
                     </div>
                   </div>
                 </div>
               ))}
-              {filteredMarkers.length === 1 && <div className="p-8 text-center text-sm font-medium text-muted-foreground uppercase tracking-widest">No active signals</div>}
+              {filteredMarkers.length === 1 && (
+                <div className="p-8 text-center text-sm font-medium text-muted-foreground uppercase tracking-widest">
+                  No active signals
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

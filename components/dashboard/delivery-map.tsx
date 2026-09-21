@@ -6,12 +6,13 @@ import {
   GoogleMap,
   MarkerF,
   useLoadScript,
-  InfoWindowF,
   PolylineF,
 } from "@react-google-maps/api";
 import { getDeliveries, type Delivery } from "@/lib/firebase/deliveries";
 import { subscribeToRiders, type Rider } from "@/lib/firebase/riders";
-import { Loader2 } from "lucide-react";
+import { db } from "@/lib/firebase/config";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { Loader2, X } from "lucide-react";
 
 type Libraries = ("places" | "drawing" | "geometry" | "visualization")[];
 
@@ -56,6 +57,7 @@ export function DeliveryMap() {
   const [animatedRiders, setAnimatedRiders] = useState<
     Record<string, { lat: number; lng: number }>
   >({});
+  const [customerNames, setCustomerNames] = useState<Record<string, string>>({});
 
   const mapKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useLoadScript({
@@ -87,6 +89,20 @@ export function DeliveryMap() {
             d.status?.toLowerCase() !== "recieved",
         );
         setDeliveries(activeDeliveries);
+
+        // Fetch customer display names
+        try {
+          const q = query(collection(db, "User"), where("role", "==", "customer"));
+          const snap = await getDocs(q);
+          const names: Record<string, string> = {};
+          snap.forEach((d) => {
+            const data = d.data() as { displayName?: string };
+            names[d.id] = data.displayName ?? d.id;
+          });
+          setCustomerNames(names);
+        } catch {
+          // non-critical, silently ignore
+        }
 
         unsubscribeRiders = subscribeToRiders((liveRiders) => {
           setRiders(liveRiders);
@@ -149,6 +165,8 @@ export function DeliveryMap() {
     const markers: MapMarker[] = [];
 
     deliveries.forEach((delivery) => {
+      const customerName = customerNames[delivery.customerId] ?? delivery.customerId?.substring(0, 8) ?? "Unknown";
+
       if (
         delivery.pickupLocation &&
         typeof delivery.pickupLocation.lat === "number" &&
@@ -157,7 +175,7 @@ export function DeliveryMap() {
         markers.push({
           id: `pickup_${delivery.id}`,
           type: "pickup",
-          name: `Pickup for ${delivery.id?.substring(0, 8)}...`,
+          name: `Pickup for ${customerName}`,
           lat: delivery.pickupLocation.lat,
           lng: delivery.pickupLocation.lng,
           deliveryId: delivery.id || "",
@@ -173,7 +191,7 @@ export function DeliveryMap() {
         markers.push({
           id: `dropoff_${delivery.id}`,
           type: "dropoff",
-          name: `Dropoff for ${delivery.id?.substring(0, 8)}...`,
+          name: `Dropoff for ${customerName}`,
           lat: delivery.dropoffLocation.lat,
           lng: delivery.dropoffLocation.lng,
           deliveryId: delivery.id || "",
@@ -215,7 +233,7 @@ export function DeliveryMap() {
     });
 
     return markers;
-  }, [deliveries, assignedRiders]);
+  }, [deliveries, assignedRiders, customerNames]);
 
   const mapOptions = useMemo(
     () => ({
@@ -312,28 +330,42 @@ export function DeliveryMap() {
               {activeLine &&
                 deliveries.map((delivery) => {
                   if (activeLine === `pickup_${delivery.id}`) {
-                    return (
-                      <PolylineF
-                        key={`line_pickup_${delivery.id}`}
-                        path={[
-                          delivery.pickupLocation as LocationCoords,
-                          delivery.dropoffLocation as LocationCoords,
-                        ]}
-                        options={{ strokeColor: "#2563EB", strokeWeight: 2 }}
-                      />
-                    );
+                    const pLat = Number((delivery.pickupLocation as any)?.lat);
+                    const pLng = Number((delivery.pickupLocation as any)?.lng);
+                    const dLat = Number((delivery.dropoffLocation as any)?.lat);
+                    const dLng = Number((delivery.dropoffLocation as any)?.lng);
+                    
+                    if (!isNaN(pLat) && !isNaN(pLng) && !isNaN(dLat) && !isNaN(dLng)) {
+                      return (
+                        <PolylineF
+                          key={`line_pickup_${delivery.id}`}
+                          path={[
+                            { lat: pLat, lng: pLng },
+                            { lat: dLat, lng: dLng },
+                          ]}
+                          options={{ strokeColor: "#2563EB", strokeWeight: 2 }}
+                        />
+                      );
+                    }
                   }
                   if (activeLine === `dropoff_${delivery.id}`) {
-                    return (
-                      <PolylineF
-                        key={`line_dropoff_${delivery.id}`}
-                        path={[
-                          delivery.dropoffLocation as LocationCoords,
-                          delivery.pickupLocation as LocationCoords,
-                        ]}
-                        options={{ strokeColor: "#F97316", strokeWeight: 2 }}
-                      />
-                    );
+                    const pLat = Number((delivery.pickupLocation as any)?.lat);
+                    const pLng = Number((delivery.pickupLocation as any)?.lng);
+                    const dLat = Number((delivery.dropoffLocation as any)?.lat);
+                    const dLng = Number((delivery.dropoffLocation as any)?.lng);
+                    
+                    if (!isNaN(pLat) && !isNaN(pLng) && !isNaN(dLat) && !isNaN(dLng)) {
+                      return (
+                        <PolylineF
+                          key={`line_dropoff_${delivery.id}`}
+                          path={[
+                            { lat: dLat, lng: dLng },
+                            { lat: pLat, lng: pLng },
+                          ]}
+                          options={{ strokeColor: "#F97316", strokeWeight: 2 }}
+                        />
+                      );
+                    }
                   }
                   return null;
                 })}
@@ -350,112 +382,197 @@ export function DeliveryMap() {
                   "lat" in delivery.pickupLocation &&
                   "lng" in delivery.pickupLocation
                 ) {
-                  return (
-                    <PolylineF
-                      key={`rider_line_${rider.userId}`}
-                      path={[
-                        {
-                          lat: rider.currentLocation.lat,
-                          lng: rider.currentLocation.lng,
-                        },
-                        {
-                          lat: delivery.pickupLocation.lat,
-                          lng: delivery.pickupLocation.lng,
-                        },
-                      ]}
-                      options={{
-                        strokeColor: "#22c55e",
-                        strokeWeight: 2,
-                        zIndex: 10,
-                      }}
-                    />
-                  );
+                  const rLat = Number(rider.currentLocation.lat);
+                  const rLng = Number(rider.currentLocation.lng);
+                  const pLat = Number(delivery.pickupLocation.lat);
+                  const pLng = Number(delivery.pickupLocation.lng);
+
+                  if (
+                    !isNaN(rLat) &&
+                    !isNaN(rLng) &&
+                    !isNaN(pLat) &&
+                    !isNaN(pLng)
+                  ) {
+                    return (
+                      <PolylineF
+                        key={`rider_line_${rider.userId || rider.id}`}
+                        path={[
+                          {
+                            lat: rLat,
+                            lng: rLng,
+                          },
+                          {
+                            lat: pLat,
+                            lng: pLng,
+                          },
+                        ]}
+                        options={{
+                          strokeColor: "#22c55e",
+                          strokeWeight: 2,
+                          zIndex: 10,
+                        }}
+                      />
+                    );
+                  }
                 }
                 return null;
               })}
+            </GoogleMap>
 
-              {selectedMarker && (
-                <InfoWindowF
-                  position={{
-                    lat: selectedMarker.lat,
-                    lng: selectedMarker.lng,
-                  }}
-                  onCloseClick={() => setSelectedMarker(null)}
-                >
-                  <div className="p-2 min-w-[200px]">
-                    <h3 className="font-bold text-sm text-foreground">
+
+            {/* Custom info overlay panel – floats over the map, fully themed */}
+            {selectedMarker && (
+              <div
+                className="absolute top-3 left-3 z-10 w-[260px] rounded-xl border border-border bg-card text-card-foreground shadow-xl overflow-hidden"
+                style={{
+                  borderLeft: selectedMarker.type === "pickup"
+                    ? "4px solid #2563EB"
+                    : selectedMarker.type === "dropoff"
+                    ? "4px solid #F97316"
+                    : selectedMarker.type === "rider"
+                    ? "4px solid #22c55e"
+                    : "4px solid #6b7280",
+                }}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2 px-4 pt-3 pb-2 border-b border-border">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {selectedMarker.id === "sahelx_office"
+                        ? "Office / Depot"
+                        : selectedMarker.type === "rider"
+                        ? "Rider"
+                        : `${selectedMarker.type} point`}
+                    </p>
+                    <h3 className="font-bold text-sm text-card-foreground leading-tight mt-0.5">
                       {selectedMarker.name}
                     </h3>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedMarker(null); setActiveLine(null); }}
+                    className="mt-0.5 shrink-0 rounded-md p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
 
-                    {selectedMarker.type === "rider" && (
-                      <>
-                        <p className="text-xs text-blue-600 font-bold mt-1">
-                          Rider Status: {selectedMarker.status}
+                {/* Body */}
+                <div className="px-4 py-3 space-y-2 text-sm max-h-[340px] overflow-y-auto">
+
+                  {/* Status badge */}
+                  {selectedMarker.status && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Status</span>
+                      <span className={[
+                        "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize",
+                        /available|active|completed|delivered|received/i.test(selectedMarker.status ?? "")
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                          : /in.transit|assigned|picked.up/i.test(selectedMarker.status ?? "")
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400"
+                          : /pending|requested/i.test(selectedMarker.status ?? "")
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                          : /cancel|offline/i.test(selectedMarker.status ?? "")
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                          : "bg-muted text-muted-foreground"
+                      ].join(" ")}>
+                        {selectedMarker.status}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Rider-specific: assigned deliveries */}
+                  {selectedMarker.type === "rider" && (() => {
+                    const riderId = selectedMarker.id.replace("rider_", "");
+                    const riderDeliveries = deliveries.filter(
+                      (d) => d.courierId === riderId &&
+                        d.status?.toLowerCase() !== "received" &&
+                        d.status?.toLowerCase() !== "recieved",
+                    );
+                    return (
+                      <div className="pt-1 border-t border-border">
+                        <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                          Assigned Deliveries
                         </p>
-                        <div className="mt-2 pt-2 border-t">
-                          <div className="font-bold text-xs mb-1">
-                            Assigned Deliveries:
+                        {riderDeliveries.length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic">No active deliveries.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {riderDeliveries.map((d) => (
+                              <div key={d.id} className="rounded-md bg-muted/60 px-2.5 py-1.5">
+                                <p className="text-xs font-mono font-semibold text-card-foreground leading-tight truncate">
+                                  {d.trackingId || d.id?.substring(0, 10) + "..."}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground capitalize mt-0.5">
+                                  {d.status?.replace(/_/g, " ")}
+                                </p>
+                              </div>
+                            ))}
                           </div>
-                          {deliveries.filter(
-                            (d) =>
-                              d.courierId ===
-                              selectedMarker.id.replace("rider_", ""),
-                          ).length === 0 ? (
-                            <div className="text-xs">No active deliveries.</div>
-                          ) : (
-                            deliveries
-                              .filter(
-                                (d) =>
-                                  d.courierId ===
-                                    selectedMarker.id.replace("rider_", "") &&
-                                  d.status?.toLowerCase() !== "received" &&
-                                  d.status?.toLowerCase() !== "recieved",
-                              )
-                              .map((d) => (
-                                <div key={d.id} className="mb-2 last:mb-0">
-                                  <div className="text-xs font-bold">
-                                    ID: {d.id?.substring(0, 8)}...
-                                  </div>
-                                  <div className="text-[10px] text-muted-foreground">
-                                    Status: {d.status}
-                                  </div>
-                                </div>
-                              ))
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Pickup / Dropoff specific */}
+                  {(selectedMarker.type === "pickup" || selectedMarker.type === "dropoff") &&
+                    selectedMarker.id !== "sahelx_office" && (() => {
+                      const delivery = deliveries.find(d => d.id === selectedMarker.deliveryId);
+                      return (
+                        <div className="pt-1 border-t border-border space-y-1.5">
+                          {delivery?.trackingId && (
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs text-muted-foreground shrink-0">Tracking</span>
+                              <code className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-card-foreground break-all">
+                                {delivery.trackingId}
+                              </code>
+                            </div>
+                          )}
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-muted-foreground shrink-0">Delivery ID</span>
+                            <code className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded text-card-foreground break-all">
+                              {selectedMarker.deliveryId}
+                            </code>
+                          </div>
+                          {delivery?.pickupLocation?.address && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">Pickup</p>
+                              <p className="text-xs text-card-foreground">{delivery.pickupLocation.address}</p>
+                            </div>
+                          )}
+                          {delivery?.dropoffLocation?.address && (
+                            <div>
+                              <p className="text-xs text-muted-foreground">Dropoff</p>
+                              <p className="text-xs text-card-foreground">{delivery.dropoffLocation.address}</p>
+                            </div>
+                          )}
+                          {delivery?.cost != null && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Fee</span>
+                              <span className="text-xs font-bold text-card-foreground">
+                                ₦{(delivery.cost).toLocaleString()}
+                              </span>
+                            </div>
                           )}
                         </div>
-                      </>
-                    )}
+                      );
+                  })()}
 
-                    {(selectedMarker.type === "pickup" ||
-                      selectedMarker.type === "dropoff") &&
-                      selectedMarker.id !== "sahelx_office" && (
-                        <div className="mt-1">
-                          <p className="text-xs font-medium text-desertred uppercase">
-                            {selectedMarker.type} Point
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Status: {selectedMarker.status}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            Delivery ID: {selectedMarker.deliveryId}
-                          </p>
-                        </div>
-                      )}
-
-                    {selectedMarker.id === "sahelx_office" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Main headquarters and dispatch center.
-                      </p>
-                    )}
-
-                    <p className="text-[10px] text-muted-foreground mt-2 pt-1 border-t">
-                      {selectedMarker.lat.toFixed(6)},{" "}
-                      {selectedMarker.lng.toFixed(6)}
+                  {/* Office / Depot */}
+                  {selectedMarker.id === "sahelx_office" && (
+                    <p className="text-xs text-muted-foreground">
+                      Main headquarters and dispatch center.
                     </p>
+                  )}
+
+                  {/* Coordinates */}
+                  <div className="pt-1.5 border-t border-border">
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {selectedMarker.lat.toFixed(5)}, {selectedMarker.lng.toFixed(5)}
+                    </span>
                   </div>
-                </InfoWindowF>
-              )}
-            </GoogleMap>
+                </div>
+              </div>
+            )}
 
             {/* Legend */}
             <div className="absolute bottom-2 md:bottom-4 right-2 md:right-4 rounded-lg bg-background/90 p-2 md:p-3 shadow-lg">

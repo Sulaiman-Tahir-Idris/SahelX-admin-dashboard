@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import * as React from "react"
 import { PlusCircle, Home, Truck, Users, Box, Layers, DollarSign, Map, MessageSquare, Shield, Settings, LogOut,
@@ -32,7 +32,6 @@ const allNavItems: NavItem[] = [
   { title: "Riders",              url: "/admin/riders",                    icon: Truck,             section: "operations" },
   { title: "Customers",           url: "/admin/customers",                 icon: Users,             section: "operations" },
   { title: "Deliveries",          url: "/admin/deliveries",                icon: Box,               section: "operations" },
-  { title: "Create Delivery",     url: "/admin/create-delivery",         icon: PlusCircle, section: "operations" },
   { title: "Multiple Deliveries", url: "/admin/multiple-deliveries",       icon: Layers,            section: "operations" },
   { title: "Live Map",            url: "/admin/live-map",                  icon: Map,               section: "operations" },
   { title: "Assets",              url: "/admin/assets",                    icon: Package,           section: "operations" },
@@ -70,7 +69,7 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
     return items.filter(i => allowed.has(i.url))
   }
   if (r === "coo") {
-    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/create-delivery", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"])
+    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"])
     return items.filter(i => allowed.has(i.url))
   }
   return items

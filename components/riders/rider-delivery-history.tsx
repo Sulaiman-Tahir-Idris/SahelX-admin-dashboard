@@ -19,10 +19,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
-import Link from "next/link";
 import { fetchRiderDeliveryHistory } from "@/lib/firebase/deliveries";
-import { formatDate } from "@/lib/utils/format-date"
+import { formatDate } from "@/lib/utils/format-date";
 
 const statusColors: Record<string, string> = {
   requested: "bg-yellow-500",
@@ -36,6 +41,7 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [selectedDelivery, setSelectedDelivery] = useState<any | null>(null);
 
   useEffect(() => {
     const loadDeliveries = async () => {
@@ -90,8 +96,9 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead>Tracking ID</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Price (₦)</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -99,9 +106,20 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
               <TableBody>
                 {filteredDeliveries.map((delivery) => (
                   <TableRow key={delivery.id}>
-                    <TableCell>{delivery.id}</TableCell>
+                    <TableCell>
+                      {delivery.trackingId ? (
+                        <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono text-muted-foreground">
+                          {delivery.trackingId}
+                        </code>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {formatDate(delivery.createdAt ?? delivery.date)}
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      ₦{(delivery.cost || 0).toLocaleString()}
                     </TableCell>
                     <TableCell>
                       <Badge className={statusColors[delivery.status]}>
@@ -109,10 +127,12 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button asChild variant="ghost">
-                        <Link href={`/deliveries/${delivery.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSelectedDelivery(delivery)}
+                      >
+                        <Eye className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -122,6 +142,51 @@ export function RiderDeliveryHistory({ riderId }: { riderId: string }) {
           </div>
         )}
       </CardContent>
+
+      {selectedDelivery && (
+        <Dialog
+          open={!!selectedDelivery}
+          onOpenChange={() => setSelectedDelivery(null)}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delivery Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 text-sm">
+              <p>
+                <strong>Tracking ID:</strong> {selectedDelivery.trackingId || "N/A"}
+              </p>
+              <p>
+                <strong>Status:</strong> {selectedDelivery.status}
+              </p>
+              <p>
+                <strong>Pickup:</strong>{" "}
+                {selectedDelivery.pickupLocation?.address || "N/A"}
+              </p>
+              <p>
+                <strong>Dropoff:</strong>{" "}
+                {selectedDelivery.dropoffLocation?.address || "N/A"}
+              </p>
+              <p>
+                <strong>Goods:</strong> {selectedDelivery.goodsSize}{" "}
+                {selectedDelivery.goodsType}
+              </p>
+              <p>
+                <strong>Fee:</strong> ₦
+                {(selectedDelivery.cost || 0).toLocaleString()}
+              </p>
+              <p>
+                <strong>Payment Status:</strong>{" "}
+                {selectedDelivery.paymentStatus || "pending"}
+              </p>
+              <p>
+                <strong>Created:</strong>{" "}
+                {formatDate(selectedDelivery.createdAt ?? selectedDelivery.date)}
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 }
