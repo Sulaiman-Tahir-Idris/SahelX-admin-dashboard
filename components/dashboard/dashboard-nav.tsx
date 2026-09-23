@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
@@ -24,7 +24,7 @@ type NavGroup = { label: string; items: NavItem[] }
 
 const allNavItems: NavItem[] = [
   { title: "Dashboard",           href: "/admin/dashboard",                icon: Home,              section: "overview" },
-  { title: "Riders",              href: "/admin/riders",                   icon: Truck,             section: "operations" },
+  { title: "Staff",               href: "/admin/staff",                   icon: Truck,             section: "operations" },
   { title: "Customers",           href: "/admin/customers",                icon: Users,             section: "operations" },
   { title: "Deliveries",          href: "/admin/deliveries",               icon: Box,               section: "operations" },
   { title: "Create Delivery",     href: "/admin/create-delivery",        icon: PlusCircle, section: "operations" },
@@ -62,7 +62,7 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
     return items.filter(i => allowed.has(i.href))
   }
   if (r === "coo") {
-    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/create-delivery", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap])
+    const allowed = new Set(["/admin/dashboard", "/admin/staff", "/admin/customers", "/admin/deliveries", "/admin/create-delivery", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap])
     return items.filter(i => allowed.has(i.href))
   }
   return items

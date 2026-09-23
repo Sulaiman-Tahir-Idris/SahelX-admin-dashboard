@@ -4,6 +4,7 @@ import {
   getDocs,
   getDoc,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "./config";
 
@@ -78,5 +79,18 @@ export const deleteAdminUser = async (adminId: string): Promise<void> => {
     // the user to be currently signed in or admin SDK on server side
   } catch (error: any) {
     throw new Error("Failed to delete admin user");
+  }
+};
+
+// Update admin user
+export const updateAdminUser = async (
+  adminId: string,
+  data: Partial<AdminUser>
+): Promise<void> => {
+  try {
+    const docRef = doc(db, "Admin", adminId);
+    await updateDoc(docRef, data);
+  } catch (error: any) {
+    throw new Error("Failed to update admin user");
   }
 };

@@ -154,7 +154,7 @@ export default function CreateDeliveryPage() {
         trackingId: generateTrackingId(),
         customerId: singleCustomer,
         courierId: (singleCourierId && singleCourierId !== "none") ? singleCourierId : null,
-        createdBy: user?.uid || "secretary",
+        createdBy: user?.id || "secretary",
         pickupLocation: {
           address: singlePickupAddress,
           phone: singlePickupPhone,
@@ -282,7 +282,7 @@ export default function CreateDeliveryPage() {
           trackingId: batchTrackingId,
           customerId: bulkCustomer,
           courierId: (bulkCourierId && bulkCourierId !== "none") ? bulkCourierId : null,
-          createdBy: user?.uid || "secretary",
+          createdBy: user?.id || "secretary",
           pickupLocation: {
             address: bulkPickupAddress,
             phone: bulkPickupPhone,

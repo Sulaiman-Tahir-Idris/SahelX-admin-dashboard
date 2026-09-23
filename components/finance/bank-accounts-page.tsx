@@ -80,7 +80,7 @@ export function BankAccountsPage() {
         debit: !isCredit ? amt : 0,
         description: row["Description"] || "Historical Import",
         reference: `HIST_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-        createdBy: user?.uid || "admin",
+        createdBy: user?.id || "admin",
         createdAt: Timestamp.fromDate(dateVal),
         date: Timestamp.fromDate(dateVal)
       }
@@ -223,7 +223,7 @@ export function BankAccountsPage() {
         credit: values.type === 'Credit' ? values.amount : 0,
         debit: values.type === 'Debit' ? values.amount : 0,
         reference: values.reference || '',
-        createdBy: user?.uid || 'admin'
+        createdBy: user?.id || 'admin'
       })
       toast.success("Transaction recorded")
       setIsAddTxnOpen(false)

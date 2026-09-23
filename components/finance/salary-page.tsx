@@ -3,16 +3,13 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/lib/auth-utils"
 import { useRole } from "@/lib/hooks/use-role"
-import { getSalaryConfig, updateSalaryConfig, getPayrollRecords, savePayrollRecord, markPayrollAsPaid, deletePayrollRecord, type SalaryConfig, type PayrollRecord } from "@/lib/firebase/salary"
-import { getAllRiders, type Rider } from "@/lib/firebase/riders"
-import { getRevenueEntries, getBankAccounts, addExpense, addCashTransaction, addBankTransaction, getExpenses, deleteExpense } from "@/lib/firebase/finance"
-import { getAllPayments, type Payment } from "@/lib/firebase/payments"
-import { getAdminUsers, type AdminUser } from "@/lib/firebase/admin-users"
-import { getSecretaryUsers, type SecretaryUser } from "@/lib/firebase/secretary-users"
+import { getPayrollRecords, savePayrollRecord, markPayrollAsPaid, deletePayrollRecord, type PayrollRecord } from "@/lib/firebase/salary"
+import { getAllStaff } from "@/lib/firebase/staff"
+import type { StaffProfile } from "@/lib/finance/types"
+import { getBankAccounts, addExpense, addCashTransaction, addBankTransaction, getExpenses, deleteExpense } from "@/lib/firebase/finance"
 import { db } from "@/lib/firebase/config"
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -21,20 +18,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Banknote, Users, Download, Save, ShieldAlert, CheckCircle2, Trash2 } from "lucide-react"
+import { Banknote, Download, CheckCircle2, Trash2 } from "lucide-react"
 
 import { useCurrency } from "@/components/providers/currency-provider"
 import type { BankAccount } from "@/lib/finance/types"
-import { saveAs } from "file-saver"
 
 export function SalaryPage() {
   const { formatAmount } = useCurrency()
   const { user } = useAuth()
   const role = useRole()
-  const canEditSettings = role === 'ceo' || role === 'cfo' || role === 'admin'
 
   const [loading, setLoading] = useState(true)
-  const [config, setConfig] = useState<SalaryConfig | null>(null)
   
   // State for Month Selection (YYYY-MM format)
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -43,13 +37,9 @@ export function SalaryPage() {
   })
 
   // Data State
-  const [riders, setRiders] = useState<Rider[]>([])
-  const [admins, setAdmins] = useState<AdminUser[]>([])
-  const [secretaries, setSecretaries] = useState<SecretaryUser[]>([])
+  const [staffList, setStaffList] = useState<StaffProfile[]>([])
   const [deliveries, setDeliveries] = useState<any[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
-  const [totalRevenue, setTotalRevenue] = useState(0)
-  const [totalDeliveryFees, setTotalDeliveryFees] = useState(0)
 
   // Payment UI State
   const [payingPayroll, setPayingPayroll] = useState<PayrollRecord | null>(null)
@@ -57,7 +47,6 @@ export function SalaryPage() {
   const [selectedBankId, setSelectedBankId] = useState<string>("")
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
   
-  const [savingSettings, setSavingSettings] = useState(false)
   const [processingId, setProcessingId] = useState<string | null>(null)
   
   // Advanced Payroll State
@@ -66,34 +55,24 @@ export function SalaryPage() {
   const [deduction, setDeduction] = useState(0)
   const [amountToPay, setAmountToPay] = useState(0)
 
-  // Settings Draft Form
-  const [draftConfig, setDraftConfig] = useState<SalaryConfig | null>(null)
-
   useEffect(() => {
     fetchInitialData()
   }, [])
 
   useEffect(() => {
-    if (config) fetchMonthlyData(selectedMonth)
-  }, [selectedMonth, config])
+    fetchMonthlyData(selectedMonth)
+  }, [selectedMonth])
 
   const fetchInitialData = async () => {
     try {
-      const [conf, rids, adm, sec, banks] = await Promise.all([
-        getSalaryConfig(),
-        getAllRiders(),
-        getAdminUsers(),
-        getSecretaryUsers(),
+      const [staff, banks] = await Promise.all([
+        getAllStaff(),
         getBankAccounts()
       ])
-      setConfig(conf)
-      setDraftConfig(conf)
-      setRiders(rids)
-      setAdmins(adm)
-      setSecretaries(sec)
+      setStaffList(staff)
       setBankAccounts(banks)
     } catch (e) {
-      toast.error("Failed to load salary configuration")
+      toast.error("Failed to load staff or bank accounts")
       setLoading(false)
     }
   }
@@ -115,26 +94,7 @@ export function SalaryPage() {
       const delivs = delivSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
       setDeliveries(delivs)
 
-      // Calculate Total Delivery Fees
-      const delivTotal = delivs.reduce((acc, d) => acc + (Number(d.cost) || 0), 0)
-      setTotalDeliveryFees(delivTotal)
-
-      // 2. Fetch System Revenue & Manual Revenue (For Total Company Revenue)
-      const [sysPayments, manualEntries] = await Promise.all([
-        getAllPayments(),
-        getRevenueEntries()
-      ])
-      
-      const monthlySys = sysPayments.filter(p => p.createdAt >= startDate && p.createdAt <= endDate)
-      const monthlyMan = manualEntries.filter(m => m.date >= startDate && m.date <= endDate)
-      
-      const revTotal = 
-        monthlySys.reduce((acc, p) => acc + p.amount, 0) + 
-        monthlyMan.reduce((acc, m) => acc + m.amount, 0)
-      
-      setTotalRevenue(revTotal)
-
-      // 3. Fetch Existing Payrolls for the month
+      // 2. Fetch Existing Payrolls for the month
       const pr = await getPayrollRecords(monthYear)
       setPayrolls(pr)
 
@@ -147,22 +107,23 @@ export function SalaryPage() {
 
   // ─── CALCULATIONS ────────────────────────────────────────────────────────
 
-  const calculatedRiderPayrolls = useMemo(() => {
-    if (!config) return []
-    return riders.map(r => {
-      // Calculate dynamic commission
-      const myDeliveries = deliveries.filter(d => d.courierId === r.id)
-      const myFees = myDeliveries.reduce((acc, d) => acc + (Number(d.cost) || 0), 0)
-      const commission = (myFees * config.riderComm) / 100
-      const basePay = config.riderBase
-      
-      // Find existing locked or partial payroll
-      const existing = payrolls.find(p => p.employeeId === r.id)
+  const calculatedPayrolls = useMemo(() => {
+    return staffList.map(staff => {
+      const basePay = staff.baseSalary || 0
+      let commissionEarned = 0
+
+      if (staff.role === 'rider' || staff.role === 'courier') {
+        const myDeliveries = deliveries.filter(d => d.courierId === staff.id)
+        const totalDeliveryFees = myDeliveries.reduce((acc, d) => acc + (Number(d.cost) || 0), 0)
+        commissionEarned = (totalDeliveryFees * (staff.commissionRate || 0)) / 100
+      }
+
+      const existing = payrolls.find(p => p.employeeId === staff.id)
       const b = existing?.bonus || 0
       const d = existing?.deduction || 0
       const adv = existing?.advancePaid || 0
       
-      const totalPay = basePay + commission + b - d
+      const totalPay = basePay + commissionEarned + b - d
       const remaining = totalPay - adv
       
       let status = existing?.status || "unpaid"
@@ -171,13 +132,13 @@ export function SalaryPage() {
       }
       
       return {
-        id: existing?.id || `draft_${r.id}`,
+        id: existing?.id || `draft_${staff.id}`,
         monthYear: selectedMonth,
-        role: "Rider",
-        employeeId: r.id || "unknown",
-        employeeName: r.displayName || "Unknown",
+        role: staff.role,
+        employeeId: staff.id,
+        employeeName: staff.name || "Unknown",
         basePay,
-        commissionEarned: commission,
+        commissionEarned,
         bonus: b,
         deduction: d,
         advancePaid: adv,
@@ -186,113 +147,9 @@ export function SalaryPage() {
         updatedAt: existing?.updatedAt
       }
     })
-  }, [riders, deliveries, config, payrolls, selectedMonth])
+  }, [staffList, deliveries, payrolls, selectedMonth])
 
-  const calculatedExecPayrolls = useMemo(() => {
-    if (!config) return []
-    
-    return admins
-      .filter(a => ["ceo", "cfo", "cto", "admin"].includes((a.role || "").toLowerCase()))
-      .map(adm => {
-        let r = (adm.role || "").toLowerCase()
-        const email = (adm.email || "").toLowerCase()
-        
-        // If role is generic admin, infer from email
-        if (r === "admin") {
-          if (email.includes("ceo")) r = "ceo"
-          else if (email.includes("cfo")) r = "cfo"
-          else if (email.includes("cto")) r = "cto"
-        }
-        let base = 0
-        let commPct = 0
-        let roleName = "Executive"
-        
-        if (r === "ceo") { base = config.ceoBase; commPct = config.ceoComm; roleName = "Chief Executive Officer" }
-        else if (r === "cfo") { base = config.cfoBase; commPct = config.cfoComm; roleName = "Chief Financial Officer" }
-        else if (r === "cto") { base = config.ctoBase; commPct = config.ctoComm; roleName = "Chief Technology Officer" }
-
-        const commission = (totalRevenue * commPct) / 100
-
-        const existing = payrolls.find(p => p.employeeId === adm.id)
-        const b = existing?.bonus || 0
-        const d = existing?.deduction || 0
-        const adv = existing?.advancePaid || 0
-        
-        const totalPay = base + commission + b - d
-        const remaining = totalPay - adv
-        
-        let status = existing?.status || "unpaid"
-        if (adv > 0) {
-          status = remaining <= 0 ? "paid" : "partial"
-        }
-
-        return {
-          id: existing?.id || `draft_${adm.id}`,
-          monthYear: selectedMonth,
-          role: roleName,
-          employeeId: adm.id || "unknown",
-          employeeName: adm.displayName || adm.email || "Admin",
-          basePay: base,
-          commissionEarned: commission,
-          bonus: b,
-          deduction: d,
-          advancePaid: adv,
-          totalPay,
-          status: status as "unpaid" | "partial" | "paid",
-          updatedAt: existing?.updatedAt
-        }
-    })
-  }, [admins, totalRevenue, config, payrolls, selectedMonth])
-
-  const calculatedSecretaryPayrolls = useMemo(() => {
-    if (!config) return []
-
-    return secretaries.map(sec => {
-      // Find manual deliveries created by this specific secretary
-      const secDeliveries = deliveries.filter(
-        d => d.type === "manual" && d.createdBy === sec.id
-      )
-      
-      const secDeliveryTotal = secDeliveries.reduce((acc, d) => acc + (Number(d.cost) || 0), 0)
-      const commission = (secDeliveryTotal * config.secretaryComm) / 100
-
-      const existing = payrolls.find(p => p.employeeId === sec.id)
-      const b = existing?.bonus || 0
-      const d = existing?.deduction || 0
-      const adv = existing?.advancePaid || 0
-      
-      const totalPay = config.secretaryBase + commission + b - d
-      const remaining = totalPay - adv
-      
-      let status = existing?.status || "unpaid"
-      if (adv > 0) {
-        status = remaining <= 0 ? "paid" : "partial"
-      }
-
-      return {
-        id: existing?.id || `draft_${sec.id}`,
-        monthYear: selectedMonth,
-        role: "Dispatch Manager",
-        employeeId: sec.id || "sec",
-        employeeName: sec.displayName || sec.email || "Secretary",
-        basePay: config.secretaryBase,
-        commissionEarned: commission,
-        bonus: b,
-        deduction: d,
-        advancePaid: adv,
-        totalPay,
-        status: status as "unpaid" | "partial" | "paid",
-        updatedAt: existing?.updatedAt
-      }
-    })
-  }, [secretaries, deliveries, config, payrolls, selectedMonth])
-
-  const allPayrolls = [...calculatedExecPayrolls, ...calculatedSecretaryPayrolls, ...calculatedRiderPayrolls]
-  const grandTotal = allPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
-  const riderTotal = calculatedRiderPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
-  const execTotal = calculatedExecPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
-  const secretaryTotal = calculatedSecretaryPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
-
+  const grandTotal = calculatedPayrolls.filter(p => p.status !== "paid").reduce((sum, p) => sum + (p.totalPay - (p.advancePaid || 0)), 0)
 
   // ─── ACTIONS ─────────────────────────────────────────────────────────────
 
@@ -364,7 +221,7 @@ export function SalaryPage() {
             amount: relatedExpense.amount,
             type: 'cash_in',
             reference: `REFUND-EXP-${relatedExpense.id.slice(-6).toUpperCase()}`,
-            createdBy: user?.uid ?? 'system'
+            createdBy: user?.id ?? 'system'
           })
         } else if (relatedExpense.bankAccountId) {
           await addBankTransaction(relatedExpense.bankAccountId, {
@@ -373,7 +230,7 @@ export function SalaryPage() {
             credit: relatedExpense.amount,
             debit: 0,
             reference: `REFUND-EXP-${relatedExpense.id.slice(-6).toUpperCase()}`,
-            createdBy: user?.uid ?? 'system'
+            createdBy: user?.id ?? 'system'
           })
         }
         await deleteExpense(relatedExpense.id)
@@ -418,7 +275,7 @@ export function SalaryPage() {
         amount: amountToPay,
         paymentMethod: paymentMethod as any,
         status: "approved",
-        createdBy: user?.uid ?? "system"
+        createdBy: user?.id ?? "system"
       })
 
       // 2. Automatically deduct funds
@@ -429,7 +286,7 @@ export function SalaryPage() {
           amount: amountToPay,
           type: "cash_out",
           reference: "Payroll Auto",
-          createdBy: user?.uid ?? "system"
+          createdBy: user?.id ?? "system"
         })
       } else {
         await addBankTransaction(selectedBankId, {
@@ -438,7 +295,7 @@ export function SalaryPage() {
           amount: amountToPay,
           type: "withdrawal",
           reference: "Payroll Auto",
-          createdBy: user?.uid ?? "system"
+          createdBy: user?.id ?? "system"
         })
       }
 
@@ -478,7 +335,7 @@ export function SalaryPage() {
         : `A final salary settlement of ${formatAmount(amountToPay)} was disbursed to ${payingPayroll.employeeName} (${payingPayroll.role}) for ${payingPayroll.monthYear} via ${paymentMethod}.${adjustmentsText}`
       
       await addDoc(collection(db, "adminChats", "global", "messages"), {
-        senderId: user?.uid ?? "system",
+        senderId: user?.id ?? "system",
         senderName: "Finance Automation",
         text: notificationMessage,
         createdAt: serverTimestamp(),
@@ -495,27 +352,16 @@ export function SalaryPage() {
     }
   }
 
-  const handleSaveSettings = async () => {
-    if (!draftConfig) return
-    setSavingSettings(true)
-    try {
-      await updateSalaryConfig(draftConfig)
-      setConfig(draftConfig)
-      toast.success("Salary configuration updated successfully")
-    } catch (e) {
-      toast.error("Failed to save settings")
-    } finally {
-      setSavingSettings(false)
-    }
-  }
-
   const handleExport = async () => {
     const XLSX = await import('xlsx-js-style')
-    const ws = XLSX.utils.json_to_sheet(allPayrolls.map(p => ({
+    const ws = XLSX.utils.json_to_sheet(calculatedPayrolls.map(p => ({
       "Role": p.role,
       "Name": p.employeeName,
       "Base Pay": p.basePay,
       "Commission": p.commissionEarned,
+      "Bonus": p.bonus || 0,
+      "Deduction": p.deduction || 0,
+      "Advance": p.advancePaid || 0,
       "Total Pay": p.totalPay,
       "Status": p.status
     })))
@@ -567,425 +413,107 @@ export function SalaryPage() {
             <div className="text-lg font-medium text-red-600">{formatAmount(grandTotal)}</div>
           </CardContent>
         </Card>
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Unpaid Rider Payroll</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-medium">{formatAmount(riderTotal)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Based on {totalDeliveryFees > 0 ? formatAmount(totalDeliveryFees) : "0"} delivery fees</p>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Unpaid Exec Payroll</CardTitle>
-            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-medium">{formatAmount(execTotal)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Based on {totalRevenue > 0 ? formatAmount(totalRevenue) : "0"} total company revenue</p>
-          </CardContent>
-        </Card>
       </div>
 
-      <Tabs defaultValue="riders">
-        <TabsList className="w-full flex-wrap justify-start h-auto">
-          <TabsTrigger value="riders">Riders Payroll</TabsTrigger>
-          <TabsTrigger value="execs">Executives Payroll</TabsTrigger>
-          <TabsTrigger value="secretaries">Secretaries Payroll</TabsTrigger>
-          {canEditSettings && <TabsTrigger value="settings">Salary Settings</TabsTrigger>}
-        </TabsList>
+      <Card className="overflow-hidden mt-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Staff Name</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Base Pay</TableHead>
+              <TableHead>Commission</TableHead>
+              <TableHead>Adjs/Adv</TableHead>
+              <TableHead>Total Pay</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {calculatedPayrolls.map(p => (
+              <TableRow key={p.id}>
+                <TableCell className="font-medium">{p.employeeName}</TableCell>
+                <TableCell className="capitalize">{p.role}</TableCell>
+                <TableCell>{formatAmount(p.basePay)}</TableCell>
+                <TableCell>{formatAmount(p.commissionEarned)}</TableCell>
+                <TableCell>
+                  {p.bonus ? <div className="text-xs text-green-600">+B: {formatAmount(p.bonus)}</div> : null}
+                  {p.deduction ? <div className="text-xs text-red-600">-D: {formatAmount(p.deduction)}</div> : null}
+                  {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatAmount(p.advancePaid)}</div> : null}
+                </TableCell>
+                <TableCell className="font-bold">
+                  <div>{formatAmount(p.totalPay)}</div>
+                  {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatAmount(p.totalPay - p.advancePaid)}</div> : null}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={p.status === "paid" ? "success" : "secondary"}>
+                    {p.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {p.status !== "paid" ? (
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleAdjust(p)}>Adjust</Button>
+                      <Button size="sm" onClick={() => handleMarkAsPaid(p)}>
+                        <CheckCircle2 className="h-4 w-4 mr-1" /> Pay
+                      </Button>
+                    </div>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 h-8 w-8">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Payroll Record?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this paid payroll record? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p)}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
 
-        <TabsContent value="riders" className="mt-4">
-          <Card className="overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Rider Name</TableHead>
-                  <TableHead>Base Pay</TableHead>
-                  <TableHead>Commission ({config?.riderComm}%)</TableHead>
-                  <TableHead>Adjs/Adv</TableHead>
-                  <TableHead>Total Pay</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {calculatedRiderPayrolls.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.employeeName}</TableCell>
-                    <TableCell>{formatAmount(p.basePay)}</TableCell>
-                    <TableCell>{formatAmount(p.commissionEarned)}</TableCell>
-                    <TableCell>
-                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatAmount(p.bonus)}</div> : null}
-                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatAmount(p.deduction)}</div> : null}
-                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatAmount(p.advancePaid)}</div> : null}
-                    </TableCell>
-                    <TableCell className="font-bold">
-                      <div>{formatAmount(p.totalPay)}</div>
-                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatAmount(p.totalPay - p.advancePaid)}</div> : null}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={p.status === "paid" ? "success" : "secondary"}>
-                        {p.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {p.status !== "paid" ? (
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleAdjust(p)}>Adjust</Button>
-                          <Button size="sm" onClick={() => handleMarkAsPaid(p)}>
-                            <CheckCircle2 className="h-4 w-4 mr-1" /> Pay
-                          </Button>
-                        </div>
-                      ) : (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 h-8 w-8">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Payroll Record?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this paid payroll record? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="execs" className="mt-4">
-          <Card className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Executive</TableHead>
-                  <TableHead>Base Pay</TableHead>
-                  <TableHead>Commission</TableHead>
-                  <TableHead>Adjs/Adv</TableHead>
-                  <TableHead>Total Pay</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {calculatedExecPayrolls.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      <div className="font-medium">{p.employeeName}</div>
-                      <div className="text-xs text-muted-foreground">{p.role}</div>
-                    </TableCell>
-                    <TableCell>{formatAmount(p.basePay)}</TableCell>
-                    <TableCell>{formatAmount(p.commissionEarned)}</TableCell>
-                    <TableCell>
-                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatAmount(p.bonus)}</div> : null}
-                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatAmount(p.deduction)}</div> : null}
-                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatAmount(p.advancePaid)}</div> : null}
-                    </TableCell>
-                    <TableCell className="font-bold">
-                      <div>{formatAmount(p.totalPay)}</div>
-                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatAmount(p.totalPay - p.advancePaid)}</div> : null}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={p.status === "paid" ? "success" : "secondary"}>
-                        {p.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {p.status !== "paid" ? (
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleAdjust(p)}>Adjust</Button>
-                          <Button size="sm" onClick={() => handleMarkAsPaid(p)}>
-                            <CheckCircle2 className="h-4 w-4 mr-1" /> Pay
-                          </Button>
-                        </div>
-                      ) : (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 h-8 w-8">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Payroll Record?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this paid payroll record? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="secretaries" className="mt-4">
-          <Card className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Secretary Name</TableHead>
-                  <TableHead>Base Pay</TableHead>
-                  <TableHead>Commission ({config?.secretaryComm}%)</TableHead>
-                  <TableHead>Adjs/Adv</TableHead>
-                  <TableHead>Total Pay</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {calculatedSecretaryPayrolls.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.employeeName}</TableCell>
-                    <TableCell>{formatAmount(p.basePay)}</TableCell>
-                    <TableCell>{formatAmount(p.commissionEarned)}</TableCell>
-                    <TableCell>
-                      {p.bonus ? <div className="text-xs text-green-600">+B: {formatAmount(p.bonus)}</div> : null}
-                      {p.deduction ? <div className="text-xs text-red-600">-D: {formatAmount(p.deduction)}</div> : null}
-                      {p.advancePaid ? <div className="text-xs text-blue-600">-Adv: {formatAmount(p.advancePaid)}</div> : null}
-                    </TableCell>
-                    <TableCell className="font-bold">
-                      <div>{formatAmount(p.totalPay)}</div>
-                      {p.advancePaid ? <div className="text-xs text-muted-foreground">Rem: {formatAmount(p.totalPay - p.advancePaid)}</div> : null}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={p.status === "paid" ? "success" : "secondary"}>
-                        {p.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {p.status !== "paid" ? (
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleAdjust(p)}>Adjust</Button>
-                          <Button size="sm" onClick={() => handleMarkAsPaid(p)}>
-                            <CheckCircle2 className="h-4 w-4 mr-1" /> Pay
-                          </Button>
-                        </div>
-                      ) : (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 h-8 w-8">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Payroll Record?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this paid payroll record? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => handleDeletePayroll(p)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </TabsContent>
-
-        {canEditSettings && draftConfig && (
-          <TabsContent value="settings" className="mt-4">
-            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-              <Card className="overflow-x-auto">
-                <CardHeader>
-                  <CardTitle>Rider Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Base Pay (₦)</label>
-                    <Input 
-                      type="number" 
-                      value={draftConfig.riderBase} 
-                      onChange={e => setDraftConfig({...draftConfig, riderBase: Number(e.target.value)})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Commission % (from Delivery Fees)</label>
-                    <Input 
-                      type="number" step="0.1"
-                      value={draftConfig.riderComm} 
-                      onChange={e => setDraftConfig({...draftConfig, riderComm: Number(e.target.value)})} 
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-x-auto">
-                <CardHeader>
-                  <CardTitle>Secretary Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Base Pay (₦)</label>
-                    <Input 
-                      type="number" 
-                      value={draftConfig.secretaryBase} 
-                      onChange={e => setDraftConfig({...draftConfig, secretaryBase: Number(e.target.value)})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Commission % (from Delivery Fees)</label>
-                    <Input 
-                      type="number" step="0.1"
-                      value={draftConfig.secretaryComm} 
-                      onChange={e => setDraftConfig({...draftConfig, secretaryComm: Number(e.target.value)})} 
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-x-auto">
-                <CardHeader>
-                  <CardTitle>CEO Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Base Pay (₦)</label>
-                    <Input 
-                      type="number" 
-                      value={draftConfig.ceoBase} 
-                      onChange={e => setDraftConfig({...draftConfig, ceoBase: Number(e.target.value)})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Commission % (from Total Revenue)</label>
-                    <Input 
-                      type="number" step="0.1"
-                      value={draftConfig.ceoComm} 
-                      onChange={e => setDraftConfig({...draftConfig, ceoComm: Number(e.target.value)})} 
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="overflow-x-auto">
-                <CardHeader>
-                  <CardTitle>CFO Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Base Pay (₦)</label>
-                    <Input 
-                      type="number" 
-                      value={draftConfig.cfoBase} 
-                      onChange={e => setDraftConfig({...draftConfig, cfoBase: Number(e.target.value)})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Commission % (from Total Revenue)</label>
-                    <Input 
-                      type="number" step="0.1"
-                      value={draftConfig.cfoComm} 
-                      onChange={e => setDraftConfig({...draftConfig, cfoComm: Number(e.target.value)})} 
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>CTO Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2 max-w-md">
-                    <label className="text-sm font-medium">Base Pay (₦)</label>
-                    <Input 
-                      type="number" 
-                      value={draftConfig.ctoBase} 
-                      onChange={e => setDraftConfig({...draftConfig, ctoBase: Number(e.target.value)})} 
-                    />
-                  </div>
-                  <div className="space-y-2 max-w-md">
-                    <label className="text-sm font-medium">Commission % (from Total Revenue)</label>
-                    <Input 
-                      type="number" step="0.1"
-                      value={draftConfig.ctoComm} 
-                      onChange={e => setDraftConfig({...draftConfig, ctoComm: Number(e.target.value)})} 
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="mt-6 flex justify-end">
-              <Button onClick={handleSaveSettings} disabled={savingSettings} size="lg" className="gap-2">
-                <Save className="h-4 w-4" /> {savingSettings ? "Saving..." : "Save All Salary Settings"}
-              </Button>
-            </div>
-          </TabsContent>
-        )}
-      </Tabs>
-      
-      <Dialog open={!!payingPayroll} onOpenChange={(val) => !val && setPayingPayroll(null)}>
+      {/* PAY DIALOG */}
+      <Dialog open={!!payingPayroll} onOpenChange={open => !open && setPayingPayroll(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Salary Payout</DialogTitle>
+            <DialogTitle>Make Payroll Payment</DialogTitle>
             <DialogDescription>
-              This will disburse funds for <strong>{payingPayroll?.employeeName}</strong> for {payingPayroll?.monthYear}, deduct the amount from your books, and notify the executives.
+              Record a payment for {payingPayroll?.employeeName}. 
+              <br/>Remaining balance: <b>{payingPayroll ? formatAmount(payingPayroll.totalPay - (payingPayroll.advancePaid || 0)) : ''}</b>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Amount to Pay (₦)</label>
-              <Input 
-                type="number" 
-                value={amountToPay || ''} 
-                onChange={(e) => setAmountToPay(Number(e.target.value))}
-                max={(payingPayroll?.totalPay || 0) - (payingPayroll?.advancePaid || 0)}
-              />
-              <p className="text-xs text-muted-foreground">Total remaining balance: {formatAmount((payingPayroll?.totalPay || 0) - (payingPayroll?.advancePaid || 0))}</p>
-            </div>
-            <div className="space-y-2">
               <label className="text-sm font-medium">Payment Method</label>
               <Select value={paymentMethod} onValueChange={(val: any) => setPaymentMethod(val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select method" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash (Cash Book)</SelectItem>
+                  <SelectItem value="Cash">Cash (Deducts from Cash Book)</SelectItem>
                   <SelectItem value="Transfer">Bank Transfer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {paymentMethod === "Transfer" && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Source Bank Account</label>
+                <label className="text-sm font-medium">From Bank Account</label>
                 <Select value={selectedBankId} onValueChange={setSelectedBankId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select bank account" />
@@ -998,50 +526,53 @@ export function SalaryPage() {
                 </Select>
               </div>
             )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Amount to Pay</label>
+              <Input 
+                type="number" 
+                value={amountToPay || ""} 
+                onChange={e => setAmountToPay(Number(e.target.value))} 
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter an amount less than the balance to record a partial advance.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPayingPayroll(null)}>Cancel</Button>
-            <Button disabled={processingId === payingPayroll?.id} onClick={handleConfirmPay}>
-              {processingId === payingPayroll?.id ? "Processing..." : "Confirm & Pay"}
+            <Button onClick={handleConfirmPay} disabled={!!processingId}>
+              {processingId === payingPayroll?.id ? "Processing..." : "Confirm Payment"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      <Dialog open={!!adjustingPayroll} onOpenChange={(val) => !val && setAdjustingPayroll(null)}>
+
+      {/* ADJUST DIALOG */}
+      <Dialog open={!!adjustingPayroll} onOpenChange={open => !open && setAdjustingPayroll(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adjust Salary</DialogTitle>
-            <DialogDescription>
-              Add a bonus or deduction for <strong>{adjustingPayroll?.employeeName}</strong>.
-            </DialogDescription>
+            <DialogTitle>Adjust Payroll</DialogTitle>
+            <DialogDescription>Add a bonus or deduction for {adjustingPayroll?.employeeName}.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-green-600">Bonus (₦)</label>
-              <Input 
-                type="number" 
-                value={bonus || ''} 
-                onChange={(e) => setBonus(Number(e.target.value))}
-              />
+              <label className="text-sm font-medium">Bonus Amount</label>
+              <Input type="number" value={bonus || ""} onChange={e => setBonus(Number(e.target.value))} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-red-600">Deduction (₦)</label>
-              <Input 
-                type="number" 
-                value={deduction || ''} 
-                onChange={(e) => setDeduction(Number(e.target.value))}
-              />
+              <label className="text-sm font-medium">Deduction Amount</label>
+              <Input type="number" value={deduction || ""} onChange={e => setDeduction(Number(e.target.value))} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAdjustingPayroll(null)}>Cancel</Button>
-            <Button disabled={processingId === adjustingPayroll?.id} onClick={handleSaveAdjustments}>
-              {processingId === adjustingPayroll?.id ? "Saving..." : "Save Adjustments"}
+            <Button onClick={handleSaveAdjustments} disabled={!!processingId}>
+              {processingId ? "Saving..." : "Save Adjustments"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }

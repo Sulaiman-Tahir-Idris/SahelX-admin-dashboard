@@ -12,10 +12,8 @@ import type {
   MonthlyDataPoint,
   DailyDataPoint,
   DepartmentBreakdown,
-  DEPARTMENT_COLORS,
 } from "./types"
 
-import { DEPARTMENT_COLORS as DEPT_COLORS } from "./types"
 
 // ─── Currency Formatting ──────────────────────────────────────────────────────
 export function formatNGN(amount: number): string {
@@ -102,19 +100,19 @@ export function buildBankRunningBalance(
 }
 
 // ─── Expense Aggregations ─────────────────────────────────────────────────────
-export function calcDepartmentBreakdown(expenses: Expense[]): DepartmentBreakdown[] {
+export function calcDepartmentBreakdown(expenses: Expense[], colorsMap: Record<string, string> = {}): DepartmentBreakdown[] {
   const approved = expenses.filter((e) => e.status !== "rejected")
   const total = approved.reduce((s, e) => s + e.amount, 0)
-  const map: Partial<Record<Department, number>> = {}
+  const map: Partial<Record<string, number>> = {}
   approved.forEach((e) => {
     map[e.department] = (map[e.department] ?? 0) + e.amount
   })
-  return (Object.entries(map) as [Department, number][])
+  return (Object.entries(map) as [string, number][])
     .map(([department, amt]) => ({
       department,
       total: amt,
       percentage: total > 0 ? Math.round((amt / total) * 1000) / 10 : 0,
-      color: DEPT_COLORS[department],
+      color: colorsMap[department] || "hsl(var(--primary))",
     }))
     .sort((a, b) => b.total - a.total)
 }

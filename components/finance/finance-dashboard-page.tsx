@@ -7,10 +7,9 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } fro
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { StatsCard } from '@/components/dashboard/stats-card'
 import { getAllPayments } from '@/lib/firebase/payments'
-import { getRevenueEntries, getExpenses, getCashTransactions, getBankAccounts, getFinanceSettings } from '@/lib/firebase/finance'
+import { getRevenueEntries, getExpenses, getCashTransactions, getBankAccounts, getFinanceSettings, getDepartments, type FinanceDepartment } from '@/lib/firebase/finance'
 import { groupByDay, groupByMonth, calcCashBalance, sumExpenses, startOfDay, startOfWeek, startOfMonth, sumInRange, calcGrowthPct, calcNetProfit, calcDepartmentBreakdown, calcBankBalance } from '@/lib/finance/calculations'
-import type { RevenueEntry, Expense, CashTransaction, BankAccount, FinanceSettings, Department } from '@/lib/finance/types'
-import { DEPARTMENT_COLORS } from '@/lib/finance/types'
+import type { RevenueEntry, Expense, CashTransaction, BankAccount, FinanceSettings } from '@/lib/finance/types'
 import type { Payment } from '@/lib/firebase/payments'
 
 import { useCurrency } from "@/components/providers/currency-provider"
@@ -26,9 +25,12 @@ export function FinanceDashboardPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [cashTxns, setCashTxns] = useState<CashTransaction[]>([])
   const [accounts, setAccounts] = useState<BankAccount[]>([])
+  const [departments, setDepartments] = useState<FinanceDepartment[]>([])
   const [settings, setSettings] = useState<FinanceSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [todayLabel, setTodayLabel] = useState("")
+
+  const getDeptColor = (name: string) => departments.find(d => d.name === name)?.color || "hsl(var(--primary))"
 
   useEffect(() => {
     setTodayLabel(
@@ -43,13 +45,15 @@ export function FinanceDashboardPage() {
       getCashTransactions(),
       getBankAccounts(),
       getFinanceSettings(),
-    ]).then(([p, e, ex, c, a, s]) => {
+      getDepartments()
+    ]).then(([p, e, ex, c, a, s, d]) => {
       setPayments(p)
       setEntries(e)
       setExpenses(ex)
       setCashTxns(c)
       setAccounts(a)
       setSettings(s)
+      setDepartments(d)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -101,7 +105,7 @@ export function FinanceDashboardPage() {
     acc[e.department] = (acc[e.department] || 0) + e.amount
     return acc
   }, {} as Record<string, number>)
-  const deptBarData = Object.entries(deptData).map(([name, amount]) => ({ name, amount, fill: DEPARTMENT_COLORS[name as Department] || 'hsl(var(--primary))' }))
+  const deptBarData = Object.entries(deptData).map(([name, amount]) => ({ name, amount, fill: getDeptColor(name) }))
   
   const monthlyData = groupByMonth(allRevenue, expenses.filter(e => e.status !== 'rejected').map(e => ({ date: new Date(e.date), amount: e.amount })), 6)
 

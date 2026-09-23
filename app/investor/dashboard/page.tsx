@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Calendar, CheckCircle2, Circle, Phone, Mail } from "lucide-react"
+import { Calendar, CheckCircle2, Circle, Phone, Mail, Eye, EyeOff } from "lucide-react"
 import { InvestorDashboardLayout } from "@/components/dashboard/investor-dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { getCurrentInvestor, type InvestorUser } from "@/lib/firebase/investorAuth"
 import { getCompanyContacts, type CompanyContacts } from "@/lib/firebase/companyContacts"
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -24,6 +25,7 @@ export default function InvestorDashboardPage() {
   const [todayLabel, setTodayLabel] = useState("")
   const [contacts, setContacts] = useState<CompanyContacts | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [revealContacts, setRevealContacts] = useState(false)
 
   useEffect(() => {
     setTodayLabel(
@@ -148,9 +150,20 @@ export default function InvestorDashboardPage() {
           className="grid grid-cols-1 gap-6"
         >
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
-              <h2 className="font-heading text-base font-semibold text-foreground">Company Contacts</h2>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-emerald-500" />
+                <h2 className="font-heading text-base font-semibold text-foreground">Company Contacts</h2>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 gap-2"
+                onClick={() => setRevealContacts(!revealContacts)}
+              >
+                {revealContacts ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="hidden sm:inline">{revealContacts ? "Hide Details" : "Reveal Details"}</span>
+              </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
               <Card className="shadow-sm">
@@ -159,17 +172,25 @@ export default function InvestorDashboardPage() {
                   <p className="text-sm font-medium text-emerald-600">{contacts?.ceoName || "Abdulsalam Tahir Idris"}</p>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <a href={`tel:${contacts?.ceoPhone || "+2348000000000"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <a 
+                    href={revealContacts ? `tel:${contacts?.ceoPhone || "+2348000000000"}` : "#"} 
+                    onClick={(e) => { if (!revealContacts) e.preventDefault() }}
+                    className={`flex items-center gap-3 text-sm text-muted-foreground transition-colors ${revealContacts ? "hover:text-emerald-600" : "cursor-default"}`}
+                  >
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
                       <Phone className="h-4 w-4 text-emerald-600" />
                     </div>
-                    {contacts?.ceoPhone || "+234 800 000 0000"}
+                    {revealContacts ? (contacts?.ceoPhone || "+234 800 000 0000") : "••••••••••••"}
                   </a>
-                  <a href={`mailto:${contacts?.ceoEmail || "tahir@sahelx.com"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <a 
+                    href={revealContacts ? `mailto:${contacts?.ceoEmail || "tahir@sahelx.com"}` : "#"} 
+                    onClick={(e) => { if (!revealContacts) e.preventDefault() }}
+                    className={`flex items-center gap-3 text-sm text-muted-foreground transition-colors ${revealContacts ? "hover:text-emerald-600" : "cursor-default"}`}
+                  >
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
                       <Mail className="h-4 w-4 text-emerald-600" />
                     </div>
-                    {contacts?.ceoEmail || "tahir@sahelx.com"}
+                    {revealContacts ? (contacts?.ceoEmail || "tahir@sahelx.com") : "••••••••••••"}
                   </a>
                 </CardContent>
               </Card>
@@ -179,17 +200,25 @@ export default function InvestorDashboardPage() {
                   <p className="text-sm font-medium text-emerald-600">{contacts?.cfoName || "Finance Team"}</p>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <a href={`tel:${contacts?.cfoPhone || "+2348000000000"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <a 
+                    href={revealContacts ? `tel:${contacts?.cfoPhone || "+2348000000000"}` : "#"} 
+                    onClick={(e) => { if (!revealContacts) e.preventDefault() }}
+                    className={`flex items-center gap-3 text-sm text-muted-foreground transition-colors ${revealContacts ? "hover:text-emerald-600" : "cursor-default"}`}
+                  >
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
                       <Phone className="h-4 w-4 text-emerald-600" />
                     </div>
-                    {contacts?.cfoPhone || "+234 800 000 0000"}
+                    {revealContacts ? (contacts?.cfoPhone || "+234 800 000 0000") : "••••••••••••"}
                   </a>
-                  <a href={`mailto:${contacts?.cfoEmail || "finance@sahelx.com"}`} className="flex items-center gap-3 text-sm text-muted-foreground hover:text-emerald-600 transition-colors">
+                  <a 
+                    href={revealContacts ? `mailto:${contacts?.cfoEmail || "finance@sahelx.com"}` : "#"} 
+                    onClick={(e) => { if (!revealContacts) e.preventDefault() }}
+                    className={`flex items-center gap-3 text-sm text-muted-foreground transition-colors ${revealContacts ? "hover:text-emerald-600" : "cursor-default"}`}
+                  >
                     <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-full">
                       <Mail className="h-4 w-4 text-emerald-600" />
                     </div>
-                    {contacts?.cfoEmail || "finance@sahelx.com"}
+                    {revealContacts ? (contacts?.cfoEmail || "finance@sahelx.com") : "••••••••••••"}
                   </a>
                 </CardContent>
               </Card>

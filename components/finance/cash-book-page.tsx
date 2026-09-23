@@ -54,7 +54,7 @@ export function CashBookPage() {
         amount: Number(row["Amount"]) || 0,
         type: typeVal,
         description: row["Description"] || "Historical Import",
-        createdBy: user?.uid || "admin",
+        createdBy: user?.id || "admin",
         createdAt: Timestamp.fromDate(dateVal),
         date: Timestamp.fromDate(dateVal)
       }
@@ -117,7 +117,7 @@ export function CashBookPage() {
         amount: values.amount,
         type: values.type,
         reference: values.reference || '',
-        createdBy: user?.uid || 'admin'
+        createdBy: user?.id || 'admin'
       })
       toast.success("Transaction recorded")
       setIsDialogOpen(false)

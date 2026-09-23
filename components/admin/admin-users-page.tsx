@@ -48,6 +48,7 @@ import { createAdminUser } from "@/lib/firebase/setup-admin";
 import {
   getAdminUsers,
   deleteAdminUser,
+  updateAdminUser,
   type AdminUser,
 } from "@/lib/firebase/admin-users";
 
@@ -58,6 +59,9 @@ export function AdminUsersPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Form state
   const [newAdmin, setNewAdmin] = useState({
@@ -125,6 +129,34 @@ export function AdminUsersPage() {
       });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleUpdateAdmin = async () => {
+    if (!editingAdmin || !editingAdmin.id) return;
+    try {
+      setIsUpdating(true);
+      await updateAdminUser(editingAdmin.id, {
+        displayName: editingAdmin.displayName,
+        role: editingAdmin.role,
+      });
+
+      toast({
+        title: "Admin user updated",
+        description: `${editingAdmin.displayName} has been successfully updated.`,
+      });
+
+      setShowEditDialog(false);
+      setEditingAdmin(null);
+      await loadAdminUsers();
+    } catch (error: any) {
+      toast({
+        title: "Failed to update admin",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -387,7 +419,12 @@ export function AdminUsersPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingAdmin(admin);
+                                  setShowEditDialog(true);
+                                }}
+                              >
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Details
                               </DropdownMenuItem>
@@ -430,6 +467,75 @@ export function AdminUsersPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>View / Edit Admin Details</DialogTitle>
+            <DialogDescription>
+              Update the admin user's role and details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-email">Email (Read Only)</Label>
+              <Input
+                id="edit-email"
+                value={editingAdmin?.email || ""}
+                disabled
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Display Name</Label>
+              <Input
+                id="edit-name"
+                value={editingAdmin?.displayName || ""}
+                onChange={(e) =>
+                  setEditingAdmin(
+                    editingAdmin
+                      ? { ...editingAdmin, displayName: e.target.value }
+                      : null
+                  )
+                }
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-role">Role</Label>
+              <select
+                id="edit-role"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={editingAdmin?.role || "admin"}
+                onChange={(e) =>
+                  setEditingAdmin(
+                    editingAdmin
+                      ? { ...editingAdmin, role: e.target.value }
+                      : null
+                  )
+                }
+              >
+                <option value="ceo">CEO</option>
+                <option value="cfo">CFO</option>
+                <option value="cto">CTO</option>
+                <option value="admin">System Admin</option>
+                <option value="manager">Manager</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateAdmin} disabled={isUpdating}>
+              {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

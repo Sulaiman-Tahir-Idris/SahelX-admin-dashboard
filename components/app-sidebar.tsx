@@ -29,7 +29,7 @@ type NavItem = { title: string; url: string; icon: any; section: string }
 
 const allNavItems: NavItem[] = [
   { title: "Dashboard",           url: "/admin/dashboard",                 icon: Home,              section: "overview" },
-  { title: "Riders",              url: "/admin/riders",                    icon: Truck,             section: "operations" },
+  { title: "Staff",               url: "/admin/staff",                     icon: Truck,             section: "operations" },
   { title: "Customers",           url: "/admin/customers",                 icon: Users,             section: "operations" },
   { title: "Deliveries",          url: "/admin/deliveries",                icon: Box,               section: "operations" },
   { title: "Multiple Deliveries", url: "/admin/multiple-deliveries",       icon: Layers,            section: "operations" },
@@ -64,12 +64,12 @@ const filterNavByRole = (items: NavItem[], role?: string): NavItem[] => {
       "/admin/finance/dashboard", "/admin/revenue", "/admin/finance/expenses",
       "/admin/finance/cash", "/admin/finance/bank", "/admin/finance/salary", "/admin/finance/reports",
       "/admin/finance/analytics", "/admin/finance/settings",
-      "/admin/riders", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"
+      "/admin/staff", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"
     ])
     return items.filter(i => allowed.has(i.url))
   }
   if (r === "coo") {
-    const allowed = new Set(["/admin/dashboard", "/admin/riders", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"])
+    const allowed = new Set(["/admin/dashboard", "/admin/staff", "/admin/customers", "/admin/deliveries", "/admin/multiple-deliveries", "/admin/create-secretary", "/admin/messages", liveMap, "/admin/assets"])
     return items.filter(i => allowed.has(i.url))
   }
   return items

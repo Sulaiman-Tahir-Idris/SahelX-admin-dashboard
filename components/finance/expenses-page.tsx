@@ -23,10 +23,10 @@ import { Pagination, PaginationContent, PaginationItem, PaginationNext, Paginati
 import { Progress } from '@/components/ui/progress'
 import { DateRangeFilter } from '@/components/finance/shared/date-range-filter'
 import { DataImporter } from '@/components/finance/shared/data-importer'
-import { getExpenses, addExpense, updateExpense, updateExpenseStatus, deleteExpense, getExpenseCategories, getBankAccounts, addBankTransaction, addCashTransaction } from '@/lib/firebase/finance'
+import { getExpenses, addExpense, updateExpense, updateExpenseStatus, deleteExpense, getExpenseCategories, getBankAccounts, addBankTransaction, addCashTransaction, getDepartments, type FinanceDepartment } from '@/lib/firebase/finance'
 import { formatNGN, filterByDateRange, filterBySearch, calcDepartmentBreakdown, calcCategoryTotals, startOfMonth, sumExpenses } from '@/lib/finance/calculations'
-import type { Expense, ExpenseCategory, Department, DateRangeState, BankAccount } from '@/lib/finance/types'
-import { DEPARTMENTS, DEPARTMENT_COLORS, EXPENSE_PAYMENT_METHODS } from '@/lib/finance/types'
+import type { Expense, ExpenseCategory, DateRangeState, BankAccount } from '@/lib/finance/types'
+import { EXPENSE_PAYMENT_METHODS } from '@/lib/finance/types'
 import { useAuth } from '@/lib/auth-utils'
 import { useRole } from '@/lib/hooks/use-role'
 import { db } from '@/lib/firebase/config'
@@ -35,7 +35,7 @@ import { saveAs } from 'file-saver'
 
 const expenseSchema = z.object({
   date: z.string().min(1, "Date is required"),
-  department: z.enum(['Operations','Marketing','Office','Technology','Administration']),
+  department: z.string(),
   category: z.string().min(1, 'Select a category'),
   vendor: z.string().min(1, 'Vendor is required'),
   description: z.string().min(1, 'Description is required'),
@@ -56,7 +56,10 @@ export function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [categories, setCategories] = useState<ExpenseCategory[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
+  const [departments, setDepartments] = useState<FinanceDepartment[]>([])
   const [loading, setLoading] = useState(true)
+
+  const getDeptColor = (name: string) => departments.find(d => d.name === name)?.color || "hsl(var(--primary))"
 
   // Filters
   const [search, setSearch] = useState('')
@@ -74,7 +77,7 @@ export function ExpensesPage() {
         paymentMethod: row["Payment Method"] || "Cash",
         vendor: row["Vendor"] || "Unknown Vendor",
         status: "approved",
-        createdBy: user?.uid || "admin",
+        createdBy: user?.id || "admin",
         createdAt: Timestamp.fromDate(dateVal),
         date: Timestamp.fromDate(dateVal)
       }
@@ -117,10 +120,11 @@ export function ExpensesPage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const [expData, catData, bankData] = await Promise.all([getExpenses(), getExpenseCategories(), getBankAccounts()])
+      const [expData, catData, bankData, deptData] = await Promise.all([getExpenses(), getExpenseCategories(), getBankAccounts(), getDepartments()])
       setExpenses(expData)
       setCategories(catData)
       setBankAccounts(bankData)
+      setDepartments(deptData)
     } catch (err) {
       console.error(err)
       toast.error('Failed to load expenses')
@@ -180,7 +184,7 @@ export function ExpensesPage() {
         const expId = await addExpense({
           ...payload,
           status: 'approved',
-          createdBy: user?.uid || 'system'
+          createdBy: user?.id || 'system'
         })
         
         // Auto deduct
@@ -191,7 +195,7 @@ export function ExpensesPage() {
             amount: payload.amount,
             type: 'cash_out',
             reference: `EXP-${expId.slice(-6).toUpperCase()}`,
-            createdBy: user?.uid ?? 'system'
+            createdBy: user?.id ?? 'system'
           })
         } else if (payload.bankAccountId) {
           await addBankTransaction(payload.bankAccountId, {
@@ -200,7 +204,7 @@ export function ExpensesPage() {
             credit: 0,
             debit: payload.amount,
             reference: `EXP-${expId.slice(-6).toUpperCase()}`,
-            createdBy: user?.uid ?? 'system'
+            createdBy: user?.id ?? 'system'
           })
         }
 
@@ -227,7 +231,7 @@ export function ExpensesPage() {
             amount: expense.amount,
             type: 'cash_in',
             reference: `REFUND-EXP-${expense.id.slice(-6).toUpperCase()}`,
-            createdBy: user?.uid ?? 'system'
+            createdBy: user?.id ?? 'system'
           })
         } else if (expense.bankAccountId) {
           await addBankTransaction(expense.bankAccountId, {
@@ -236,7 +240,7 @@ export function ExpensesPage() {
             credit: expense.amount,
             debit: 0,
             reference: `REFUND-EXP-${expense.id.slice(-6).toUpperCase()}`,
-            createdBy: user?.uid ?? 'system'
+            createdBy: user?.id ?? 'system'
           })
         }
       }
@@ -253,7 +257,8 @@ export function ExpensesPage() {
     const summaryWb = XLSX.utils.book_new()
     
     // Summary
-    const deptTotals = calcDepartmentBreakdown(expenses)
+    const colorsMap = departments.reduce((acc, d) => ({ ...acc, [d.name]: d.color }), {} as Record<string, string>)
+    const deptTotals = calcDepartmentBreakdown(expenses, colorsMap)
     const wsSummary = XLSX.utils.json_to_sheet(deptTotals)
     XLSX.utils.book_append_sheet(summaryWb, wsSummary, 'Summary')
     
@@ -293,7 +298,8 @@ export function ExpensesPage() {
   const thisMonthExpenses = sumExpenses(expenses.filter(e => new Date(e.date) >= startOfMonth(new Date())))
   const pendingApprovals = expenses.filter(e => e.status === 'pending').length
   const approvedThisMonth = expenses.filter(e => e.status === 'approved' && new Date(e.date) >= startOfMonth(new Date())).length
-  const deptBreakdown = calcDepartmentBreakdown(expenses.filter(e => new Date(e.date) >= startOfMonth(new Date())))
+  const colorsMap = departments.reduce((acc, d) => ({ ...acc, [d.name]: d.color }), {} as Record<string, string>)
+  const deptBreakdown = calcDepartmentBreakdown(expenses.filter(e => new Date(e.date) >= startOfMonth(new Date())), colorsMap)
   const topDepartment = deptBreakdown.length > 0 ? deptBreakdown[0].department : 'N/A'
 
   return (
@@ -309,7 +315,7 @@ export function ExpensesPage() {
                 templateName="Historical_Expenses"
                 columns={["Date", "Department", "Category", "Vendor", "Description", "Amount", "Payment Method"]}
                 dropdownLists={{
-                  "Department": [...DEPARTMENTS],
+                  "Department": departments.map(d => d.name),
                   "Payment Method": [...EXPENSE_PAYMENT_METHODS],
                   "Category": categories.map(c => c.name)
                 }}
@@ -374,7 +380,7 @@ export function ExpensesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Depts</SelectItem>
-                {DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                {departments.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -419,7 +425,7 @@ export function ExpensesPage() {
                       <TableRow key={expense.id}>
                         <TableCell className="whitespace-nowrap">{new Date(expense.date).toLocaleDateString('en-GB')}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" style={{ color: DEPARTMENT_COLORS[expense.department], borderColor: DEPARTMENT_COLORS[expense.department] }}>
+                          <Badge variant="outline" style={{ color: getDeptColor(expense.department), borderColor: getDeptColor(expense.department) }}>
                             {expense.department}
                           </Badge>
                         </TableCell>
@@ -493,15 +499,16 @@ export function ExpensesPage() {
 
         <TabsContent value="by-department" className="space-y-4">
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {DEPARTMENTS.map(dept => {
+            {departments.map(deptObj => {
+              const dept = deptObj.name
               const deptExpenses = expenses.filter(e => e.department === dept && e.status !== 'rejected')
               const total = sumExpenses(deptExpenses)
               const thisMonth = sumExpenses(deptExpenses.filter(e => new Date(e.date) >= startOfMonth(new Date())))
               const pct = thisMonthExpenses > 0 ? (thisMonth / thisMonthExpenses) * 100 : 0
               return (
-                <Card key={dept}>
+                <Card key={deptObj.id}>
                   <CardHeader>
-                    <CardTitle style={{ color: DEPARTMENT_COLORS[dept] }}>{dept}</CardTitle>
+                    <CardTitle style={{ color: getDeptColor(dept) }}>{dept}</CardTitle>
                     <CardDescription>{formatNGN(thisMonth)} this month</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -547,7 +554,7 @@ export function ExpensesPage() {
                     <TableRow key={key}>
                       <TableCell className="font-medium">{data.category}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" style={{ color: DEPARTMENT_COLORS[data.department as Department], borderColor: DEPARTMENT_COLORS[data.department as Department] }}>
+                        <Badge variant="outline" style={{ color: getDeptColor(data.department), borderColor: getDeptColor(data.department) }}>
                           {data.department}
                         </Badge>
                       </TableCell>
@@ -585,7 +592,7 @@ export function ExpensesPage() {
                         <SelectTrigger><SelectValue placeholder="Select dept" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                        {departments.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />

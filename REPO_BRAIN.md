@@ -149,3 +149,11 @@ SahelX-admin-dashboard/
 | 2026-09-21 | Antigravity | Fixed DeliveryMap PolylineF InvalidValueError: added Number() coercion + isNaN guards on all path coordinates for rider lines and active delivery lines. |
 | 2026-09-21 | Antigravity | Moved "Create Delivery" from Admin sidebar to a button on the Admin Deliveries page; Secretary sidebar remains unchanged. |
 | 2026-09-21 | Antigravity | Replaced native Google Maps InfoWindowF (broken in dark mode / Tailwind sandbox) with a custom absolute-positioned Tailwind overlay panel on the DeliveryMap. Full dark/light mode support, colour-coded left border per marker type, status badges, and scrollable delivery list. |
+|   2 0 2 6 - 0 9 - 2 2   |   A n t i g r a v i t y   |   I m p l e m e n t e d   C r e a t e   D e p a r t m e n t s   U I   i n   F i n a n c e   S e t t i n g s ,   a d d e d   C o u r i e r   r o l e   a n d   c o m m i s s i o n   r a t e   t o   C r e a t e   S t a f f ,   f i x e d   T S   e r r o r s .   |  
+ | 2026-09-22 | Antigravity | Built unified Staff Management module: new /admin/staff page, staff-page.tsx, staff-table.tsx, staff-detail.tsx, lib/firebase/staff.ts, /api/admin/create-staff route. |
+| 2026-09-22 | Antigravity | Refactored Finance module to use dynamic departments from Firestore (financeDepartments collection) replacing all hardcoded DEPARTMENTS arrays and DEPARTMENT_COLORS objects. |
+| 2026-09-22 | Antigravity | Made expense categories editable with department dropdown; fixed DEPARTMENT_COLORS build error in lib/finance/calculations.ts. |
+| 2026-09-22 | Antigravity | Refactored Salary page to use unified getAllStaff() and per-employee baseSalary/commissionRate instead of global SalaryConfig. |
+| 2026-09-22 | Antigravity | Added contact reveal toggle (Eye/EyeOff) on Investor Dashboard to hide CEO/CFO contact details by default. |
+| 2026-09-22 | Antigravity | Fixed Admin Users 'View Details' - wired onClick, added updateAdminUser, built edit dialog for displayName and role. |
+| 2026-09-23 | Antigravity | Confirmed clean pnpm build (53 pages). Deleted 6 temporary Python patch scripts and scratch files from repo root. Pushed all changes to GitHub. |

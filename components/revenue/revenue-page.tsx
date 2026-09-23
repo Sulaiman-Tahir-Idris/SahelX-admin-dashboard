@@ -239,7 +239,7 @@ export function RevenuePage() {
   const onSubmitEntry = async (values: RevenueEntryFormValues) => {
     try {
       if (dialogMode === 'add') {
-        await addRevenueEntry({ ...values, date: new Date(values.date), source: 'manual', createdBy: user?.uid || 'system' })
+        await addRevenueEntry({ ...values, date: new Date(values.date), source: 'manual', createdBy: user?.id || 'system' })
         toast.success('Revenue entry saved')
       } else if (editingEntry) {
         await updateRevenueEntry(editingEntry.id, { ...values, date: new Date(values.date) })
