@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 
 
@@ -77,11 +77,24 @@ export const onDeliveryStatusChanged = onDocumentUpdated(
       title = 'Package Picked Up';
       body = 'Your package has been picked up and is on its way!';
     } else if (afterData.status === 'delivered') {
-      title = 'Package Delivered ??';
+      title = 'Package Delivered';
       body = 'Your package has been successfully delivered!';
     } else if (afterData.status === 'cancelled') {
       title = 'Delivery Cancelled';
       body = 'Your delivery request was cancelled.';
+    }
+
+    try {
+      // 1. Write to Firestore so it appears in the app's notification bell inbox
+      await db.collection('User').doc(customerId).collection('notifications').add({
+        title,
+        body,
+        deliveryId: event.params.deliveryId,
+        read: false,
+        createdAt: FieldValue.serverTimestamp()
+      });
+    } catch (e) {
+      console.error('Error writing to User/notifications:', e);
     }
 
     const customerSnap = await db.collection('User').doc(customerId).get();
