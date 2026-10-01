@@ -44,6 +44,21 @@ export const sendAdminNotification = onCall(async (request) => {
     const response = await messaging.sendEachForMulticast({
       tokens,
       notification: { title, body },
+      android: {
+        priority: 'high',
+        notification: {
+          sound: 'default',
+          channelId: 'default'
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1
+          }
+        }
+      }
     });
     return { success: true, count: response.successCount };
   } catch (error) {
@@ -109,7 +124,22 @@ export const onDeliveryStatusChanged = onDocumentUpdated(
       await messaging.sendEachForMulticast({
         tokens,
         notification: { title, body },
-        data: { deliveryId: event.params.deliveryId }
+        data: { deliveryId: event.params.deliveryId },
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            channelId: 'default'
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+            }
+          }
+        }
       });
       console.log(`Status notification sent for delivery ${event.params.deliveryId}`);
     } catch (error) {
