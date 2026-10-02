@@ -13,11 +13,14 @@ export const sendAdminNotification = onCall(async (request) => {
   }
 
   let tokens: string[] = [];
+  const batch = db.batch();
 
   if (target === 'all' || target === 'customers') {
     const usersSnap = await db.collection('User').get();
     usersSnap.forEach((doc) => {
       const data = doc.data();
+      const notifRef = db.collection('User').doc(doc.id).collection('notifications').doc();
+      batch.set(notifRef, { title, body, read: false, createdAt: FieldValue.serverTimestamp() });
       if (data.fcmTokens && Array.isArray(data.fcmTokens)) {
         tokens.push(...data.fcmTokens);
       }
@@ -25,14 +28,18 @@ export const sendAdminNotification = onCall(async (request) => {
   }
 
   if (target === 'all' || target === 'riders') {
-    const ridersSnap = await db.collection('CourierUser').get();
+    const ridersSnap = await db.collection('User').where('role', '==', 'courier').get();
     ridersSnap.forEach((doc) => {
       const data = doc.data();
+      const notifRef = db.collection('User').doc(doc.id).collection('notifications').doc();
+      batch.set(notifRef, { title, body, read: false, createdAt: FieldValue.serverTimestamp() });
       if (data.fcmTokens && Array.isArray(data.fcmTokens)) {
         tokens.push(...data.fcmTokens);
       }
     });
   }
+
+  await batch.commit();
 
   tokens = [...new Set(tokens)];
 
