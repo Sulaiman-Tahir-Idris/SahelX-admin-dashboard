@@ -1,0 +1,91 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/Admin/$(request.auth.uid)); }
+    function isSecretary() { return isSignedIn() && exists(/databases/$(database)/documents/Secretary/$(request.auth.uid)); }
+    function isAdminOrSecretary() { return isAdmin() || isSecretary(); }
+    function isInvestor() { return isSignedIn() && exists(/databases/$(database)/documents/Investors/$(request.auth.uid)); }
+    function isCourier() { return isSignedIn() && get(/databases/$(database)/documents/User/$(request.auth.uid)).data.role == 'courier'; }
+
+    match /User/{uid} {
+      allow read, write: if isAdminOrSecretary();
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid);
+      
+      match /notifications/{notificationId} {
+        allow read, update, delete: if isOwner(uid) || isAdminOrSecretary();
+        allow create: if true; // Or restrict to admin
+      }
+    }
+
+    match /Admin/{docId} { allow read, write: if isAdminOrSecretary() || isOwner(docId); }
+    match /Secretary/{docId} { allow read, write: if isAdminOrSecretary() || isOwner(docId); }
+    match /Investors/{docId} { allow read, write: if isAdminOrSecretary() || isOwner(docId); }
+
+    match /Wallets/{uid} {
+      allow read: if isAdminOrSecretary() || isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if false;
+      allow delete: if isOwner(uid) || isAdminOrSecretary();
+    }
+    match /Wallets/{uid}/transactions/{txId} {
+      allow read: if isOwner(uid) || isAdminOrSecretary();
+      allow write: if false;
+    }
+
+    match /bulkDeliveries/{deliveryId} {
+      allow get: if true;
+      allow list, write: if isAdminOrSecretary();
+    }
+
+    match /deliveries/{deliveryId}/tracking/{trackingId} {
+      allow get: if true;
+      allow read: if isSignedIn();
+      allow write: if isCourier();
+    }
+
+    match /deliveries/{deliveryId} {
+      allow get: if true;
+      allow list, write: if isAdminOrSecretary();
+      allow list: if isCourier() && (resource.data.courierId == request.auth.uid || resource.data.status == 'pending');
+      allow update: if isCourier() && (resource.data.courierId == request.auth.uid || ((!('courierId' in resource.data) || resource.data.courierId == null) && request.resource.data.courierId == request.auth.uid)) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'history', 'courierId']);
+      allow list: if isSignedIn() && resource.data.customerId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.customerId == request.auth.uid;
+      allow delete: if isAdminOrSecretary();
+    }
+
+    match /Setting/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdminOrSecretary();
+    }
+
+    match /financeSettings/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /payments/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /revenueEntries/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /expenses/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /expenseCategories/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /cashTransactions/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /bankAccounts/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /bankAccounts/{accountId}/transactions/{txId} { allow read, write: if isAdminOrSecretary(); }
+    match /payrolls/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /investorPayouts/{docId} {
+      allow read: if isAdminOrSecretary() || (request.auth != null && resource.data.investorId == request.auth.uid);
+      allow write: if isAdminOrSecretary();
+    }
+    match /assets/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /companyContacts/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdminOrSecretary();
+    }
+    match /adminChats/{chatId} { allow read, write: if isAdminOrSecretary(); }
+    match /adminChats/{chatId}/messages/{msgId} { allow read, write: if isAdminOrSecretary(); }
+    match /adminChats/{chatId}/typing/{typingId} { allow read, write: if isAdminOrSecretary(); }
+    match /offlineStaff/{docId} { allow read, write: if isAdminOrSecretary(); }
+    match /financeDepartments/{docId} { allow read, write: if isAdminOrSecretary(); }
+  }
+}
