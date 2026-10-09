@@ -5,7 +5,11 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { email, password, displayName, phone, role, departmentId, baseSalary, hasAuth } = data;
+    const { email, password, displayName, phone, role, departmentId, baseSalary, commissionRate, hasAuth } = data;
+
+    if (!displayName) {
+      return NextResponse.json({ message: "Display name is required" }, { status: 400 });
+    }
 
     if (hasAuth === true) {
       if (!email || !password) {
@@ -23,17 +27,25 @@ export async function POST(req: Request) {
       });
 
       const uid = userRecord.uid;
-      const collectionName = role === "admin" ? "Admin" : "Secretary";
+      let collectionName = "offlineStaff";
+      let actualRole = role;
+      
+      if (role === "admin") collectionName = "Admin";
+      else if (role === "secretary") collectionName = "Secretary";
+      else if (role === "rider") {
+        collectionName = "User";
+        actualRole = "courier"; // Map "rider" back to "courier" for the DB consistency
+      }
 
       // 2. Write to Firestore
       await adminDb.collection(collectionName).doc(uid).set({
         email,
         displayName,
         phone: phone || "",
-        role,
+        role: actualRole,
         departmentId: departmentId || "",
         baseSalary: baseSalary || 0,
-        commissionRate: 0,
+        commissionRate: commissionRate || 0,
         isActive: true,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -41,15 +53,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ staffId: uid });
     } else {
       // Bypass auth creation, add directly to offlineStaff
+      let actualRole = role;
+      if (role === "rider") actualRole = "courier";
+
       const docRef = adminDb.collection("offlineStaff").doc();
       await docRef.set({
         email: email || "",
         displayName,
         phone: phone || "",
-        role: "offline",
+        role: hasAuth ? actualRole : "offline",
         departmentId: departmentId || "",
         baseSalary: baseSalary || 0,
-        commissionRate: 0,
+        commissionRate: commissionRate || 0,
         isActive: true,
         createdAt: FieldValue.serverTimestamp(),
       });

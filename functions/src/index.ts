@@ -5,5 +5,6 @@ export { onNewChatMessage } from './chat';
 export { requestDeliveryWallet, refundToWallet, onUserDeleted } from './wallet';
 
 export { initializePaystackTransaction, verifyPaystackTransaction, paystackWebhook } from './paystack';
-export { sendAdminNotification, onDeliveryStatusChanged } from './notifications';
+export { sendAdminNotification, onDeliveryStatusChanged, onDeliveryCreated } from './notifications';
 export { lookupTrackingId } from './tracking';
+

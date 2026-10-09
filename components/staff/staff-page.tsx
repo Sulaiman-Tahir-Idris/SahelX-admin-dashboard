@@ -62,7 +62,7 @@ export default function StaffPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          ...formData, displayName: formData.name,
           baseSalary: Number(formData.baseSalary),
           commissionRate: Number(formData.commissionRate),
         }),
@@ -214,3 +214,4 @@ export default function StaffPage() {
 
 // Fallback for default export
 export { StaffPage };
+
