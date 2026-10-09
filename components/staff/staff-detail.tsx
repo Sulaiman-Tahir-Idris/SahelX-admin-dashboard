@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Star, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,7 +23,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { getAllStaff, updateStaffPayrollInfo } from "@/lib/firebase/staff";
 import { getDepartments } from "@/lib/firebase/finance";
+import { getAverageRatingForCourier, getDeliveryCountForCourier } from "@/lib/firebase/deliveries";
 import { StaffProfile, FinanceDepartment } from "@/lib/finance/types";
+import { RiderDeliveryHistory } from "@/components/riders/rider-delivery-history";
 
 export default function StaffDetailPage({ id }: { id: string }) {
   const router = useRouter();
@@ -33,6 +35,9 @@ export default function StaffDetailPage({ id }: { id: string }) {
   const [departments, setDepartments] = useState<FinanceDepartment[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [avgRating, setAvgRating] = useState<number>(0);
+  const [deliveryCount, setDeliveryCount] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     baseSalary: "0",
@@ -57,6 +62,15 @@ export default function StaffDetailPage({ id }: { id: string }) {
             commissionRate: foundStaff.commissionRate?.toString() || "0",
             departmentId: foundStaff.departmentId || "none",
           });
+
+          if (foundStaff.role === 'rider' || foundStaff.role === 'courier') {
+            const [avg, count] = await Promise.all([
+              getAverageRatingForCourier(foundStaff.id),
+              getDeliveryCountForCourier(foundStaff.id),
+            ]);
+            setAvgRating(avg ?? 0);
+            setDeliveryCount(count ?? 0);
+          }
         }
         
         setDepartments(deptsData as FinanceDepartment[]);
@@ -106,6 +120,8 @@ export default function StaffDetailPage({ id }: { id: string }) {
     return <div className="p-8 text-center">Staff member not found.</div>;
   }
 
+  const isRider = staff.role === "rider" || staff.role === "courier";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -116,34 +132,55 @@ export default function StaffDetailPage({ id }: { id: string }) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Basic details about the staff member.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-muted-foreground">Name</Label>
-              <div className="font-medium text-lg">{staff.name}</div>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>Basic details about the staff member.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-muted-foreground">Name</Label>
+                <div className="font-medium text-lg">{staff.name}</div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Role</Label>
+                <div className="font-medium capitalize">{staff.role}</div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Email</Label>
+                <div>{staff.email || "-"}</div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Phone</Label>
+                <div>{staff.phone || "-"}</div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Status</Label>
+                <div>{staff.isActive ? "Active" : "Inactive"}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {isRider && (
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="p-4 flex flex-col items-center justify-center">
+                  <Star className="h-8 w-8 text-yellow-500 mb-2" />
+                  <div className="text-2xl font-bold">{avgRating.toFixed(1)}/5</div>
+                  <div className="text-sm text-muted-foreground text-center">Average Rating</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex flex-col items-center justify-center">
+                  <Package className="h-8 w-8 text-blue-500 mb-2" />
+                  <div className="text-2xl font-bold">{deliveryCount}</div>
+                  <div className="text-sm text-muted-foreground text-center">Total Deliveries</div>
+                </CardContent>
+              </Card>
             </div>
-            <div>
-              <Label className="text-muted-foreground">Role</Label>
-              <div className="font-medium capitalize">{staff.role}</div>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Email</Label>
-              <div>{staff.email || "-"}</div>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Phone</Label>
-              <div>{staff.phone || "-"}</div>
-            </div>
-            <div>
-              <Label className="text-muted-foreground">Status</Label>
-              <div>{staff.isActive ? "Active" : "Inactive"}</div>
-            </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
 
         <Card>
           <CardHeader>
@@ -171,7 +208,7 @@ export default function StaffDetailPage({ id }: { id: string }) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="baseSalary">Base Salary (₦)</Label>
+              <Label htmlFor="baseSalary">Base Salary (?)</Label>
               <Input
                 id="baseSalary"
                 type="number"
@@ -197,6 +234,17 @@ export default function StaffDetailPage({ id }: { id: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {isRider && (
+        <div className="mt-8">
+          <h2 className="text-2xl font-semibold mb-4">Delivery History</h2>
+          <Card>
+            <CardContent className="p-0">
+              <RiderDeliveryHistory riderId={staff.id} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
