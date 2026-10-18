@@ -595,7 +595,7 @@ export default function AdminCreateDeliveryPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="single-fee">Delivery Fee (â‚¦)</Label>
+                        <Label htmlFor="single-fee">Delivery Fee (₦)</Label>
                         <Input
                           id="single-fee"
                           type="number"
@@ -668,7 +668,7 @@ export default function AdminCreateDeliveryPage() {
                           <Building2 className="h-3.5 w-3.5" /> Pickup
                         </span>
                         <span className="font-semibold text-right max-w-[140px] truncate">
-                          {singlePickupAddress || "â€”"}
+                          {singlePickupAddress || "—"}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm py-2 border-b border-dashed">
@@ -676,7 +676,7 @@ export default function AdminCreateDeliveryPage() {
                           <MapPin className="h-3.5 w-3.5" /> Drop-off
                         </span>
                         <span className="font-semibold text-right max-w-[140px] truncate">
-                          {singleDropoffAddress || "â€”"}
+                          {singleDropoffAddress || "—"}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm py-2 border-b border-dashed">
@@ -684,13 +684,13 @@ export default function AdminCreateDeliveryPage() {
                           <Package className="h-3.5 w-3.5" /> Type
                         </span>
                         <span className="font-semibold">
-                          {singlePackageType || "â€”"}
+                          {singlePackageType || "—"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center pt-2">
                         <span className="text-lg font-bold">Total Cost</span>
                         <span className="text-xl font-bold text-primary">
-                          â‚¦{(Number(singleFee) || 0).toLocaleString()}
+                          ₦{(Number(singleFee) || 0).toLocaleString()}
                         </span>
                       </div>
                     </div>
@@ -894,7 +894,7 @@ export default function AdminCreateDeliveryPage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label>Delivery Fee (â‚¦)</Label>
+                                <Label>Delivery Fee (₦)</Label>
                                 <Input
                                   type="number"
                                   value={bulkFees[i]}
@@ -958,14 +958,14 @@ export default function AdminCreateDeliveryPage() {
                           <Building2 className="h-3.5 w-3.5" /> Pickup
                         </span>
                         <span className="font-semibold text-right max-w-[140px] truncate">
-                          {bulkPickupAddress || "â€”"}
+                          {bulkPickupAddress || "—"}
                         </span>
                       </div>
                       <div className="space-y-1">
                         <div className="flex justify-between items-center pt-2">
                           <span className="text-lg font-bold">Grand Total</span>
                           <span className="text-xl font-bold text-primary">
-                            â‚¦
+                            ₦
                             {(
                               bulkFees.reduce((sum, fee) => sum + (Number(fee) || 0), 0)
                             ).toLocaleString()}
