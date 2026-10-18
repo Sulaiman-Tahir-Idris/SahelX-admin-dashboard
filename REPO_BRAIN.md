@@ -157,3 +157,4 @@ SahelX-admin-dashboard/
 | 2026-09-22 | Antigravity | Added contact reveal toggle (Eye/EyeOff) on Investor Dashboard to hide CEO/CFO contact details by default. |
 | 2026-09-22 | Antigravity | Fixed Admin Users 'View Details' - wired onClick, added updateAdminUser, built edit dialog for displayName and role. |
 | 2026-09-23 | Antigravity | Confirmed clean pnpm build (53 pages). Deleted 6 temporary Python patch scripts and scratch files from repo root. Pushed all changes to GitHub. |
+| 2026-10-18 | Antigravity | Restored corrupted Naira (₦) currency symbols and em-dashes on Admin Create Delivery (Single & Bulk) page. |
