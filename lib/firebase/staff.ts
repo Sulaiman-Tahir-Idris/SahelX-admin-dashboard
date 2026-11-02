@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, where, updateDoc } from "firebase/firestore";
+import { collection, doc, getDocs, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./config";
 import { StaffProfile } from "../finance/types";
 
@@ -110,5 +110,33 @@ export const updateStaffPayrollInfo = async (
   } catch (error) {
     console.error("Error updating staff payroll info:", error);
     throw error;
+  }
+};
+
+export const deleteStaff = async (
+  id: string,
+  collectionName: string,
+  hasAuth: boolean = false
+): Promise<void> => {
+  try {
+    // 1. Delete from Firestore client SDK directly (same as deleteAdminUser / deleteSecretaryUser)
+    const docRef = doc(db, collectionName, id);
+    await deleteDoc(docRef);
+
+    // 2. Call backend endpoint to clean up Firebase Auth user if configured
+    if (hasAuth) {
+      try {
+        await fetch("/api/admin/delete-staff", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, collection: collectionName, hasAuth: true }),
+        });
+      } catch (err) {
+        console.warn("Auth deletion background call error:", err);
+      }
+    }
+  } catch (error: any) {
+    console.error("Failed to delete staff:", error);
+    throw new Error(error.message || "Failed to delete staff");
   }
 };

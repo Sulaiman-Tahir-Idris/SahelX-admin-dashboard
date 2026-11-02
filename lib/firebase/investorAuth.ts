@@ -14,6 +14,9 @@ export interface InvestorUser {
   displayName: string;
   email: string;
   phone?: string;
+  accountNumber?: string;
+  bankName?: string;
+  accountName?: string;
   numberOfBikes: number;
   totalInvested: number;
   notes?: string;

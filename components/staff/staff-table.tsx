@@ -16,16 +16,29 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MoreHorizontal, Search } from "lucide-react";
-import { getAllStaff } from "@/lib/firebase/staff";
+import { MoreHorizontal, Search, Trash2, Eye } from "lucide-react";
+import { getAllStaff, deleteStaff } from "@/lib/firebase/staff";
 import { getDepartments } from "@/lib/firebase/finance";
 import { StaffProfile, FinanceDepartment } from "@/lib/finance/types";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function StaffTable() {
   const router = useRouter();
+  const { toast } = useToast();
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [departments, setDepartments] = useState<FinanceDepartment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,24 +46,51 @@ export default function StaffTable() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [deptFilter, setDeptFilter] = useState("all");
 
+  // Deletion state
+  const [staffToDelete, setStaffToDelete] = useState<StaffProfile | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [staffData, deptsData] = await Promise.all([
-          getAllStaff(),
-          getDepartments(),
-        ]);
-        setStaff(staffData as StaffProfile[]);
-        setDepartments(deptsData as FinanceDepartment[]);
-      } catch (err) {
-        console.error("Error fetching staff data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [staffData, deptsData] = await Promise.all([
+        getAllStaff(),
+        getDepartments(),
+      ]);
+      setStaff(staffData as StaffProfile[]);
+      setDepartments(deptsData as FinanceDepartment[]);
+    } catch (err) {
+      console.error("Error fetching staff data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteStaff = async () => {
+    if (!staffToDelete) return;
+    try {
+      setIsDeleting(true);
+      await deleteStaff(staffToDelete.id, staffToDelete.collection, staffToDelete.hasAuth);
+      toast({
+        title: "Staff deleted",
+        description: `${staffToDelete.name} has been removed.`,
+      });
+      setStaffToDelete(null);
+      await fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Failed to delete staff",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const getDepartmentName = (id?: string) => {
     if (!id || id === "none") return "-";
@@ -158,7 +198,16 @@ export default function StaffTable() {
                         <DropdownMenuItem
                           onClick={() => router.push(`/admin/staff/${s.id}`)}
                         >
+                          <Eye className="mr-2 h-4 w-4" />
                           View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => setStaffToDelete(s)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Staff
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -169,6 +218,29 @@ export default function StaffTable() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!staffToDelete} onOpenChange={(open) => !open && setStaffToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently delete staff member <strong>{staffToDelete?.name}</strong> ({staffToDelete?.role}).
+              {staffToDelete?.hasAuth && " Their login account will also be deleted."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDeleteStaff}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

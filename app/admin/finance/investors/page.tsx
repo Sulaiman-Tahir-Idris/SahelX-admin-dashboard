@@ -65,6 +65,9 @@ export default function AdminInvestorsPage() {
     password: "",
     displayName: "",
     phone: "",
+    accountNumber: "",
+    bankName: "",
+    accountName: "",
     numberOfBikes: 0,
     totalInvested: 0,
     notes: "",
@@ -120,6 +123,9 @@ export default function AdminInvestorsPage() {
         password: "",
         displayName: "",
         phone: "",
+        accountNumber: "",
+        bankName: "",
+        accountName: "",
         numberOfBikes: 0,
         totalInvested: 0,
         notes: "",
@@ -171,10 +177,9 @@ export default function AdminInvestorsPage() {
   const filteredInvestors = investors.filter(
     (inv) =>
       inv.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inv.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      inv.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (inv.accountNumber && inv.accountNumber.includes(searchQuery))
   );
-
-
 
   return (
     <DashboardLayout>
@@ -267,6 +272,42 @@ export default function AdminInvestorsPage() {
                     }
                   />
                 </div>
+                
+                {/* Bank account fields */}
+                <div className="space-y-2">
+                  <Label htmlFor="accountNumber">Account Number</Label>
+                  <Input
+                    id="accountNumber"
+                    placeholder="e.g. 0123456789"
+                    value={newInvestor.accountNumber}
+                    onChange={(e) =>
+                      setNewInvestor({ ...newInvestor, accountNumber: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankName">Bank Name</Label>
+                  <Input
+                    id="bankName"
+                    placeholder="e.g. GTBank / Zenith"
+                    value={newInvestor.bankName}
+                    onChange={(e) =>
+                      setNewInvestor({ ...newInvestor, bankName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="accountName">Account Name</Label>
+                  <Input
+                    id="accountName"
+                    placeholder="e.g. John Doe"
+                    value={newInvestor.accountName}
+                    onChange={(e) =>
+                      setNewInvestor({ ...newInvestor, accountName: e.target.value })
+                    }
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="numberOfBikes">Number of Bikes</Label>
                   <Input
@@ -320,6 +361,7 @@ export default function AdminInvestorsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Account No.</TableHead>
                 <TableHead>Bikes</TableHead>
                 <TableHead>Total Invested</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -328,13 +370,13 @@ export default function AdminInvestorsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     Loading investors...
                   </TableCell>
                 </TableRow>
               ) : filteredInvestors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No investors found.
                   </TableCell>
                 </TableRow>
@@ -343,6 +385,16 @@ export default function AdminInvestorsPage() {
                   <TableRow key={inv.id}>
                     <TableCell className="font-medium">{inv.displayName}</TableCell>
                     <TableCell>{inv.email}</TableCell>
+                    <TableCell>
+                      {inv.accountNumber ? (
+                        <div className="text-sm">
+                          <div>{inv.accountNumber}</div>
+                          {inv.bankName && <span className="text-xs text-muted-foreground">{inv.bankName}</span>}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
+                    </TableCell>
                     <TableCell>{inv.numberOfBikes}</TableCell>
                     <TableCell>₦{inv.totalInvested?.toLocaleString()}</TableCell>
                     <TableCell className="text-right">

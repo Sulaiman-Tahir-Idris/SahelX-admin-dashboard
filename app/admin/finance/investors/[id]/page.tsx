@@ -9,13 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Users, Box, Truck, Plus, History } from "lucide-react";
+import { ArrowLeft, Users, Box, Truck, Plus, History, Pencil } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { getInvestor, updateInvestor } from "@/lib/firebase/investors";
 import { getCustomers, getCouriers } from "@/lib/firebase/users";
 import { getDeliveries } from "@/lib/firebase/deliveries";
 import { getBankAccounts } from "@/lib/firebase/finance";
-import { createInvestorPayout, getInvestorPayouts, type InvestorPayout } from "@/lib/firebase/investorPayouts";
+import { createInvestorPayout, getInvestorPayouts, updateInvestorPayout, type InvestorPayout } from "@/lib/firebase/investorPayouts";
 import type { InvestorUser } from "@/lib/firebase/investorAuth";
 import type { BankAccount } from "@/lib/finance/types";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +54,9 @@ export default function AdminInvestorDetailPage() {
 
   // Editable form state
   const [formData, setFormData] = useState({
+    accountNumber: "",
+    bankName: "",
+    accountName: "",
     numberOfBikes: 0,
     totalInvested: 0,
     notes: "",
@@ -62,8 +65,6 @@ export default function AdminInvestorDetailPage() {
     riderReadiness: false,
     bikeReadiness: false,
   });
-
-
 
   // Payouts state
   const [payouts, setPayouts] = useState<InvestorPayout[]>([]);
@@ -75,6 +76,12 @@ export default function AdminInvestorDetailPage() {
     source: "Cash",
     notes: "",
   });
+
+  // Edit payout state
+  const [editingPayout, setEditingPayout] = useState<InvestorPayout | null>(null);
+  const [editPayoutAmount, setEditPayoutAmount] = useState<number>(0);
+  const [editPayoutNotes, setEditPayoutNotes] = useState<string>("");
+  const [isUpdatingPayout, setIsUpdatingPayout] = useState(false);
 
   useEffect(() => {
     if (investorId) {
@@ -94,6 +101,9 @@ export default function AdminInvestorDetailPage() {
       }
       setInvestor(inv);
       setFormData({
+        accountNumber: inv.accountNumber || "",
+        bankName: inv.bankName || "",
+        accountName: inv.accountName || "",
         numberOfBikes: inv.numberOfBikes || 0,
         totalInvested: inv.totalInvested || 0,
         notes: inv.notes || "",
@@ -160,6 +170,36 @@ export default function AdminInvestorDetailPage() {
       });
     } finally {
       setIsCreatingPayout(false);
+    }
+  };
+
+  const handleOpenEditPayout = (payout: InvestorPayout) => {
+    setEditingPayout(payout);
+    setEditPayoutAmount(payout.amount);
+    setEditPayoutNotes(payout.notes || "");
+  };
+
+  const handleSaveEditPayout = async () => {
+    if (!editingPayout) return;
+    if (editPayoutAmount <= 0) {
+      toast({ title: "Amount must be greater than 0", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setIsUpdatingPayout(true);
+      await updateInvestorPayout(editingPayout.id, editPayoutAmount, editPayoutNotes);
+      toast({ title: "Payout updated successfully" });
+      setEditingPayout(null);
+      await loadData();
+    } catch (error: any) {
+      toast({
+        title: "Failed to update payout",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPayout(false);
     }
   };
 
@@ -267,7 +307,7 @@ export default function AdminInvestorDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>Profile & Settings</CardTitle>
-              <CardDescription>Manage investor stake and configuration</CardDescription>
+              <CardDescription>Manage investor stake, bank details and configuration</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -278,6 +318,40 @@ export default function AdminInvestorDetailPage() {
                 <div className="space-y-1">
                   <Label className="text-muted-foreground">Email</Label>
                   <p className="font-medium">{investor.email}</p>
+                </div>
+              </div>
+
+              {/* Bank Account Details */}
+              <div className="rounded-lg border p-3 bg-muted/20 space-y-3">
+                <h4 className="text-sm font-semibold">Bank / Payout Account</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1 col-span-2 sm:col-span-1">
+                    <Label htmlFor="accountNumber">Account Number</Label>
+                    <Input
+                      id="accountNumber"
+                      placeholder="e.g. 0123456789"
+                      value={formData.accountNumber}
+                      onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2 sm:col-span-1">
+                    <Label htmlFor="bankName">Bank Name</Label>
+                    <Input
+                      id="bankName"
+                      placeholder="e.g. GTBank / Access"
+                      value={formData.bankName}
+                      onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label htmlFor="accountName">Account Name</Label>
+                    <Input
+                      id="accountName"
+                      placeholder="e.g. John Doe"
+                      value={formData.accountName}
+                      onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -377,16 +451,28 @@ export default function AdminInvestorDetailPage() {
                           <TableHead>Source</TableHead>
                           <TableHead>Notes</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="w-[60px] text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {payouts.slice(0, 5).map((p) => (
+                        {payouts.map((p) => (
                           <TableRow key={p.id}>
                             <TableCell>{p.date.toLocaleDateString()}</TableCell>
                             <TableCell>{getSourceName(p.source)}</TableCell>
                             <TableCell className="max-w-[120px] truncate">{p.notes || "-"}</TableCell>
                             <TableCell className="text-right font-medium text-emerald-600">
                               ₦{p.amount.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleOpenEditPayout(p)}
+                                title="Edit Payout"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -396,10 +482,45 @@ export default function AdminInvestorDetailPage() {
                 )}
               </CardContent>
             </Card>
-
-
           </div>
         </div>
+
+        {/* Edit Payout Dialog */}
+        <Dialog open={!!editingPayout} onOpenChange={(open) => !open && setEditingPayout(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Investor Payout</DialogTitle>
+              <DialogDescription>
+                Update the payout amount and description notes for this record.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Amount (₦)</Label>
+                <Input
+                  type="number"
+                  value={editPayoutAmount}
+                  onChange={(e) => setEditPayoutAmount(parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Input
+                  value={editPayoutNotes}
+                  onChange={(e) => setEditPayoutNotes(e.target.value)}
+                  placeholder="e.g. Adjusted Week 12 Payout"
+                />
+              </div>
+              <Button
+                className="w-full bg-sahelx-600 hover:bg-sahelx-700"
+                onClick={handleSaveEditPayout}
+                disabled={isUpdatingPayout}
+              >
+                {isUpdatingPayout ? "Saving..." : "Save Payout Changes"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </DashboardLayout>
   );

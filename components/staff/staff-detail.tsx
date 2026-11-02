@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Star, Package } from "lucide-react";
+import { ArrowLeft, Star, Package, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,8 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { getAllStaff, updateStaffPayrollInfo } from "@/lib/firebase/staff";
+import { getAllStaff, updateStaffPayrollInfo, deleteStaff } from "@/lib/firebase/staff";
 import { getDepartments } from "@/lib/firebase/finance";
 import { getAverageRatingForCourier, getDeliveryCountForCourier } from "@/lib/firebase/deliveries";
 import { StaffProfile, FinanceDepartment } from "@/lib/finance/types";
@@ -35,6 +45,8 @@ export default function StaffDetailPage({ id }: { id: string }) {
   const [departments, setDepartments] = useState<FinanceDepartment[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [avgRating, setAvgRating] = useState<number>(0);
   const [deliveryCount, setDeliveryCount] = useState<number>(0);
@@ -112,6 +124,27 @@ export default function StaffDetailPage({ id }: { id: string }) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!staff) return;
+    try {
+      setIsDeleting(true);
+      await deleteStaff(staff.id, staff.collection, staff.hasAuth);
+      toast({
+        title: "Staff deleted",
+        description: `${staff.name} has been successfully deleted.`,
+      });
+      router.push("/admin/staff");
+    } catch (error: any) {
+      toast({
+        title: "Failed to delete staff",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-8 text-center">Loading staff details...</div>;
   }
@@ -124,11 +157,21 @@ export default function StaffDetailPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold tracking-tight">Staff Details</h1>
+        </div>
+        <Button
+          variant="destructive"
+          onClick={() => setShowDeleteDialog(true)}
+          className="gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete Staff
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Staff Details</h1>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -208,7 +251,7 @@ export default function StaffDetailPage({ id }: { id: string }) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="baseSalary">Base Salary (?)</Label>
+              <Label htmlFor="baseSalary">Base Salary (₦)</Label>
               <Input
                 id="baseSalary"
                 type="number"
@@ -245,6 +288,29 @@ export default function StaffDetailPage({ id }: { id: string }) {
           </Card>
         </div>
       )}
+
+      {/* Delete Confirmation Alert Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Staff Member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{staff.name}</strong> ({staff.role}).
+              {staff.hasAuth && " Their authentication login account will also be deleted."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

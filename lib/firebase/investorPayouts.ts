@@ -106,3 +106,22 @@ export const createInvestorPayout = async (
     throw new Error("Failed to create investor payout");
   }
 };
+
+export const updateInvestorPayout = async (
+  payoutId: string,
+  amount: number,
+  notes: string
+): Promise<void> => {
+  try {
+    const payoutRef = doc(db, "investorPayouts", payoutId);
+    await updateDoc(payoutRef, {
+      amount,
+      notes,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Failed to update investor payout", error);
+    throw new Error("Failed to update investor payout");
+  }
+};
+
